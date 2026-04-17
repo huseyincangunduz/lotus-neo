@@ -28,5 +28,5 @@
     // "@libs/my-lib": ["libs/my-lib/src/index.ts"],
     // "@libs/my-lib/*": ["libs/my-lib/src/*"]
   },
-  "include": ["apps", "libs", "vite.config.ts"]
+  "include": ["apps", "libs", "vite-config-global.js"]
 }
