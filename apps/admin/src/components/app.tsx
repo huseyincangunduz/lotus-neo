@@ -3,7 +3,7 @@ export class AppComponent extends NeolitComponent {
   render() {
     return (
       <>
-        <div><h1>Hello, Neolit!</h1></div>
+        <div><h1>Admin sayfasına hoş geldiniz!</h1></div>
       </>
     );
   }

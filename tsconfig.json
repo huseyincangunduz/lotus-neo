@@ -20,14 +20,13 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-    "baseUrl": ".",
-    "paths": {
-      "@libs/ui": ["libs/ui/src/index.ts"],
-      "@libs/ui/*": ["libs/ui/src/*"]
-      // Yeni lib eklemek için:
-      // "@libs/my-lib": ["libs/my-lib/src/index.ts"],
-      // "@libs/my-lib/*": ["libs/my-lib/src/*"]
-    }
+  "baseUrl": ".",
+  "paths": {
+    "@libs/ui": ["libs/ui/src/index.ts"],
+    "@libs/ui/*": ["libs/ui/src/*"]
+    // Yeni lib eklemek için:
+    // "@libs/my-lib": ["libs/my-lib/src/index.ts"],
+    // "@libs/my-lib/*": ["libs/my-lib/src/*"]
   },
   "include": ["apps", "libs", "vite.config.ts"]
 }
