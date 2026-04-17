@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "esnext",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@ubs-platform/neolit",
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+    "baseUrl": ".",
+    "paths": {
+      "@libs/ui": ["libs/ui/src/index.ts"],
+      "@libs/ui/*": ["libs/ui/src/*"]
+      // Yeni lib eklemek için:
+      // "@libs/my-lib": ["libs/my-lib/src/index.ts"],
+      // "@libs/my-lib/*": ["libs/my-lib/src/*"]
+    }
+  },
+  "include": ["apps", "libs", "vite.config.ts"]
+}
