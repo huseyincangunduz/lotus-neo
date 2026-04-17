@@ -7,8 +7,14 @@ export default defineConfig({
   esbuild: {
     jsxImportSource: '@ubs-platform/neolit',
   },
-
+  resolve: {
+    alias: {
+      // Yeni lib eklemek için: '@libs/my-lib': resolve(__dirname, 'libs/my-lib/src')
+      '@libs/ui': resolve(__dirname, '../libs/ui/src'),
+    },
+  },
   build: {
+
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
