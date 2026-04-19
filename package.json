@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "dev": "cd apps/$1 && vite",
+    "build": "cd apps/$1 && vite build",
+    "preview": "cd apps/$1 && vite preview"
   },
   "devDependencies": {
+    "sass-embedded": "^1.99.0",
     "typescript": "~6.0.2",
     "vite": "^8.0.4"
   },

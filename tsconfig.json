@@ -18,15 +18,14 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "baseUrl": ".",
-  "paths": {
-    "@libs/ui": ["libs/ui/src/index.ts"],
-    "@libs/ui/*": ["libs/ui/src/*"]
-    // Yeni lib eklemek için:
-    // "@libs/my-lib": ["libs/my-lib/src/index.ts"],
-    // "@libs/my-lib/*": ["libs/my-lib/src/*"]
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@libs/*": ["./libs/*/src/index.ts", "./libs/*/src/index.tsx"],
+
+      // Yeni lib eklemek için:
+      // "@libs/my-lib": ["libs/my-lib/src/index.ts"],
+      // "@libs/my-lib/*": ["libs/my-lib/src/*"]
+    }
   },
   "include": ["apps", "libs", "vite-config-global.js"]
 }

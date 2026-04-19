@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfigWithPaths } from '../../vite-config-global.js'
 
 export default defineConfig(
-  defineConfigWithPaths("apps/main/src/index.html", "../..", [tailwindcss()])
+  defineConfigWithPaths(__dirname, "index.html", [tailwindcss()])
 )
 // export default defineConfig({
 //   plugins: [tailwindcss()],
