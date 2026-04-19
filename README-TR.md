@@ -83,25 +83,34 @@ export class MyComponent extends NeolitComponent {
 }
 ```
 
-### Props'lu Bileşen
+### Props ve State ile Bileşen
 
 ```tsx
-export interface MyProps {
-  title: string;
+import { NeolitComponent, state } from "@ubs-platform/neolit/core";
+import { Button } from "@libs/ui/button";
+
+
+export class AppComponent extends NeolitComponent {
+  readonly name = state("Hüsniye");
+  render() {
+    return (
+      <>
+        <div>
+          <h1>Normal kullanıcı sayfasına hoş geldin, {this.name}!</h1>
+          <Button label="Tıkla!" onClick={() => 
+            {
+              const newName = prompt("Yeni ismini gir:");
+              if (newName) {
+                this.name.set(newName);
+              }
+            }
+          } />
+        </div>
+      </>
+    );
+  }
 }
 
-export class MyComponent extends NeolitComponent {
-  title: string;
-
-  constructor({ title }: MyProps) {
-    super();
-    this.title = title;
-  }
-
-  render(): NeolitNode | null {
-    return <h1>{this.title}</h1>;
-  }
-}
 ```
 
 ### JSX Yapılandırması

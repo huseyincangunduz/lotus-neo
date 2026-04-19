@@ -83,25 +83,34 @@ export class MyComponent extends NeolitComponent {
 }
 ```
 
-### Component with Props
+### Component with States
 
 ```tsx
-export interface MyProps {
-  title: string;
+import { NeolitComponent, state } from "@ubs-platform/neolit/core";
+import { Button } from "@libs/ui/button";
+
+
+export class AppComponent extends NeolitComponent {
+  readonly name = state("Neolit");
+  render() {
+    return (
+      <>
+        <div>
+          <h1>Welcome, {this.name}!</h1>
+          <Button label="Click!" onClick={() => 
+            {
+              const newName = prompt("Type your name:");
+              if (newName) {
+                this.name.set(newName);
+              }
+            }
+          } />
+        </div>
+      </>
+    );
+  }
 }
 
-export class MyComponent extends NeolitComponent {
-  title: string;
-
-  constructor({ title }: MyProps) {
-    super();
-    this.title = title;
-  }
-
-  render(): NeolitNode | null {
-    return <h1>{this.title}</h1>;
-  }
-}
 ```
 
 ### JSX Configuration
