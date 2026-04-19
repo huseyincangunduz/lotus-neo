@@ -1,0 +1,275 @@
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 3; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100dvw; /* Full width */
+  height: 100dvh; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0, 0, 0, 0.4);
+  // background-color: rgb(0, 0, 0); /* Fallback color */
+  // background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+  // &.show {
+  //   display: block;
+  // }
+  &[animation-state='BEGIN'],
+  &[animation-state='HOLD'],
+  &[animation-state='OUT'] {
+    display: block;
+  }
+
+  &[animation-state='BEGIN'] {
+    animation: bgColor;
+    animation-duration: var(--duration);
+  }
+
+  &[animation-state='OUT'] {
+    animation: bgColor;
+    animation-delay: var(--animDelay);
+    animation-duration: var(--duration);
+    animation-direction: reverse;
+  }
+}
+
+@keyframes bgColor {
+  0% {
+    background-color: rgba(0, 0, 0, 0);
+  }
+  100% {
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes dialog-flate {
+  from {
+    // right: -100%;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  to {
+    // right: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes dialog_to_right_income_w {
+  from {
+    // right: -100%;
+    transform: translateX(100%);
+  }
+  to {
+    // right: 0;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dialog_to_left_income_w {
+  from {
+    // right: -100%;
+    transform: translateX(-100%);
+  }
+  to {
+    // right: 0;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dialog_from_bottom_income_h {
+  from {
+    // right: -100%;
+    transform: translateY(100%);
+  }
+  to {
+    // right: 0;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog_from_bottomcenter_income_h {
+  from {
+    // right: -100%;
+    transform: translateY(100%) translateX(-50%);
+  }
+  to {
+    // right: 0;
+    transform: translateY(0) translateX(-50%);
+  }
+}
+
+@keyframes dialog_from_top_income_h {
+  from {
+    // right: -100%;
+    transform: translateY(-100%);
+  }
+  to {
+    // right: 0;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog_from_center {
+  from {
+    // right: -100%;
+    transform: translate(-50%, -50%);
+
+    scale: 0.9;
+  }
+  to {
+    // right: 0;
+    transform: translate(-50%, -50%);
+
+    scale: 1;
+  }
+}
+
+/* Modal Content */
+.dialog {
+  .dialog-inner {
+    width: 100%;
+  }
+
+  &[dialog-align='center'] {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    animation-duration: var(--duration);
+    animation-delay: var(--animDelay);
+    animation-iteration-count: 1;
+
+    &[animation-state='BEGIN'] {
+      animation: dialog-flate;
+      animation-duration: var(--duration);
+    }
+    &[animation-state='HOLD'] {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    &[animation-state='OUT'] {
+      animation: dialog-flate;
+      animation-delay: var(--animDelay);
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+
+  &[dialog-align='right'] {
+    right: 0px;
+    height: 100dvh;
+
+    &[animation-state='BEGIN'] {
+      animation: dialog_to_right_income_w;
+      animation-duration: var(--duration);
+    }
+    // &[animation-state='HOLD'] {
+    // }
+    &[animation-state='OUT'] {
+      animation: dialog_to_right_income_w;
+      animation-delay: var(--animDelay);
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+
+  &[dialog-align='left'] {
+    left: 0px;
+    height: 100dvh;
+    transform: translateX(-100%);
+
+    &[animation-state='BEGIN'] {
+      animation: dialog_to_left_income_w;
+      animation-duration: var(--duration);
+      animation-iteration-count: 1;
+      animation-delay: var(--animDelay);
+    }
+    &[animation-state='HOLD'] {
+      transform: translateX(0);
+    }
+    &[animation-state='OUT'] {
+      animation: dialog_to_left_income_w;
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+
+  &[dialog-align='bottom-center'] {
+    bottom: 0px;
+    left: 50%;
+
+    transform: translateY(100%) translateX(-50%);
+    margin: 0 auto;
+    &[animation-state='BEGIN'] {
+      animation: dialog_from_bottomcenter_income_h;
+      animation-duration: var(--duration);
+      animation-iteration-count: 1;
+      animation-delay: var(--animDelay);
+    }
+    &[animation-state='HOLD'] {
+      transform: translateY(0) translateX(-50%);
+    }
+    &[animation-state='OUT'] {
+      animation: dialog_from_bottomcenter_income_h;
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+
+  &[dialog-align='bottom-left'] {
+    bottom: 0px;
+    left: 0;
+
+    transform: translateY(100%);
+    margin: 0 auto;
+    &[animation-state='BEGIN'] {
+      animation: dialog_from_bottom_income_h;
+      animation-duration: var(--duration);
+      animation-iteration-count: 1;
+      animation-delay: var(--animDelay);
+    }
+    &[animation-state='HOLD'] {
+      transform: translateY(0);
+    }
+    &[animation-state='OUT'] {
+      animation: dialog_from_bottom_income_h;
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+
+  &[dialog-align='bottom-right'] {
+    bottom: 0px;
+    right: 0;
+
+    transform: translateY(100%);
+    margin: 0 auto;
+    &[animation-state='BEGIN'] {
+      animation: dialog_from_bottom_income_h;
+      animation-duration: var(--duration);
+      animation-iteration-count: 1;
+      animation-delay: var(--animDelay);
+    }
+    &[animation-state='HOLD'] {
+      transform: translateY(0);
+    }
+    &[animation-state='OUT'] {
+      animation: dialog_from_bottom_income_h;
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+  position: fixed; /* Stay in place */
+  // width: 500px;
+  max-width: 100dvw;
+  max-height: 100dvh;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background-color: var(--bg-1);
+  display: flex;
+  flex-direction: column;
+  .header {
+    padding: 1rem;
+    h1 {
+      padding: 0%;
+      margin: 0%;
+    }
+  }
+}
