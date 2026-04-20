@@ -1,4 +1,5 @@
-// import "./style.css";
+import "./tailwind.css";
+import "./styles.scss";
 import { AppComponent } from "./components/app";
 
 const app = new AppComponent();
