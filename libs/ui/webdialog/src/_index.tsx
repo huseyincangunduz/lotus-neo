@@ -167,7 +167,8 @@ export class WebDialog extends NeolitComponent {
       this.animationState.set("OUT");
       setTimeout(() => {
         this.animationState.set("HIDE");
-        this.renderDialog.set(false);
+        // bir nevi memorize yaparak diyaloğu silmek yerine gizliyoruz, böylece tekrar açarken animasyonun başından başlayabiliyoruz.
+        // this.renderDialog.set(false);
       }, this.animationAfterApply);
       if (emitOnClose && this.onClose) {
         this.onClose();
