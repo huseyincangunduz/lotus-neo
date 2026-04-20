@@ -20,7 +20,7 @@ export class AppComponent extends NeolitComponent {
   render() {
     return (
       <>
-        <WebDialog show={this.showDialog} title={this.staticText}>
+        <WebDialog show={this.showDialog} title={this.staticText} onClose={() => this.showDialog.set(false)}>
           <KeltosKel />
           <Button label="Change title" onClick={() => this.staticText.set("New Title")}></Button>
         </WebDialog>
