@@ -7,6 +7,7 @@ import { WebDialog } from "@libs/ui/webdialog";
 export class AppComponent extends NeolitComponent {
   showDialog = state(false);
   staticText = state("Hello, World!");
+  padding = state(true);
 
   constructor() {
     super();
@@ -19,10 +20,12 @@ export class AppComponent extends NeolitComponent {
   render() {
     return (
       <>
-        <WebDialog position={"right"} show={this.showDialog} title={this.staticText} onClose={() => this.showDialog.set(false)}>
+        <WebDialog padding={this.padding} position={"right"} show={this.showDialog} title={this.staticText} onClose={() => this.showDialog.set(false)}>
           <KeltosKel />
           {/* Monolit yazmışım :d kendim bile ismini karıştırıyorsam artık sşdlfksd */}
-          <Button label="Change title" variant="primary" visual="ghost" onClick={() => this.staticText.set("Neolit'ten selamlar")}></Button>
+          <Button label="Başlık değiştir" variant="primary" visual="ghost" onClick={() => this.staticText.set(prompt("Yeni başlık:")?.trim() || "Metinsiz")}></Button>
+          <Button label="Diyalog kapat" variant="secondary" visual="outline" onClick={() => this.showDialog.set(false)}></Button>
+          <Button label="Padding aç/kapa" variant="secondary" visual="outline" onClick={() => this.padding.set(!this.padding.get())}></Button>
         </WebDialog>
         <div >
           <h1>Admin sayfasına hoş geldiniz!</h1>

@@ -222,18 +222,8 @@ export class WebDialog extends NeolitComponent {
                 </div>
               )}
               <div
-                // daha iyi haber, class name içine obje verebiliyoruz. Normal değer olabiliyor ama eğer gelen state ise yine subscribe oluyor ve class'ı güncelliyor.
-                // Demek isterdim ama nedense object object olarak görünüyor, bu yüzden classnames kütüphanesi gibi bir şeye ihtiyaç var gibi duruyor. Bunu da ilerleyen zamanlarda ekleyebilirim.
-                className={
-                  {
-                    "dialog-inner": true,
-                    "flex-grow-1": true,
-                    "overflow-auto": true,
-                    "px-3": this.padding.get(),
-                    "pb-3": this.padding.get(),
-                  }
-                  // `dialog-inner flex-grow-1 overflow-auto${this.paddingClass.get()}`
-                }
+
+                className={["dialog-inner", "flex-grow-1", "overflow-auto", computed([this.padding],() => (this.padding.get() ? "px-3 pb-3" : ""))]}
               >
                 {this.content}
               </div>
