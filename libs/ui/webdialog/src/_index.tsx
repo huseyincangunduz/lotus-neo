@@ -46,6 +46,10 @@ export class WebDialog extends NeolitComponent {
   paddingClass = computed([this.padding], () =>
     this.padding.get() ? " px-3 pb-3" : "",
   );
+  dialogContentClassName = computed(
+    [this.paddingClass],
+    () => `dialog-inner flex-grow-1 overflow-auto ${this.paddingClass.get()}`,
+  );
   position = state<DialogPosition>("center");
   displayHeader = state(true);
   displayCloseButton = state(true);
@@ -70,6 +74,7 @@ export class WebDialog extends NeolitComponent {
     () => this.animationDelay.get() + "ms",
   );
   show = state(false);
+  renderDialog = state(false);
 
   constructor({
     children,
@@ -145,6 +150,7 @@ export class WebDialog extends NeolitComponent {
   }
 
   showDialog() {
+    this.renderDialog.set(true);
     const current = this.animationState.get();
     if (current !== "BEGIN" && current !== "HOLD") {
       this.animationState.set("BEGIN");
@@ -161,6 +167,7 @@ export class WebDialog extends NeolitComponent {
       this.animationState.set("OUT");
       setTimeout(() => {
         this.animationState.set("HIDE");
+        this.renderDialog.set(false);
       }, this.animationAfterApply);
       if (emitOnClose && this.onClose) {
         this.onClose();
@@ -183,7 +190,7 @@ export class WebDialog extends NeolitComponent {
     return (
       <>
         {/* fromState bir hatadan dolayı fragment içinden verilmesi lazım. Bunu düzelteceğim */}
-        {fromState(this.show).renderIf(() => (
+        {fromState(this.renderDialog).renderIf(() => (
           <div
             className="modal"
             animation-state={this.animationState}
@@ -215,18 +222,19 @@ export class WebDialog extends NeolitComponent {
               )}
               <div
                 // daha iyi haber, class name içine obje verebiliyoruz. Normal değer olabiliyor ama eğer gelen state ise yine subscribe oluyor ve class'ı güncelliyor.
-                  // Demek isterdim ama nedense object object olarak görünüyor, bu yüzden classnames kütüphanesi gibi bir şeye ihtiyaç var gibi duruyor. Bunu da ilerleyen zamanlarda ekleyebilirim.
-                klass={
+                // Demek isterdim ama nedense object object olarak görünüyor, bu yüzden classnames kütüphanesi gibi bir şeye ihtiyaç var gibi duruyor. Bunu da ilerleyen zamanlarda ekleyebilirim.
+                className={
                   {
                     "dialog-inner": true,
                     "flex-grow-1": true,
                     "overflow-auto": true,
-                    "px-3": this.padding,
-                    "pb-3": this.padding,
+                    "px-3": this.padding.get(),
+                    "pb-3": this.padding.get(),
                   }
                   // `dialog-inner flex-grow-1 overflow-auto${this.paddingClass.get()}`
                 }
               >
+                {this.animationState}
                 {this.content}
               </div>
             </div>
