@@ -1,6 +1,42 @@
-.app {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+@mixin darktema {
+  --color-primary: #1423ad;
+  --color-primary-text: #c0cfff;
+  --color-primary-card-bg: #020c1c;
+  --color-primary-card-bg-text: #c0dbff;
+  --color-primary-bg-hover: #627ef0;
+  --color-primary-fg-hover: rgb(0, 0, 0);
+  --color-primary-bg-active: #080949;
+  --color-primary-fg-active: #ffffff;
+  --color-primary-hover: #081949;
 
+  --color-surface: #121416;
+  --color-surface-1: #171416;
+  --color-surface-2: #361416;
+  --color-surface-3: #161476;
+  --color-border: #1e14ad;
+  --color-fg: #ffffff;
 
+  &[amoled="true"] {
+    --color-surface: #000000;
+  }
 }
 
+:root {
+  overflow: hidden;
+
+  &[theme="dark"] {
+    @include darktema;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([theme="light"]) {
+    @include darktema;
+  }
+}
+
+body {
+  font-family: var(--font-secondary);
+  background-color: var(--color-surface);
+  color: var(--color-fg);
+}

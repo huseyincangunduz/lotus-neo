@@ -19,13 +19,14 @@ export class AppComponent extends NeolitComponent {
   render() {
     return (
       <>
-        <WebDialog show={this.showDialog} title={this.staticText} onClose={() => this.showDialog.set(false)}>
+        <WebDialog position={"right"} show={this.showDialog} title={this.staticText} onClose={() => this.showDialog.set(false)}>
           <KeltosKel />
-          <Button label="Change title" onClick={() => this.staticText.set("New Title")}></Button>
+          {/* Monolit yazmışım :d kendim bile ismini karıştırıyorsam artık sşdlfksd */}
+          <Button label="Change title" variant="primary" visual="ghost" onClick={() => this.staticText.set("Neolit'ten selamlar")}></Button>
         </WebDialog>
         <div >
           <h1>Admin sayfasına hoş geldiniz!</h1>
-          <Button label="asdasd" onClick={() => this.showDialog.set(true)}></Button>
+          <Button label="Diyalog göster" variant="primary" visual="filled" onClick={() => this.showDialog.set(true)}></Button>
         </div>
       </>
     );

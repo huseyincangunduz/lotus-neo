@@ -14,7 +14,7 @@ export class Button extends NeolitComponent {
     visual = state<"filled" | "outline" | "ghost">("filled");
     buttonClassName = computed([this.variant, this.visual], () => {
         const variantClass = {
-            primary: "bg-blue-500 text-white hover:bg-blue-600",
+            primary: "bg-(--color-primary) text-white hover:bg-(--color-primary-bg-hover)",
             secondary: "bg-gray-500 text-white hover:bg-gray-600",
             tertiary: "bg-transparent text-gray-500 hover:bg-gray-100",
         }[this.variant.get()];

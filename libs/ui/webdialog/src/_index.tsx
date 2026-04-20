@@ -214,8 +214,8 @@ export class WebDialog extends NeolitComponent {
             >
               {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
               {this.displayHeader.get() && (
-                <div className="header flex items-center justify-between px-3 pt-3">
-                  <h2 className="h2">{this.title}</h2>
+                <div className={`${styles.header} flex items-center justify-between px-3 pt-3`}>
+                  <h2 className="h2 flex-grow-1">{this.title}</h2>
                   {fromState(this.displayCloseButton).renderIf(() => (
                     <button onClick={() => this.closeDialog()}>✕</button>
                   ))}
