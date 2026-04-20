@@ -1,3 +1,4 @@
+import type { IconProperties } from "@libs/ui/icon";
 import { computed, NeolitComponent, state, type NeolitNode, type StateOrPlain } from "@ubs-platform/neolit/core";
 export interface ButtonProps {
     label: StateOrPlain<string>;
@@ -5,6 +6,7 @@ export interface ButtonProps {
     // tailwind'in varsayılan renk paletini baz alarak primary, secondary ve tertiary olmak üzere üç farklı buton varyantı tanımladım. İleride ihtiyaç duyulursa bu varyantlara yeni stiller eklenebilir veya mevcut stiller güncellenebilir.
     variant?: StateOrPlain<"primary" | "secondary" | "tertiary">;
     visual?: StateOrPlain<"filled" | "outline" | "ghost">;
+    icon?: StateOrPlain<IconProperties | null>;
 }
 
 export class Button extends NeolitComponent {
@@ -12,6 +14,7 @@ export class Button extends NeolitComponent {
     onClick?: () => void;
     variant = state<"primary" | "secondary" | "tertiary">("primary");
     visual = state<"filled" | "outline" | "ghost">("filled");
+    icon = state<IconProperties | null>(null);
     buttonClassName = computed([this.variant, this.visual], () => {
         const variantClass = {
             primary: "bg-(--color-primary) text-white hover:bg-(--color-primary-bg-hover)",
@@ -30,12 +33,13 @@ export class Button extends NeolitComponent {
     /**
      *
      */
-    constructor({label, onClick, variant, visual}: ButtonProps) {
+    constructor({label, onClick, variant, visual, icon}: ButtonProps) {
         super();
         this.label.set(label);
         this.onClick = onClick;
         this.variant.set(variant || "primary");
         this.visual.set(visual || "filled");
+        this.icon.set(icon ?? null);
     }
     render(): NeolitNode | NeolitNode[] | NeolitComponent | null {
         return <button className={this.buttonClassName.get()} onClick={this.onClick}>{this.label}</button>
