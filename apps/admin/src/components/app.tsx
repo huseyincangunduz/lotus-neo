@@ -20,11 +20,11 @@ export class AppComponent extends NeolitComponent {
   render() {
     return (
       <>
-        <WebDialog padding={this.padding} position={"right"} show={this.showDialog} title={this.staticText} onClose={() => this.showDialog.set(false)}>
+        <WebDialog padding={this.padding} position="right" show={this.showDialog} title={this.staticText} onClose={() => this.showDialog.set(false)}>
           <KeltosKel />
           {/* Monolit yazmışım :d kendim bile ismini karıştırıyorsam artık sşdlfksd */}
           <div className="mt-2 flex flex-row gap-2 justify-center">
-            <Button label="Başlık değiştir" variant="primary" visual="ghost" onClick={() => this.staticText.set(prompt("Yeni başlık:")?.trim() || "Metinsiz")}></Button>
+            <Button icon={{className: "material-symbols-outlined", content: "edit"}} label="Başlık değiştir" variant="primary" visual="ghost" onClick={() => this.staticText.set(prompt("Yeni başlık:")?.trim() || "Metinsiz")}></Button>
             <Button label="Diyalog kapat" variant="secondary" visual="outline" onClick={() => this.showDialog.set(false)}></Button>
             <Button label="Padding aç/kapa" variant="secondary" visual="outline" onClick={() => this.padding.update(v => !v)}></Button>
           </div>

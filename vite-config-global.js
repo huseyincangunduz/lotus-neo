@@ -16,6 +16,16 @@ export const defineConfigWithPaths = (
   const rootDir = resolve(appDir, "../..");
   return {
     plugins,
+    server: {
+      fs: {
+        allow: [
+          rootDir,
+          resolve(rootDir, "apps"),
+          resolve(rootDir, "libs"),
+          resolve(rootDir, "node_modules"),
+        ],
+      },
+    },
     esbuild: {
       jsxImportSource: "@ubs-platform/neolit",
     },

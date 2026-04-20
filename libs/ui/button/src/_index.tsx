@@ -1,4 +1,5 @@
-import type { IconProperties } from "@libs/ui/icon";
+import { IconComponent, type IconProperties } from "@libs/ui/icon";
+import { fromState } from "@ubs-platform/neolit/structural";
 import { computed, NeolitComponent, state, type NeolitNode, type StateOrPlain } from "@ubs-platform/neolit/core";
 export interface ButtonProps {
     label: StateOrPlain<string>;
@@ -33,7 +34,7 @@ export class Button extends NeolitComponent {
     /**
      *
      */
-    constructor({label, onClick, variant, visual, icon}: ButtonProps) {
+    constructor({ label, onClick, variant, visual, icon }: ButtonProps) {
         super();
         this.label.set(label);
         this.onClick = onClick;
@@ -42,6 +43,15 @@ export class Button extends NeolitComponent {
         this.icon.set(icon ?? null);
     }
     render(): NeolitNode | NeolitNode[] | NeolitComponent | null {
-        return <button className={this.buttonClassName.get()} onClick={this.onClick}>{this.label}</button>
+        return <button className={this.buttonClassName} onClick={this.onClick}>
+            <div className="flex items-center gap-2">
+                {fromState(this.icon).renderIf(iconProps => {
+                    return <IconComponent className={iconProps.className} content={iconProps.content} imgSrc={iconProps.imgSrc}  />
+
+                })}
+                {this.label}
+            </div>
+
+        </button>
     }
 }

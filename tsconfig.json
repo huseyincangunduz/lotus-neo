@@ -20,7 +20,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@libs/*": ["./libs/*/src/index.ts", "./libs/*/src/index.tsx"],
+      "@libs/*": ["./libs/*/src/index.tsx", "./libs/*/src/index.ts"],
 
       // Yeni lib eklemek için:
       // "@libs/my-lib": ["libs/my-lib/src/index.ts"],

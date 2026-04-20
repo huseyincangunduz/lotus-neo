@@ -2,42 +2,38 @@ import { NeolitComponent, state, type StateOrPlain, computed } from "@ubs-platfo
 import { fromState } from "@ubs-platform/neolit/structural";
 
 export interface IconProperties {
-    iconClass: StateOrPlain<string>;
-    iconContent: StateOrPlain<string>;
-    iconImgSource: StateOrPlain<string>;
-    iconSvgSource: StateOrPlain<string>;
+    className?: StateOrPlain<string | null | undefined>;
+    content?: StateOrPlain<string | null | undefined>;
+    imgSrc?: StateOrPlain<string | null | undefined>;
+    iconAlt?: StateOrPlain<string | null | undefined>;
 }
 
 export class IconComponent extends NeolitComponent {
-    iconClass = state<string>("");
-    iconContent = state<string>("");
-    iconImgSource = state<string>("");
-    iconSvgSource = state<string>("");
-    combineContentAndClass = computed([this.iconContent, this.iconClass], () => this.iconContent.get() && this.iconClass.get());
+    className = state<string | null | undefined>("");
+    content = state<string | null | undefined>("");
+    imgSrc = state<string | null | undefined>("");
+    iconAlt = state<string | null | undefined>("");
+    combineContentAndClass = computed([this.content, this.className], () => this.content.get() && this.className.get());
 
-    constructor({ iconClass, iconContent, iconImgSource, iconSvgSource }: IconProperties) {
+    constructor({ className: iconClass, content: iconContent, imgSrc: iconImgSource, iconAlt: iconAltText }: IconProperties) {
         super();
-        this.iconClass.set(iconClass);
-        this.iconContent.set(iconContent);
-        this.iconImgSource.set(iconImgSource);
-        this.iconSvgSource.set(iconSvgSource);
+        this.className.set(iconClass);
+        this.content.set(iconContent);
+        this.imgSrc.set(iconImgSource);
+        this.iconAlt.set(iconAltText);
     }
 
 
     render() {
         return (
             <>
-                
                 {fromState(this.combineContentAndClass).renderIf(() => {
-                    return <span className={this.iconClass}>{this.iconContent}</span>
-                })}
-                
-                {fromState(this.iconSvgSource).renderIf(svg => <img src={svg} alt="icon" className={this.iconClass.get()} />)}
-
-                {fromState(this.iconImgSource).renderIf(() => {
-                    return <img src={this.iconImgSource} alt="icon" className={this.iconClass} />
+                    return <span className={this.className}>{this.content}</span>
                 })}
 
+                {/* {fromState(this.svgSrc).renderIf(svg => <svg src={svg} alt="icon" className={this.className} />)} */}
+
+                {fromState(this.imgSrc).renderIf(img => <img src={img} alt={this.iconAlt} className={this.className} />)}
             </>
         );
     }
