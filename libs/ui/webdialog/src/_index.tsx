@@ -6,7 +6,7 @@ import {
   type NeolitNode,
   type StateOrPlain,
 } from "@ubs-platform/neolit/core";
-import "./webdialog.scss";
+import styles from "./webdialog.module.scss";
 import { fromState } from "@ubs-platform/neolit/structural";
 
 export type DialogPosition =
@@ -193,7 +193,7 @@ export class WebDialog extends NeolitComponent {
         {/* fromState bir hatadan dolayı fragment içinden verilmesi lazım. Bunu düzelteceğim */}
         {fromState(this.renderDialog).renderIf(() => (
           <div
-            className="modal"
+            className={styles.modal}
             animation-state={this.animationState}
             style={{
               "--duration": this.durationMs,
@@ -202,7 +202,7 @@ export class WebDialog extends NeolitComponent {
             onClick={(e: MouseEvent) => this.maskClick(e)}
           >
             <div
-              className="dialog"
+              className={styles.dialog}
               animation-state={this.animationState}
               dialog-align={this.position}
               style={{
@@ -214,8 +214,8 @@ export class WebDialog extends NeolitComponent {
             >
               {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
               {this.displayHeader.get() && (
-                <div className="header flex align-items-center justify-content-between">
-                  <h2 className="font-bold underline">{this.title}</h2>
+                <div className="header flex items-center justify-between px-3 pt-3">
+                  <h2 className="h2">{this.title}</h2>
                   {fromState(this.displayCloseButton).renderIf(() => (
                     <button onClick={() => this.closeDialog()}>✕</button>
                   ))}

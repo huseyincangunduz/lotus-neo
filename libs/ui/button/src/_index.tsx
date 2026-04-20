@@ -25,7 +25,7 @@ export class Button extends NeolitComponent {
             ghost: "bg-transparent",
         }[this.visual.get()];
 
-        return `px-4 py-2 rounded ${variantClass} ${visualClass}`;
+        return `px-4 py-2 rounded-sm ${variantClass} ${visualClass}`;
     });
     /**
      *
