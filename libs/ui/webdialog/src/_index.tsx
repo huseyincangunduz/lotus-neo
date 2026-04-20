@@ -43,12 +43,12 @@ export class WebDialog extends NeolitComponent {
   animationState = state<AnimationState>("HIDE");
   title = state("");
   padding = state(true);
-  paddingClass = computed([this.padding], () =>
-    this.padding.get() ? " px-3 pb-3" : "",
+  paddingClass = computed([this.padding], ([padding]) =>
+    padding ? " px-3 pb-3" : "",
   );
   dialogContentClassName = computed(
     [this.paddingClass],
-    () => `dialog-inner flex-grow-1 overflow-auto ${this.paddingClass.get()}`,
+    ([paddingClass]) => `dialog-inner flex-grow-1 overflow-auto ${paddingClass}`,
   );
   position = state<DialogPosition>("center");
   displayHeader = state(true);
@@ -67,11 +67,11 @@ export class WebDialog extends NeolitComponent {
   private beginTimeout?: ReturnType<typeof setTimeout>;
   durationMs = computed(
     [this.animationDuration],
-    () => this.animationDuration.get() + "ms",
+    ([duration]) => duration + "ms",
   );
   delayMs = computed(
     [this.animationDelay],
-    () => this.animationDelay.get() + "ms",
+    ([delay]) => delay + "ms",
   );
   show = state(false);
   renderDialog = state(false);

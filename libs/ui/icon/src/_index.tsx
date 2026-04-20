@@ -13,7 +13,7 @@ export class IconComponent extends NeolitComponent {
     content = state<string | null | undefined>("");
     imgSrc = state<string | null | undefined>("");
     iconAlt = state<string | null | undefined>("");
-    combineContentAndClass = computed([this.content, this.className], () => this.content.get() && this.className.get());
+    combineContentAndClass = computed([this.content, this.className], ([content, className]) => content && className);
 
     constructor({ className: iconClass, content: iconContent, imgSrc: iconImgSource, iconAlt: iconAltText }: IconProperties) {
         super();

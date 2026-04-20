@@ -16,18 +16,18 @@ export class Button extends NeolitComponent {
     variant = state<"primary" | "secondary" | "tertiary">("primary");
     visual = state<"filled" | "outline" | "ghost">("filled");
     icon = state<IconProperties | null>(null);
-    buttonClassName = computed([this.variant, this.visual], () => {
+    buttonClassName = computed([this.variant, this.visual], ([variant, visual]) => {
         const variantClass = {
             primary: "bg-(--color-primary) text-white hover:bg-(--color-primary-bg-hover)",
             secondary: "bg-gray-500 text-white hover:bg-gray-600",
             tertiary: "bg-transparent text-gray-500 hover:bg-gray-100",
-        }[this.variant.get()];
+        }[variant];
 
         const visualClass = {
             filled: "",
             outline: "border border-current bg-transparent",
             ghost: "bg-transparent",
-        }[this.visual.get()];
+        }[visual];
 
         return `px-4 py-2 rounded-sm ${variantClass} ${visualClass}`;
     });
