@@ -1,13 +1,13 @@
 import {
   NeolitComponent,
-  State,
+  computed,
   getStateValue,
-  isState,
   state,
   type NeolitNode,
   type StateOrPlain,
 } from "@ubs-platform/neolit/core";
 import "./webdialog.scss";
+import { fromState } from "@ubs-platform/neolit/structural";
 
 export type DialogPosition =
   | "center"
@@ -43,6 +43,9 @@ export class WebDialog extends NeolitComponent {
   animationState = state<AnimationState>("HIDE");
   title = state("");
   padding = state(true);
+  paddingClass = computed([this.padding], () =>
+    this.padding.get() ? " px-3 pb-3" : "",
+  );
   position = state<DialogPosition>("center");
   displayHeader = state(true);
   displayCloseButton = state(true);
@@ -58,6 +61,15 @@ export class WebDialog extends NeolitComponent {
   content: NeolitNode | NeolitNode[] = (<></>);
 
   private beginTimeout?: ReturnType<typeof setTimeout>;
+  durationMs = computed(
+    [this.animationDuration],
+    () => this.animationDuration.get() + "ms",
+  );
+  delayMs = computed(
+    [this.animationDelay],
+    () => this.animationDelay.get() + "ms",
+  );
+  show = state(false);
 
   constructor({
     children,
@@ -80,83 +92,55 @@ export class WebDialog extends NeolitComponent {
     this.content = children;
     this.onClose = onClose;
 
-    this.title.set(getStateValue(title));
-    this.padding.set(getStateValue(padding));
-    this.position.set(getStateValue(position));
-    this.displayHeader.set(getStateValue(displayHeader));
-    this.displayCloseButton.set(getStateValue(displayCloseButton));
-    this.maxWidth.set(getStateValue(maxWidth));
-    this.maxHeight.set(getStateValue(maxHeight));
-    this.width.set(getStateValue(width));
-    this.height.set(getStateValue(height));
-    this.dismissOnClickMask.set(getStateValue(dismissOnClickMask));
-    this.animationDuration.set(getStateValue(animationDuration));
-    this.animationDelay.set(getStateValue(animationDelay));
-
-    // Dışarıdan gelen State prop'larını izle, değişince internal state'e yansıt
-    if (isState(title))
-      (title as State<string>).subscribe((v) => this.title.set(v));
-    if (isState(padding))
-      (padding as State<boolean>).subscribe((v) => this.padding.set(v));
-    if (isState(position))
-      (position as State<DialogPosition>).subscribe((v) =>
-        this.position.set(v),
-      );
-    if (isState(displayHeader))
-      (displayHeader as State<boolean>).subscribe((v) =>
-        this.displayHeader.set(v),
-      );
-    if (isState(displayCloseButton))
-      (displayCloseButton as State<boolean>).subscribe((v) =>
-        this.displayCloseButton.set(v),
-      );
-    if (isState(maxWidth))
-      (maxWidth as State<string>).subscribe((v) => this.maxWidth.set(v));
-    if (isState(maxHeight))
-      (maxHeight as State<string>).subscribe((v) => this.maxHeight.set(v));
-    if (isState(width))
-      (width as State<string>).subscribe((v) => this.width.set(v));
-    if (isState(height))
-      (height as State<string>).subscribe((v) => this.height.set(v));
-    if (isState(dismissOnClickMask))
-      (dismissOnClickMask as State<boolean>).subscribe((v) =>
-        this.dismissOnClickMask.set(v),
-      );
-    if (isState(animationDuration))
-      (animationDuration as State<number>).subscribe((v) =>
-        this.animationDuration.set(v),
-      );
-    if (isState(animationDelay))
-      (animationDelay as State<number>).subscribe((v) =>
-        this.animationDelay.set(v),
-      );
-
-    // show prop'u değişince animasyon state machine'ini tetikle
-    const handleShow = (newShow: boolean) => {
+    this.title.set(title, { notifyIncoming: true, subscribeIncoming: true });
+    this.padding.set(padding, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.position.set(position, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.displayHeader.set(displayHeader, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.displayCloseButton.set(displayCloseButton, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.maxWidth.set(maxWidth, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.maxHeight.set(maxHeight, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.width.set(width, { notifyIncoming: true, subscribeIncoming: true });
+    this.height.set(height, { notifyIncoming: true, subscribeIncoming: true });
+    this.dismissOnClickMask.set(dismissOnClickMask, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.animationDuration.set(animationDuration, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.animationDelay.set(animationDelay, {
+      notifyIncoming: true,
+      subscribeIncoming: true,
+    });
+    this.show.set(show, { notifyIncoming: true, subscribeIncoming: true });
+    this.show.subscribe((newShow) => {
       if (newShow) this.showDialog();
-      else this.closeDialog();
-    };
-    if (isState(show)) {
-      (show as State<boolean>).subscribe(handleShow);
-    }
+      else this.closeDialog(false);
+    });
     if (getStateValue(show)) this.showDialog();
-
-    // TODO: Mobile geçmiş (history) geri-tuşu ile dialog kapatma mekanizması
-    //   (Angular'daki generateMobileOptimizedDialogHideController karşılığı) henüz mevcut değil.
-
-    // this.watchToRerender(this.animationState);
-    // this.watchToRerender(this.title);
-    // this.watchToRerender(this.padding);
-    // this.watchToRerender(this.position);
-    // this.watchToRerender(this.displayHeader);
-    // this.watchToRerender(this.displayCloseButton);
-    // this.watchToRerender(this.maxWidth);
-    // this.watchToRerender(this.maxHeight);
-    // this.watchToRerender(this.width);
-    // this.watchToRerender(this.height);
   }
 
   private get animationAfterApply() {
+    console.info("animationDuration ", this.animationDuration.get());
     return this.animationDuration.get() + 5;
   }
 
@@ -185,46 +169,70 @@ export class WebDialog extends NeolitComponent {
   }
 
   maskClick(event: MouseEvent) {
+    // Burada .get() gerekiyor, eğer içi null olsa bile get kullanılmazsa true döner ve diyalog her şekilde kapanır...
     if (this.dismissOnClickMask.get() && event.target === event.currentTarget) {
       this.closeDialog();
     }
   }
 
   render() {
-    const animState = this.animationState.get();
-    const durationMs = this.animationDuration.get() + "ms";
-    const delayMs = this.animationDelay.get() + "ms";
-
+    // Neolit JSX'i parse ederken eğer gelen prop değeri state ise ona subscribe olup onun propertysini değiştiriyor html elementinin.
+    // Bu yüzden burada ayrıca get yapmaya gerek yok, direkt olarak state'i vermek yeterli oluyor.
+    // If neolit JSX, when parsing, encounters a prop value that is a state, it subscribes to it and updates the corresponding property of the HTML element when the state changes.
+    // Therefore, there is no need to call get() here; simply passing the state is sufficient.
     return (
-      <div
-        className="modal"
-        animation-state={animState}
-        style={{ "--duration": durationMs, "--animDelay": delayMs }}
-        onClick={(e: MouseEvent) => this.maskClick(e)}
-      >
-        <div
-          className="dialog"
-          animation-state={animState}
-          dialog-align={this.position.get()}
-          style={`max-width: ${this.maxWidth.get()}; width: ${this.width.get()}; height: ${this.height.get()}; max-height: ${this.maxHeight.get()}`}
-        >
-          {this.displayHeader.get() && (
-            <div className="header flex align-items-center justify-content-between">
-              <h2 className="my-1 w-full text-center">{this.title}</h2>
-              {this.displayCloseButton.get() && (
-                <button onClick={() => this.closeDialog()}>✕</button>
-              )}
-            </div>
-          )}
+      <>
+        {/* fromState bir hatadan dolayı fragment içinden verilmesi lazım. Bunu düzelteceğim */}
+        {fromState(this.show).renderIf(() => (
           <div
-            className={`dialog-inner flex-grow-1 overflow-auto${
-              this.padding.get() ? " px-3 pb-3" : ""
-            }`}
+            className="modal"
+            animation-state={this.animationState}
+            style={{
+              "--duration": this.durationMs,
+              "--animDelay": this.delayMs,
+            }}
+            onClick={(e: MouseEvent) => this.maskClick(e)}
           >
-            {this.content}
+            <div
+              className="dialog"
+              animation-state={this.animationState}
+              dialog-align={this.position}
+              style={{
+                maxWidth: this.maxWidth,
+                width: this.width,
+                height: this.height,
+                maxHeight: this.maxHeight,
+              }}
+            >
+              {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
+              {this.displayHeader.get() && (
+                <div className="header flex align-items-center justify-content-between">
+                  <h2 className="my-1 w-full text-center">{this.title}</h2>
+                  {fromState(this.displayCloseButton).renderIf(() => (
+                    <button onClick={() => this.closeDialog()}>✕</button>
+                  ))}
+                </div>
+              )}
+              <div
+                // daha iyi haber, class name içine obje verebiliyoruz. Normal değer olabiliyor ama eğer gelen state ise yine subscribe oluyor ve class'ı güncelliyor.
+                  // Demek isterdim ama nedense object object olarak görünüyor, bu yüzden classnames kütüphanesi gibi bir şeye ihtiyaç var gibi duruyor. Bunu da ilerleyen zamanlarda ekleyebilirim.
+                klass={
+                  {
+                    "dialog-inner": true,
+                    "flex-grow-1": true,
+                    "overflow-auto": true,
+                    "px-3": this.padding,
+                    "pb-3": this.padding,
+                  }
+                  // `dialog-inner flex-grow-1 overflow-auto${this.paddingClass.get()}`
+                }
+              >
+                {this.content}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        ))}
+      </>
     );
   }
 }
