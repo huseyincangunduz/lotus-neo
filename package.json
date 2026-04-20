@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
-    "@ubs-platform/neolit": "^1.1.0",
+    "@ubs-platform/neolit": "file:ubs-platform-neolit-1.2.0.tgz",
     "tailwindcss": "^4.2.2"
   }
 }
