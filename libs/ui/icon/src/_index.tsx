@@ -9,31 +9,26 @@ export interface IconProperties {
 }
 
 export class IconComponent extends NeolitComponent {
-    className = state<string | null | undefined>("");
-    content = state<string | null | undefined>("");
-    imgSrc = state<string | null | undefined>("");
-    iconAlt = state<string | null | undefined>("");
-    combineContentAndClass = computed([this.content, this.className], ([content, className]) => content && className);
-
-    constructor({ className: iconClass, content: iconContent, imgSrc: iconImgSource, iconAlt: iconAltText }: IconProperties) {
-        super();
-        this.className.set(iconClass);
-        this.content.set(iconContent);
-        this.imgSrc.set(iconImgSource);
-        this.iconAlt.set(iconAltText);
+    properties = {
+        className: state<string | null | undefined>(null),
+        content: state<string | null | undefined>(null),
+        imgSrc: state<string | null | undefined>(null),
+        iconAlt: state<string | null | undefined>(null),
     }
 
+    combineContentAndClass = computed([this.properties.content, this.properties.className], ([content, className]) => content && className);
 
     render() {
+        console.info(this.properties.className, this.properties.content, this.properties.imgSrc, this.properties.iconAlt);
         return (
             <>
                 {fromState(this.combineContentAndClass).renderIf(() => {
-                    return <span className={this.className}>{this.content}</span>
+                    return <span className={this.properties.className}>{this.properties.content}</span>
                 })}
 
                 {/* {fromState(this.svgSrc).renderIf(svg => <svg src={svg} alt="icon" className={this.className} />)} */}
 
-                {fromState(this.imgSrc).renderIf(img => <img src={img} alt={this.iconAlt} className={this.className} />)}
+                {fromState(this.properties.imgSrc).renderIf(img => <img src={img} alt={this.properties.iconAlt} className={this.properties.className} />)}
             </>
         );
     }

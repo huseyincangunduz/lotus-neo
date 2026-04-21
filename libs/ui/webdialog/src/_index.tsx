@@ -1,7 +1,9 @@
 import {
   NeolitComponent,
+  State,
   computed,
   getStateValue,
+  isState,
   state,
   type NeolitNode,
   type StateOrPlain,
@@ -33,120 +35,47 @@ export interface WebDialogProps {
   dismissOnClickMask?: StateOrPlain<boolean>;
   animationDuration?: StateOrPlain<number>;
   animationDelay?: StateOrPlain<number>;
-  // TODO: swipeTrigger?: StateOrPlain<"RIGHT_TO_LEFT" | "LEFT_TO_RIGHT" | "">;
-  //   Neolit'te DocumentSwipeListener / gesture servis mekanizması henüz mevcut değil.
-  // TODO: suspendSwipe?: StateOrPlain<boolean>;
-  // TODO: swipeFloor?: StateOrPlain<number>;
 }
 
-export class WebDialog extends NeolitComponent {
-  animationState = state<AnimationState>("HIDE");
-  title = state("");
-  padding = state(true);
-  paddingClass = computed([this.padding], ([padding]) =>
-    padding ? " px-3 pb-3" : "",
-  );
-  dialogContentClassName = computed(
-    [this.paddingClass],
-    ([paddingClass]) => `dialog-inner flex-grow-1 overflow-auto ${paddingClass}`,
-  );
-  position = state<DialogPosition>("center");
-  displayHeader = state(true);
-  displayCloseButton = state(true);
-  maxWidth = state("100dvw");
-  maxHeight = state("100dvh");
-  width = state("500px");
-  height = state("");
-  dismissOnClickMask = state(true);
-  animationDuration = state(125);
-  animationDelay = state(10);
+export class WebDialog extends NeolitComponent<WebDialogProps> {
+  properties: WebDialogProps = {
+    // title: state<string>(""),
+    show: state<boolean>(false),
+    padding: state<boolean>(true),
+    position: state<DialogPosition>("center"),
+    displayHeader: state<boolean>(true),
+    displayCloseButton: state<boolean>(true),
+    maxWidth: state<string>("90vw"),
+    maxHeight: state<string>("90vh"),
+    width: state<string>("fit-content"),
+    height: state<string>("fit-content"),
+    dismissOnClickMask: state<boolean>(true),
+    animationDuration: state<number>(300),
+    animationDelay: state<number>(0),
+    onClose: () => {},
+    children: <></>,
+  };
 
-  onClose?: () => void;
-  content: NeolitNode | NeolitNode[] = (<></>);
+  private renderDialog = state<boolean>(false);
+  private animationState = state<AnimationState>("HIDE");
+  private beginTimeout!: ReturnType<typeof setTimeout>;
 
-  private beginTimeout?: ReturnType<typeof setTimeout>;
-  durationMs = computed(
-    [this.animationDuration],
-    ([duration]) => duration + "ms",
-  );
-  delayMs = computed(
-    [this.animationDelay],
-    ([delay]) => delay + "ms",
-  );
-  show = state(false);
-  renderDialog = state(false);
-
-  constructor({
-    children,
-    title = "",
-    show,
-    onClose,
-    padding = true,
-    position = "center",
-    displayHeader = true,
-    displayCloseButton = true,
-    maxWidth = "100dvw",
-    maxHeight = "100dvh",
-    width = "500px",
-    height = "",
-    dismissOnClickMask = true,
-    animationDuration = 125,
-    animationDelay = 10,
-  }: WebDialogProps) {
-    super();
-    this.content = children;
-    this.onClose = onClose;
-
-    this.title.set(title, { notifyIncoming: true, subscribeIncoming: true });
-    this.padding.set(padding, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
+  onInit(): void {
+    // debugger
+    if (getStateValue(this.properties.show)) this.showDialog();
+    if (!isState(this.properties.show)) return;
+    (this.properties.show as State<boolean>).subscribe((show) => {
+      if (show) {
+        this.showDialog();
+      } else {
+        this.closeDialog(false);
+      }
     });
-    this.position.set(position, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.displayHeader.set(displayHeader, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.displayCloseButton.set(displayCloseButton, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.maxWidth.set(maxWidth, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.maxHeight.set(maxHeight, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.width.set(width, { notifyIncoming: true, subscribeIncoming: true });
-    this.height.set(height, { notifyIncoming: true, subscribeIncoming: true });
-    this.dismissOnClickMask.set(dismissOnClickMask, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.animationDuration.set(animationDuration, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.animationDelay.set(animationDelay, {
-      notifyIncoming: true,
-      subscribeIncoming: true,
-    });
-    this.show.set(show, { notifyIncoming: true, subscribeIncoming: true });
-    this.show.subscribe((newShow) => {
-      if (newShow) this.showDialog();
-      else this.closeDialog(false);
-    });
-    if (getStateValue(show)) this.showDialog();
   }
 
   private get animationAfterApply() {
-    console.info("animationDuration ", this.animationDuration.get());
-    return this.animationDuration.get() + 5;
+
+    return getStateValue(this.properties.animationDuration as State<number>) + 5;
   }
 
   showDialog() {
@@ -170,15 +99,18 @@ export class WebDialog extends NeolitComponent {
         // bir nevi memorize yaparak diyaloğu silmek yerine gizliyoruz, böylece tekrar açarken animasyonun başından başlayabiliyoruz.
         // this.renderDialog.set(false);
       }, this.animationAfterApply);
-      if (emitOnClose && this.onClose) {
-        this.onClose();
+      if (emitOnClose && this.properties.onClose) {
+        (this.properties.onClose as () => void)();
       }
     }
   }
 
   maskClick(event: MouseEvent) {
     // Burada .get() gerekiyor, eğer içi null olsa bile get kullanılmazsa true döner ve diyalog her şekilde kapanır...
-    if (this.dismissOnClickMask.get() && event.target === event.currentTarget) {
+    if (
+      (this.properties.dismissOnClickMask as State<boolean>).get() &&
+      event.target === event.currentTarget
+    ) {
       this.closeDialog();
     }
   }
@@ -196,36 +128,48 @@ export class WebDialog extends NeolitComponent {
             className={styles.modal}
             animation-state={this.animationState}
             style={{
-              "--duration": this.durationMs,
-              "--animDelay": this.delayMs,
+              "--duration": this.properties.animationDuration,
+              "--animDelay": this.properties.animationDelay,
             }}
             onClick={(e: MouseEvent) => this.maskClick(e)}
           >
             <div
               className={styles.dialog}
               animation-state={this.animationState}
-              dialog-align={this.position}
+              dialog-align={this.properties.position}
               style={{
-                maxWidth: this.maxWidth,
-                width: this.width,
-                height: this.height,
-                maxHeight: this.maxHeight,
+                maxWidth: this.properties.maxWidth,
+                width: this.properties.width,
+                height: this.properties.height,
+                maxHeight: this.properties.maxHeight,
               }}
             >
               {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
-              {this.displayHeader.get() && (
-                <div className={`${styles.header} flex items-center justify-between px-3 pt-3`}>
-                  <h2 className="h2 flex-grow-1">{this.title}</h2>
-                  {fromState(this.displayCloseButton).renderIf(() => (
+              {getStateValue(
+                this.properties.displayHeader as StateOrPlain<boolean>,
+              ) && (
+                <div
+                  className={`${styles.header} flex items-center justify-between px-3 pt-3`}
+                >
+                  <h2 className="h2 flex-grow-1">{this.properties.title}</h2>
+                  {fromState(
+                    this.properties.displayCloseButton as State<boolean>,
+                  ).renderIf(() => (
                     <button onClick={() => this.closeDialog()}>✕</button>
                   ))}
                 </div>
               )}
               <div
-
-                className={["dialog-inner", "flex-grow-1", "overflow-auto", computed([this.padding],() => (this.padding.get() ? "px-3 pb-3" : ""))]}
+                className={[
+                  "dialog-inner",
+                  "flex-grow-1",
+                  "overflow-auto",
+                  computed([this.properties.padding], ([padding]) =>
+                    padding ? "px-3 pb-3" : "",
+                  ),
+                ]}
               >
-                {this.content}
+                {this.properties.children}
               </div>
             </div>
           </div>
