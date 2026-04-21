@@ -45,16 +45,25 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     position: state<DialogPosition>("center"),
     displayHeader: state<boolean>(true),
     displayCloseButton: state<boolean>(true),
-    maxWidth: state<string>("90vw"),
-    maxHeight: state<string>("90vh"),
-    width: state<string>("fit-content"),
-    height: state<string>("fit-content"),
+    maxWidth: state<string>(""),
+    maxHeight: state<string>("100vh"),
+    width: state<string>(""),
+    height: state<string>(""),
     dismissOnClickMask: state<boolean>(true),
-    animationDuration: state<number>(300),
+    animationDuration: state<number>(150),
     animationDelay: state<number>(0),
     onClose: () => {},
     children: <></>,
   };
+
+  durationMs = computed(
+    [this.properties.animationDuration],
+    ([duration]) => duration + "ms",
+  );
+  delayMs = computed(
+    [this.properties.animationDelay],
+    ([delay]) => delay + "ms",
+  );
 
   private renderDialog = state<boolean>(false);
   private animationState = state<AnimationState>("HIDE");
@@ -73,19 +82,20 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     });
   }
 
-  private get animationAfterApply() {
-
-    return getStateValue(this.properties.animationDuration as State<number>) + 5;
-  }
-
   showDialog() {
     this.renderDialog.set(true);
     const current = this.animationState.get();
     if (current !== "BEGIN" && current !== "HOLD") {
       this.animationState.set("BEGIN");
-      this.beginTimeout = setTimeout(() => {
-        this.animationState.set("HOLD");
-      }, this.animationAfterApply);
+      const timeoutClose =
+        getStateValue(this.properties.animationDuration || 0) - 30;
+
+      this.beginTimeout = setTimeout(
+        () => {
+          this.animationState.set("HOLD");
+        },
+        timeoutClose,
+      );
     }
   }
 
@@ -94,11 +104,14 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     if (current === "BEGIN" || current === "HOLD") {
       clearTimeout(this.beginTimeout);
       this.animationState.set("OUT");
+      const timeoutClose =
+        getStateValue(this.properties.animationDuration || 0) - 30;
+
       setTimeout(() => {
         this.animationState.set("HIDE");
         // bir nevi memorize yaparak diyaloğu silmek yerine gizliyoruz, böylece tekrar açarken animasyonun başından başlayabiliyoruz.
         // this.renderDialog.set(false);
-      }, this.animationAfterApply);
+      }, timeoutClose);
       if (emitOnClose && this.properties.onClose) {
         (this.properties.onClose as () => void)();
       }
@@ -122,58 +135,55 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     // Therefore, there is no need to call get() here; simply passing the state is sufficient.
     return (
       <>
-        {/* fromState bir hatadan dolayı fragment içinden verilmesi lazım. Bunu düzelteceğim */}
-        {fromState(this.renderDialog).renderIf(() => (
+        <div
+          className={styles.modal}
+          animation-state={this.animationState}
+          style={{
+            "--duration": this.durationMs,
+            "--animDelay": this.delayMs,
+          }}
+          onClick={(e: MouseEvent) => this.maskClick(e)}
+        >
           <div
-            className={styles.modal}
+            className={styles.dialog}
             animation-state={this.animationState}
+            dialog-align={this.properties.position}
             style={{
-              "--duration": this.properties.animationDuration,
-              "--animDelay": this.properties.animationDelay,
+              maxWidth: this.properties.maxWidth,
+              width: this.properties.width,
+              height: this.properties.height,
+              maxHeight: this.properties.maxHeight,
             }}
-            onClick={(e: MouseEvent) => this.maskClick(e)}
           >
-            <div
-              className={styles.dialog}
-              animation-state={this.animationState}
-              dialog-align={this.properties.position}
-              style={{
-                maxWidth: this.properties.maxWidth,
-                width: this.properties.width,
-                height: this.properties.height,
-                maxHeight: this.properties.maxHeight,
-              }}
-            >
-              {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
-              {getStateValue(
-                this.properties.displayHeader as StateOrPlain<boolean>,
-              ) && (
-                <div
-                  className={`${styles.header} flex items-center justify-between px-3 pt-3`}
-                >
-                  <h2 className="h2 flex-grow-1">{this.properties.title}</h2>
-                  {fromState(
-                    this.properties.displayCloseButton as State<boolean>,
-                  ).renderIf(() => (
-                    <button onClick={() => this.closeDialog()}>✕</button>
-                  ))}
-                </div>
-              )}
+            {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
+            {getStateValue(
+              this.properties.displayHeader as StateOrPlain<boolean>,
+            ) && (
               <div
-                className={[
-                  "dialog-inner",
-                  "flex-grow-1",
-                  "overflow-auto",
-                  computed([this.properties.padding], ([padding]) =>
-                    padding ? "px-3 pb-3" : "",
-                  ),
-                ]}
+                className={`${styles.header} flex items-center justify-between px-3 pt-3`}
               >
-                {this.properties.children}
+                <h2 className="h2 flex-grow-1">{this.properties.title}</h2>
+                {fromState(
+                  this.properties.displayCloseButton as State<boolean>,
+                ).renderIf(() => (
+                  <button onClick={() => this.closeDialog()}>✕</button>
+                ))}
               </div>
+            )}
+            <div
+              className={[
+                "dialog-inner",
+                "flex-grow-1",
+                "overflow-auto",
+                computed([this.properties.padding], ([padding]) =>
+                  padding ? "px-3 pb-3" : "",
+                ),
+              ]}
+            >
+              {this.properties.children}
             </div>
           </div>
-        ))}
+        </div>
       </>
     );
   }
