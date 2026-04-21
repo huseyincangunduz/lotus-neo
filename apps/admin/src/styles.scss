@@ -21,17 +21,46 @@
   }
 }
 
+@mixin lighttema {
+  --color-primary: #2d3fd4;
+  --color-primary-text: #1a2a8a;
+  --color-primary-card-bg: #e8eeff;
+  --color-primary-card-bg-text: #0d1a5e;
+  --color-primary-bg-hover: #4a67f5;
+  --color-primary-fg-hover: #ffffff;
+  --color-primary-bg-active: #c5ceff;
+  --color-primary-fg-active: #0d1a5e;
+  --color-primary-hover: #d4daff;
+
+  --color-surface: #f5f5f7;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #fff0f0;
+  --color-surface-3: #eff0ff;
+  --color-border: #a0aaee;
+  --color-fg: #111111;
+}
+
 :root {
   overflow: hidden;
 
   &[theme="dark"] {
     @include darktema;
   }
+
+  &[theme="light"] {
+    @include lighttema;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([theme="light"]) {
     @include darktema;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([theme="dark"]) {
+    @include lighttema;
   }
 }
 
