@@ -29,20 +29,43 @@ export class Button extends NeolitComponent<ButtonProps> {
     [this.properties.variant, this.properties.visual],
     ([variant, visual]) => {
       const variantClass = {
-        primary:
-          "bg-(--color-primary) text-(--color-surface-1) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
-        secondary: "bg-gray-500 text-white hover:bg-gray-600",
-        tertiary:
+        "filled-primary":
+          "bg-(--color-primary) text-(--color-fg) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+        "filled-secondary": "bg-gray-500 text-white hover:bg-gray-600",
+        "filled-tertiary":
           "bg-(--color-primary-bg-hover) text-(--color-fg) hover:bg-(--color-primary-bg-hover)",
-      }[variant as "primary" | "secondary" | "tertiary"];
+        "outline-primary":
+          "border border-(--color-primary) text-(--primary-color-text) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+        "outline-secondary":
+          "border border-gray-500 text-gray-500 hover:bg-gray-600 hover:text-white",
+        "outline-tertiary":
+          "border border-(--color-primary-bg-hover) text-(--color-primary-bg-hover) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+        "ghost-primary":
+          "bg-transparent text-(--color-primary) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+        "ghost-secondary":
+          "bg-transparent text-gray-500 hover:bg-gray-600 hover:text-white",
+        "ghost-tertiary":
+          "bg-transparent text-(--color-primary-bg-hover) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+      }[
+        `${visual}-${variant}` as
+          | "filled-primary"
+          | "filled-secondary"
+          | "filled-tertiary"
+          | "outline-primary"
+          | "outline-secondary"
+          | "outline-tertiary"
+          | "ghost-primary"
+          | "ghost-secondary"
+          | "ghost-tertiary"
+      ];
 
-      const visualClass = {
-        filled: "",
-        outline: "border border-(--color-border) bg-transparent",
-        ghost: "",
-      }[visual as "filled" | "outline" | "ghost"];
+      // const visualClass = {
+      //   filled: "",
+      //   outline: "border border-(--color-border) bg-transparent",
+      //   ghost: "",
+      // }[visual as "filled" | "outline" | "ghost"];
 
-      return `px-4 py-2 rounded-sm ${variantClass} ${visualClass}`;
+      return `px-4 py-2 rounded-sm ${variantClass}`;
     },
   );
   /**

@@ -8,7 +8,9 @@ export class AppComponent extends NeolitComponent {
   showDialog = state(false);
   staticText = state("Hello, World!");
   padding = state(true);
-  position = state<"center" | "right" | "left" | "bottom-center" | "bottom">("center");
+  position = state<"center" | "right" | "left" | "bottom-center" | "bottom">(
+    "center",
+  );
 
   constructor() {
     super();
@@ -46,25 +48,25 @@ export class AppComponent extends NeolitComponent {
             ></Button>
             <Button
               label="Diyalog kapat"
-              variant="secondary"
+              variant="ghost"
               visual="outline"
               onClick={() => this.showDialog.set(false)}
             ></Button>
             <Button
               label="Padding aç/kapa"
-              variant="secondary"
+              variant="ghost"
               visual="outline"
               onClick={() => this.padding.update((v) => !v)}
             ></Button>
             <Button
               label="Merkez"
-              variant="secondary"
+              variant="ghost"
               visual="outline"
               onClick={() => this.position.set("center")}
             ></Button>
             <Button
               label="Sağa bitişik"
-              variant="secondary"
+              variant="ghost"
               visual="outline"
               onClick={() => this.position.set("right")}
             ></Button>
