@@ -30,15 +30,16 @@ export class Button extends NeolitComponent<ButtonProps> {
     ([variant, visual]) => {
       const variantClass = {
         primary:
-          "bg-(--color-primary) text-white hover:bg-(--color-primary-bg-hover)",
+          "bg-(--color-primary) text-(--color-surface-1) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
         secondary: "bg-gray-500 text-white hover:bg-gray-600",
-        tertiary: "bg-transparent text-gray-500 hover:bg-gray-100",
+        tertiary:
+          "bg-(--color-primary-bg-hover) text-(--color-fg) hover:bg-(--color-primary-bg-hover)",
       }[variant as "primary" | "secondary" | "tertiary"];
 
       const visualClass = {
         filled: "",
-        outline: "border border-current bg-transparent",
-        ghost: "bg-transparent",
+        outline: "border border-(--color-border) bg-transparent",
+        ghost: "",
       }[visual as "filled" | "outline" | "ghost"];
 
       return `px-4 py-2 rounded-sm ${variantClass} ${visualClass}`;
