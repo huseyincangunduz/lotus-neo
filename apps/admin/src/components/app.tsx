@@ -3,6 +3,7 @@ import { Button } from "@libs/ui/button";
 import { KeltosKel } from "@libs/keltos-kel";
 import "@libs/ui/webdialog";
 import { WebDialog } from "@libs/ui/webdialog";
+import { materialSymbolsOutlined } from "@libs/ui/icon";
 
 export class AppComponent extends NeolitComponent {
   showDialog = state(false);
@@ -14,7 +15,6 @@ export class AppComponent extends NeolitComponent {
 
   constructor() {
     super();
-
     // setInterval(() => {
     //   this.showDialog.set(!this.showDialog.get());
     // }, 1000);
@@ -34,12 +34,12 @@ export class AppComponent extends NeolitComponent {
             <KeltosKel />
           </div>
           {/* Monolit yazmışım :d kendim bile ismini karıştırıyorsam artık sşdlfksd */}
-          <div className="mt-2 flex flex-row gap-2 justify-center">
+          
+          <div className="mt-2 flex flex-row gap-2 justify-center flex-wrap w-100">
             <Button
-              icon={{ className: "material-symbols-outlined", content: "edit" }}
+              icon={materialSymbolsOutlined("edit")}
               label="Başlık değiştir"
-              variant="primary"
-              visual="ghost"
+              variant="filled-primary"
               onClick={() =>
                 this.staticText.set(
                   prompt("Yeni başlık:")?.trim() || "Metinsiz",
@@ -49,25 +49,21 @@ export class AppComponent extends NeolitComponent {
             <Button
               label="Diyalog kapat"
               variant="ghost"
-              visual="outline"
               onClick={() => this.showDialog.set(false)}
             ></Button>
             <Button
               label="Padding aç/kapa"
-              variant="ghost"
-              visual="outline"
+              variant="outline-primary"
               onClick={() => this.padding.update((v) => !v)}
             ></Button>
             <Button
               label="Merkez"
-              variant="ghost"
-              visual="outline"
+              variant="outline-primary"
               onClick={() => this.position.set("center")}
             ></Button>
             <Button
               label="Sağa bitişik"
-              variant="ghost"
-              visual="outline"
+              variant="outline-primary"
               onClick={() => this.position.set("right")}
             ></Button>
           </div>
@@ -76,8 +72,7 @@ export class AppComponent extends NeolitComponent {
           <h1>Admin sayfasına hoş geldiniz!</h1>
           <Button
             label="Diyalog göster"
-            variant="primary"
-            visual="filled"
+            variant="outline-primary"
             onClick={() => this.showDialog.set(true)}
           ></Button>
         </div>

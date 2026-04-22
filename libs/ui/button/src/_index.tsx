@@ -7,12 +7,18 @@ import {
   type NeolitNode,
   type StateOrPlain,
 } from "@ubs-platform/neolit/core";
+export type ButtonVariant =
+  | "filled-primary"
+  | "filled-secondary"
+  | "filled-tertiary"
+  | "outline-primary"
+  | "ghost";
+
 export interface ButtonProps {
   label: StateOrPlain<string>;
   onClick?: () => void;
   // tailwind'in varsayılan renk paletini baz alarak primary, secondary ve tertiary olmak üzere üç farklı buton varyantı tanımladım. İleride ihtiyaç duyulursa bu varyantlara yeni stiller eklenebilir veya mevcut stiller güncellenebilir.
-  variant?: StateOrPlain<"primary" | "secondary" | "tertiary">;
-  visual?: StateOrPlain<"filled" | "outline" | "ghost">;
+  variant?: StateOrPlain<ButtonVariant>;
   icon?: StateOrPlain<IconProperties | null>;
 }
 
@@ -20,14 +26,13 @@ export class Button extends NeolitComponent<ButtonProps> {
   properties = {
     label: state<string>(""),
     onClick: () => {},
-    variant: state<"primary" | "secondary" | "tertiary">("primary"),
-    visual: state<"filled" | "outline" | "ghost">("filled"),
+    variant: state<ButtonVariant>("filled-primary"),
     icon: state<IconProperties | null>(null),
   };
 
   buttonClassName = computed(
-    [this.properties.variant, this.properties.visual],
-    ([variant, visual]) => {
+    [this.properties.variant],
+    ([variant]: ButtonVariant[]) => {
       const variantClass = {
         "filled-primary":
           "bg-(--color-primary) text-(--color-fg) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
@@ -35,29 +40,11 @@ export class Button extends NeolitComponent<ButtonProps> {
         "filled-tertiary":
           "bg-(--color-primary-bg-hover) text-(--color-fg) hover:bg-(--color-primary-bg-hover)",
         "outline-primary":
-          "border border-(--color-primary) text-(--primary-color-text) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
-        "outline-secondary":
-          "border border-gray-500 text-gray-500 hover:bg-gray-600 hover:text-white",
-        "outline-tertiary":
-          "border border-(--color-primary-bg-hover) text-(--color-primary-bg-hover) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
-        "ghost-primary":
-          "bg-transparent text-(--color-primary) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
-        "ghost-secondary":
-          "bg-transparent text-gray-500 hover:bg-gray-600 hover:text-white",
-        "ghost-tertiary":
-          "bg-transparent text-(--color-primary-bg-hover) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
-      }[
-        `${visual}-${variant}` as
-          | "filled-primary"
-          | "filled-secondary"
-          | "filled-tertiary"
-          | "outline-primary"
-          | "outline-secondary"
-          | "outline-tertiary"
-          | "ghost-primary"
-          | "ghost-secondary"
-          | "ghost-tertiary"
-      ];
+          "border border-(--color-primary) text-(--color-primary-text) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+
+        ghost:
+          "bg-transparent text-(--color-primary-text) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+      }[`${variant}`];
 
       // const visualClass = {
       //   filled: "",
@@ -65,7 +52,7 @@ export class Button extends NeolitComponent<ButtonProps> {
       //   ghost: "",
       // }[visual as "filled" | "outline" | "ghost"];
 
-      return `px-4 py-2 rounded-sm ${variantClass}`;
+      return `p-2 rounded-sm ${variantClass}`;
     },
   );
   /**
@@ -88,13 +75,7 @@ export class Button extends NeolitComponent<ButtonProps> {
         <div className="flex items-center gap-2">
           {fromState(this.properties.icon).renderIf(
             (iconProps: IconProperties) => {
-              return (
-                <IconComponent
-                  className={iconProps.className}
-                  content={iconProps.content}
-                  imgSrc={iconProps.imgSrc}
-                />
-              );
+              return <IconComponent {...iconProps} />;
             },
           )}
           {this.properties.label}
