@@ -1,131 +1,25 @@
-$max-seconds: 0.15s;
-
-// the containers
 .touchHostPagination {
-    // background-color: #f8388b;
+    display: flex;
+    flex-flow: row nowrap;
     height: 100%;
-    padding: 0px;
+    width: 100%;
     position: relative;
-    border-radius: 2px;
-    overflow-x: hidden;
-}
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
 
-.group {
-    padding: 10px;
-    position: absolute;
-    top: 0px;
-    bottom: 0px;
-}
-
-// the animations
-
-@keyframes anim-send-left {
-    0% {
-        left: 0px;
-        opacity: 1;
-        right: 0px;
+    &::-webkit-scrollbar {
+        display: none;
     }
 
-    100% {
-        opacity: 0;
-        left: 100%;
-        right: -100%;
-    }
+    scrollbar-width: none;
 }
 
-@keyframes anim-send-right {
-    0% {
-        left: 0px;
-        right: 0px;
-        opacity: 1;
-    }
-
-    100% {
-        left: -100%;
-        right: 100%;
-        opacity: 0;
-        visibility: hidden;
-    }
-}
-
-@keyframes anim-bring-it-from-left {
-    0% {
-        left: -100%;
-        right: 100%;
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 1;
-        left: 0%;
-        right: 0%;
-    }
-}
-
-@keyframes anim-bring-it-from-right {
-    0% {
-        left: 100%;
-        right: -100%;
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 1;
-        left: 0%;
-        right: 0%;
-    }
-}
-
-.anim {
-    animation-duration: $max-seconds;
-    animation-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
-    animation-direction: alternate;
-    animation-fill-mode: forwards;
-}
-
-.animPause {
-    animation-play-state: paused;
-    animation-timing-function: linear;
-}
-
-.sendLeft {
-    @extend .anim;
-    animation-name: anim-send-left;
-
-    left: 0px;
-    right: 0px;
-}
-
-.sendRight {
-    @extend .anim;
-    animation-name: anim-send-right;
-    left: 0px;
-    right: 100%;
-}
-
-.bringItFromLeft {
-    @extend .anim;
-    animation-name: anim-bring-it-from-left;
-    left: 100%;
-    right: -100%;
-    opacity: 0;
-}
-
-.holdFront {
-    opacity: 1;
-    left: 0%;
-    right: 0%;
-}
-
-.bringItFromRight {
-    @extend .anim;
-    animation-name: anim-bring-it-from-right;
-
-    left: -100%;
-    right: 100%;
-    opacity: 0;
-}
-
-.hidden {
-    display: none;
+.card {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    scroll-snap-align: center;
+    overflow: auto;
 }

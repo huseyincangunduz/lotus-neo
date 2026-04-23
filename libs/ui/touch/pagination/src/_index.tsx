@@ -1,7 +1,6 @@
-import { computed, NeolitComponent, state, type StateOrPlain, type NeolitNode } from "@ubs-platform/neolit/core"
+import { NeolitComponent, state, type StateOrPlain, type NeolitNode } from "@ubs-platform/neolit/core"
 import { fromState } from "@ubs-platform/neolit/structural";
 import styles from "./touch.module.scss";
-export type Rotation = 'FORWARD' | 'BACKWARD' | 'HOLD';
 
 export interface PaginationPage {
   children: NeolitNode | (() => NeolitComponent)
@@ -12,248 +11,237 @@ export interface PaginationProperties {
   children: StateOrPlain<PaginationPage[]>
 }
 
+interface PaginationSlot {
+  id: 'prev' | 'current' | 'next'
+  page: PaginationPage | null
+}
+
 
 export class Pagination extends NeolitComponent<PaginationProperties> {
   properties = {
     children: state<PaginationPage[]>([]),
   }
 
+  private scrollHost: HTMLElement | null = null;
+  private scrollSettleTimer: number | null = null;
+  private currentIndex = 0;
+
   foreground = state('');
   previousPages = state<string[]>([]);
-  backButtonStates = state<(() => void)[]>([]);
-  sentForward = state('');
-  sentBack = state('');
-  rotation = state<Rotation>('HOLD');
-  xPercent = state(0);
-  backGesture = state(false);
-  startPos = state<{ x: number; y: number }>({ x: 0, y: 0 });
-  diff = state<{ x: number; y: number }>({ x: 0, y: 0 });
-  previousDiff = state<{ x: number; y: number }>({ x: 0, y: 0 });
-  swipeLeftPage = state('');
-  swipeRightPage = state('');
-  delaySecond = state('0s');
-  animationDurationSecond = state('0.22s');
+  slots = state<PaginationSlot[]>([]);
 
   onInit() {
-    if (!this.foreground.get()) {
-      // this.foreground.set();
-      this.selectHoldAndClear(this.properties.children.get()?.[0]?.name!);
-      setTimeout(() => {
-        this.select(this.properties.children.get()?.[2]?.name!);
-      }, 1000);
-    }
-  }
+    const pages = this.getPages();
+    if (!pages.length) return;
 
-  maxSeconds() {
-    return 0.22;
-  }
-
-  backGestureThreshold() {
-    return Math.min(Math.max(window.innerWidth * 0.22, 72), 160);
-  }
-
-  animationDurationMs() {
-    return this.maxSeconds() * 1000;
-  }
-
-  cancelAnimationSeconds() {
-    return 0.14;
-  }
-
-  gestureStartEdgeThreshold() {
-    return 32;
-  }
-
-  setAnimationDuration(seconds: number) {
-    this.animationDurationSecond.set(`${seconds}s`);
+    const currentName = this.foreground.get();
+    const foundIndex = currentName ? pages.findIndex((a) => a.name === currentName) : -1;
+    this.currentIndex = foundIndex > -1 ? foundIndex : 0;
+    this.foreground.set(pages[this.currentIndex].name);
+    this.slots.set(this.createSlots(this.currentIndex));
   }
 
   selectHoldAndClear(t: string) {
-    // this.backButtonStates.get().forEach((a) => a.closeManually());
+    const pages = this.getPages();
+    const selectedIndex = pages.findIndex((a) => a.name === t);
+    if (selectedIndex < 0) return;
 
     this.foreground.set(t);
     this.previousPages.set([]);
-    this.backButtonStates.set([]);
+    this.currentIndex = selectedIndex;
+    this.slots.set(this.createSlots(selectedIndex));
+    window.setTimeout(() => this.resetToCenter(), 0);
   }
 
-  select(t: string, sendTo: Rotation = 'FORWARD') {
-    this.xPercent.set(0);
-    this.setAnimationDuration(this.maxSeconds());
-    const oldForeground = this.foreground.get();
-    this.foreground.set(t);
-    this.rotation.set(sendTo);
-    if (sendTo == 'FORWARD') {
-      this.sentForward.set(oldForeground);
-      this.sentBack.set('');
-      this.backButtonStates.update((a) => [
-        ...a,
-        // this.secondaryOverlay.insertBackButtonFlag(() => {
-        //   this.backRaw();
-        // }),
-      ]);
+  select(t: string) {
+    const pages = this.getPages();
+    const targetIndex = pages.findIndex((a) => a.name === t);
+    if (targetIndex < 0) {
+      return;
+    }
+
+    if (targetIndex === this.currentIndex) {
+      return;
+    }
+
+    if (!this.scrollHost || Math.abs(targetIndex - this.currentIndex) > 1) {
+      this.applyDirectSelection(targetIndex);
+      return;
+    }
+
+    const width = this.scrollHost.clientWidth || 1;
+    this.scrollHost.scrollTo({
+      left: targetIndex > this.currentIndex ? width * 2 : 0,
+      behavior: 'smooth',
+    });
+  }
+
+  private getPages() {
+    return this.properties.children.get() || [];
+  }
+
+  private createSlots(index: number): PaginationSlot[] {
+    const pages = this.getPages();
+    return [
+      { id: 'prev', page: pages[index - 1] ?? null },
+      { id: 'current', page: pages[index] ?? null },
+      { id: 'next', page: pages[index + 1] ?? null },
+    ];
+  }
+
+  private resetToCenter() {
+    if (!this.scrollHost) return;
+    const width = this.scrollHost.clientWidth || 1;
+    this.scrollHost.scrollTo({ left: width, behavior: 'auto' });
+  }
+
+  private applyDirectSelection(targetIndex: number) {
+    const pages = this.getPages();
+    const oldIndex = this.currentIndex;
+    const oldName = pages[oldIndex]?.name;
+    const targetName = pages[targetIndex]?.name;
+    if (!targetName) return;
+
+    if (targetIndex > oldIndex) {
+      if (oldName) {
+        this.previousPages.update((a) => [...a, oldName]);
+      }
     } else {
-      this.sentBack.set(oldForeground);
-      this.sentForward.set('');
+      this.previousPages.update((a) => {
+        if (a[a.length - 1] === targetName) {
+          return a.slice(0, -1);
+        }
+        return a;
+      });
     }
 
-    if (!this.backGesture.get()) {
-      setTimeout(() => {
-        this.holdAndExitAnimationMode();
-      }, this.animationDurationMs());
-    }
+    this.currentIndex = targetIndex;
+    this.foreground.set(targetName);
+    this.slots.set(this.createSlots(targetIndex));
+    window.setTimeout(() => this.resetToCenter(), 0);
   }
 
-  private holdAndExitAnimationMode(shouldStoreForwardPage = true) {
-    if (shouldStoreForwardPage && this.sentForward.get()) {
-      this.previousPages.update((a) => [...a, this.sentForward.get()]);
-    }
-    this.sentForward.set('');
-    this.sentBack.set('');
-    this.rotation.set('HOLD');
-    this.setDelay(0);
-    // TODO: Callback when animation is done
-    // this.pageChange.emit(this.foreground.get());
-  }
-
-  // gesture
-
-  mouseDownGroup(e: TouchEvent) {
+  private bindScrollHost(e: Event) {
     const currentTarget = e.currentTarget as HTMLElement | null;
+    if (!currentTarget) {
+      return;
+    }
 
-    if (this.previousPages.get().length && currentTarget) {
-      console.debug('back gesture start');
-      const previousPages = this.previousPages.get();
-      const swipeLeftPage = previousPages[previousPages.length - 1];
-      if (!swipeLeftPage) {
-        return;
-      }
-      this.backGesture.set(true);
-      this.setAnimationDuration(this.maxSeconds());
-      this.startPos.set({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-      this.diff.set({ x: 0, y: 0 });
-      this.previousDiff.set({ x: 0, y: 0 });
-      this.swipeLeftPage.set(swipeLeftPage);
-      this.swipeRightPage.set(this.foreground.get()!);
-      this.xPercent.set(this.maxSeconds());
-      this.setDelay(this.maxSeconds());
-      // this.setSwipeRotation(false);
+    if (this.scrollHost !== currentTarget) {
+      this.scrollHost = currentTarget;
+      this.resetToCenter();
     }
   }
 
-  private setSwipeRotation(showCurrentPage: boolean) {
-    if (showCurrentPage) {
-      this.rotation.set('FORWARD');
-      this.sentForward.set(this.swipeLeftPage.get());
-      this.sentBack.set('');
-      this.foreground.set(this.swipeRightPage.get());
+  onTouchStartHost(e: TouchEvent) {
+    this.bindScrollHost(e);
+  }
+
+  onMouseDownHost(e: MouseEvent) {
+    this.bindScrollHost(e);
+  }
+
+  onScrollHost(e: Event) {
+    this.bindScrollHost(e);
+
+    if (!this.scrollHost) return;
+    if (this.scrollSettleTimer !== null) {
+      window.clearTimeout(this.scrollSettleTimer);
+    }
+
+    this.scrollSettleTimer = window.setTimeout(() => {
+      this.commitByScrollPosition();
+      this.scrollSettleTimer = null;
+    }, 90);
+  }
+
+  private commitByScrollPosition() {
+    if (!this.scrollHost) return;
+
+    const width = this.scrollHost.clientWidth || 1;
+    const slotIndex = Math.round(this.scrollHost.scrollLeft / width);
+
+    if (slotIndex === 2) {
+      this.commitDirection('forward');
+    } else if (slotIndex === 0) {
+      this.commitDirection('backward');
+    }
+  }
+
+  private commitDirection(direction: 'forward' | 'backward') {
+    const pages = this.getPages();
+    if (!pages.length) return;
+
+    const targetIndex = direction === 'forward' ? this.currentIndex + 1 : this.currentIndex - 1;
+    if (targetIndex < 0 || targetIndex >= pages.length) {
+      this.resetToCenter();
+      return;
+    }
+
+    const oldName = pages[this.currentIndex]?.name;
+    const targetName = pages[targetIndex]?.name;
+    if (!targetName) {
+      this.resetToCenter();
+      return;
+    }
+
+    if (direction === 'forward') {
+      if (oldName) {
+        this.previousPages.update((a) => [...a, oldName]);
+      }
     } else {
-      this.rotation.set('BACKWARD');
-      this.sentBack.set(this.swipeRightPage.get());
-      this.sentForward.set('');
-      this.foreground.set(this.swipeLeftPage.get());
+      this.previousPages.update((a) => {
+        if (a[a.length - 1] === targetName) {
+          return a.slice(0, -1);
+        }
+        return a;
+      });
     }
+
+    this.currentIndex = targetIndex;
+    this.foreground.set(targetName);
+    this.slots.set(this.createSlots(targetIndex));
+    window.setTimeout(() => this.resetToCenter(), 0);
   }
 
+  onWheelHost(e: WheelEvent) {
+    this.bindScrollHost(e);
 
-  mouseUpGroup() {
-    if (this.backGesture.get()) {
-      const shouldCompleteBack = this.diff.get().x > this.backGestureThreshold();
-      const animationSeconds = shouldCompleteBack ? this.maxSeconds() : this.cancelAnimationSeconds();
-      this.backGesture.set(false);
-      this.diff.set({ x: 0, y: 0 });
-      this.previousDiff.set({ x: 0, y: 0 });
-      this.startPos.set({ x: 0, y: 0 });
-      this.setAnimationDuration(animationSeconds);
-
-      if (shouldCompleteBack) {
-        this.previousPages.update((pages) => pages.slice(0, -1));
-        this.setSwipeRotation(false);
-      } else {
-        this.setSwipeRotation(true);
-      }
-
-      setTimeout(() => {
-        this.holdAndExitAnimationMode(!shouldCompleteBack);
-        this.setAnimationDuration(this.maxSeconds());
-      }, animationSeconds * 1000);
+    if (!this.scrollHost) {
+      return;
+    }
+    const threshold = 10;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && Math.abs(e.deltaY) > threshold) {
+      this.scrollHost.scrollBy({ left: e.deltaY, behavior: 'smooth' });
+      e.preventDefault();
     }
   }
 
   back() {
-    let bbs = this.backButtonStates.get();
-    const newI = bbs.length - 1;
-    this.backButtonStates.get();
-    this.backButtonStates.update((a) => a.slice(0, newI));
-    // backTo?.closeMainAction();
-  }
-
-  mouseMoveGroup(e: TouchEvent) {
-    if (!this.startPos.get() || (this.startPos.get().x == 0 && this.startPos.get().y == 0) || !this.backGesture.get()) {
+    const previous = this.previousPages.get();
+    const previousPageName = previous[previous.length - 1];
+    if (!previousPageName) {
       return;
     }
-    const nextDiff = {
-      x: e.touches[0].clientX - this.startPos.get().x,
-      y: e.touches[0].clientY - this.startPos.get().y,
-    };
-    this.diff.set(nextDiff);
-
-    const positiveDiffX = Math.max(nextDiff.x, 0);
-    const maxDistance = Math.max(window.innerWidth - this.startPos.get().x, 1);
-    const progress = Math.min(positiveDiffX / maxDistance, 1);
-    const showCurrentPage = nextDiff.x <= 0;
-    let now = progress * this.maxSeconds();
-    if (showCurrentPage) {
-      now = this.maxSeconds() - now;
-    }
-    this.setDelay(now);
-
-    this.setSwipeRotation(showCurrentPage);
-    console.debug(this.rotation);
-
-    this.previousDiff.set(nextDiff);
-    // if (this.previousDiff.get().x != this.diff.get().x) 
-    e.preventDefault();
+    this.select(previousPageName);
   }
-
-  setDelay(d: number) {
-    if (!this.backGesture.get()) d = 0;
-    this.xPercent.set(-d);
-    this.delaySecond.set(-d + 's');
-  }
-
-
 
   render() {
     return (
-      <div class={styles.touchHostPagination} style={{ 'height': '400px', 'width': '400px' }}>
-        {fromState(this.properties.children).keyFn(a => a.name).renderFor(blockPage => {
-          return <div
-
-            onTouchStart={(e: TouchEvent) => this.mouseDownGroup(e)}
-            onTouchEnd={() => this.mouseUpGroup()}
-            onTouchMove={(e: TouchEvent) => this.mouseMoveGroup(e)}
-            style={{ animationDelay: this.delaySecond, animationDuration: this.animationDurationSecond }}
-            className={{
-              [`${styles.group}`]: true,
-              [`${styles.animPause}`]: this.backGesture,
-              [`${styles.sendLeft}`]: computed([this.sentBack], ([sentBack]) => sentBack == blockPage.name),
-              [`${styles.sendRight}`]: computed([this.sentForward, this.rotation], ([sentForward, rotation]) => sentForward == blockPage.name && rotation == 'FORWARD'),
-              [`${styles.bringItFromLeft}`]:
-                computed([this.foreground, this.rotation], ([foreground, rotation]) => foreground == blockPage.name && rotation == 'BACKWARD'),
-              [`${styles.holdFront}`]: computed([this.foreground, this.rotation], ([foreground, rotation]) => foreground == blockPage.name && rotation == 'HOLD'),
-              [`${styles.bringItFromRight}`]:
-                computed([this.foreground, this.rotation], ([foreground, rotation]) => foreground == blockPage.name && rotation == 'FORWARD'),
-              [`${styles.hidden}`]: computed([this.sentBack, this.sentForward, this.foreground], ([sentBack, sentForward, foreground]) => !(
-                blockPage.name == sentBack ||
-                blockPage.name == sentForward ||
-                blockPage.name == foreground))
-            }}
-          >
-            {typeof blockPage.children == 'function' ? blockPage.children() : blockPage.children}
+      <div
+        class={styles.touchHostPagination}
+        style={{ 'height': '400px', 'width': '400px' }}
+        onTouchStart={(e: TouchEvent) => this.onTouchStartHost(e)}
+        onMouseDown={(e: MouseEvent) => this.onMouseDownHost(e)}
+        onScroll={(e: Event) => this.onScrollHost(e)}
+        onWheel={(e: WheelEvent) => this.onWheelHost(e)}
+      >
+        {fromState(this.slots).keyFn(a => a.id).renderFor(slot => {
+          return <div class={styles.card}>
+            {slot.page ? (typeof slot.page.children == 'function' ? slot.page.children() : slot.page.children) : null}
           </div>
-        })
-        }
-      </div >
+        })}
+      </div>
     )
   }
 }
