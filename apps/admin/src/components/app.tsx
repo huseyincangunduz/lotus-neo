@@ -4,7 +4,7 @@ import { KeltosKel } from "@libs/keltos-kel";
 import "@libs/ui/webdialog";
 import { WebDialog } from "@libs/ui/webdialog";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
-
+import { Pagination } from "@libs/ui/touch/pagination";
 export class AppComponent extends NeolitComponent {
   showDialog = state(false);
   staticText = state("Hello, World!");
@@ -33,8 +33,6 @@ export class AppComponent extends NeolitComponent {
           <div style={{ width: "300px" }}>
             <KeltosKel />
           </div>
-          {/* Monolit yazmışım :d kendim bile ismini karıştırıyorsam artık sşdlfksd */}
-          
           <div className="mt-2 flex flex-row gap-2 justify-center flex-wrap w-100">
             <Button
               icon={materialSymbolsOutlined("edit")}
@@ -75,6 +73,18 @@ export class AppComponent extends NeolitComponent {
             variant="outline-primary"
             onClick={() => this.showDialog.set(true)}
           ></Button>
+
+          <h1>Sayfalama: </h1>
+          <Pagination>
+            {[1, 2, 3, 4, 5].map((page) => {
+              return {
+                name: `Sayfa ${page}`,
+                children: <>
+                  {`Bu sayfa ${page}.`}
+                </>,
+              }
+            })}
+          </Pagination>
         </div>
       </>
     );
