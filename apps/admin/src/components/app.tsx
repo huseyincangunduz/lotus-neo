@@ -19,19 +19,13 @@ export class AppComponent extends NeolitComponent {
   selectedPage = state<string>("1");
   toastService = toastService;
 
-  onInit(): void {
-    setTimeout(() => {
-      this.toastService.info("Hoş Geldiniz!");
-    }, 500);
-    setTimeout(() => {
-      this.toastService.error("Bir hata oluştu.");
-    }, 1000);
-    setTimeout(() => {
-      this.toastService.success("İşlem başarıyla tamamlandı.");
-    }, 2000);
-    setTimeout(() => {
-      this.toastService.warning("Dikkatli olun!");
-    }, 3000);
+  onInit(): void {}
+
+  showToasts(): void {
+    this.toastService.info("Hoş Geldiniz!");
+    this.toastService.error("Bir hata oluştu.");
+    this.toastService.success("İşlem başarıyla tamamlandı.");
+    this.toastService.warning("Dikkatli olun!");
   }
 
   render() {
@@ -102,6 +96,11 @@ export class AppComponent extends NeolitComponent {
             label="Diyalog göster"
             variant="outline-primary"
             onClick={() => this.showDialog.set(true)}
+          ></Button>
+          <Button
+            label="Toast göster"
+            variant="outline-primary"
+            onClick={() => this.showToasts()}
           ></Button>
 
           <Checkbox label="Şartları kabul ediyorum" checked={state(false)} />

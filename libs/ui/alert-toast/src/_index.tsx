@@ -196,7 +196,7 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
  */
 export class AlertToastContainer extends NeolitComponent {
   onInit(): void {
-    this.watchToRerender(toastService.toasts);
+    // this.watchToRerender(toastService.toasts);
   }
 
   render(): NeolitNode | NeolitNode[] {
