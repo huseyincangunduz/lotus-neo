@@ -253,11 +253,6 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
         class={styles.touchHostPagination}
         style={{ height: "400px", width: "400px" }}
       >
-        <div>
-          {computed([this.previousPages], ([previousPages]: string[][]) =>
-            previousPages.join(", "),
-          )}
-        </div>
         {fromState(this.properties.children)
           .keyFn((a) => a.name)
           .renderFor((blockPage) => {

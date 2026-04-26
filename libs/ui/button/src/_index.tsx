@@ -15,11 +15,12 @@ export type ButtonVariant =
   | "ghost";
 
 export interface ButtonProps {
-  label: StateOrPlain<string>;
+  label?: StateOrPlain<string>;
   onClick?: () => void;
   // tailwind'in varsayılan renk paletini baz alarak primary, secondary ve tertiary olmak üzere üç farklı buton varyantı tanımladım. İleride ihtiyaç duyulursa bu varyantlara yeni stiller eklenebilir veya mevcut stiller güncellenebilir.
   variant?: StateOrPlain<ButtonVariant>;
   icon?: StateOrPlain<IconProperties | null>;
+  style?: Record<string, StateOrPlain<string>> | undefined;
 }
 
 export class Button extends NeolitComponent<ButtonProps> {
@@ -28,6 +29,7 @@ export class Button extends NeolitComponent<ButtonProps> {
     onClick: () => {},
     variant: state<ButtonVariant>("filled-primary"),
     icon: state<IconProperties | null>(null),
+    style: {},
   };
 
   buttonClassName = computed(
@@ -71,8 +73,9 @@ export class Button extends NeolitComponent<ButtonProps> {
       <button
         className={this.buttonClassName}
         onClick={this.properties.onClick}
+        style={this.properties.style}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-h-[1.5em]">
           {fromState(this.properties.icon).renderIf(
             (iconProps: IconProperties) => {
               return <IconComponent {...iconProps} />;

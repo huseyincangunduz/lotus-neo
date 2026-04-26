@@ -10,6 +10,8 @@ import {
 } from "@ubs-platform/neolit/core";
 import styles from "./webdialog.module.scss";
 import { fromState } from "@ubs-platform/neolit/structural";
+import { Button } from "@libs/ui/button";
+import { materialSymbolsOutlined } from "@libs/ui/icon";
 
 export type DialogPosition =
   | "center"
@@ -90,12 +92,9 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
       const timeoutClose =
         getStateValue(this.properties.animationDuration || 0) - 30;
 
-      this.beginTimeout = setTimeout(
-        () => {
-          this.animationState.set("HOLD");
-        },
-        timeoutClose,
-      );
+      this.beginTimeout = setTimeout(() => {
+        this.animationState.set("HOLD");
+      }, timeoutClose);
     }
   }
 
@@ -166,7 +165,12 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
                 {fromState(
                   this.properties.displayCloseButton as State<boolean>,
                 ).renderIf(() => (
-                  <button onClick={() => this.closeDialog()}>✕</button>
+                  <Button
+                    icon={materialSymbolsOutlined("close","0", "1.5em")}
+                    variant="ghost"
+                    onClick={() => this.closeDialog()}
+                    style={{ padding: "0.25em" }}
+                  ></Button>
                 ))}
               </div>
             )}
