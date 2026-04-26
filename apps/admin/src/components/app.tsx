@@ -5,6 +5,10 @@ import "@libs/ui/webdialog";
 import { WebDialog } from "@libs/ui/webdialog";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
 import { Pagination } from "@libs/ui/touch/pagination";
+import { Checkbox } from "@libs/ui/checkbox";
+import { ToggleSwitch } from "@libs/ui/toggle-switch";
+import { AlertToastContainer, toastService } from "@libs/ui/alert-toast";
+
 export class AppComponent extends NeolitComponent {
   showDialog = state(false);
   staticText = state("Hello, World!");
@@ -12,18 +16,28 @@ export class AppComponent extends NeolitComponent {
   position = state<"center" | "right" | "left" | "bottom-center" | "bottom">(
     "center",
   );
-  selectedPage = state<string>('1');
+  selectedPage = state<string>("1");
+  toastService = toastService;
 
-  constructor() {
-    super();
-    // setInterval(() => {
-    //   this.showDialog.set(!this.showDialog.get());
-    // }, 1000);
+  onInit(): void {
+    setTimeout(() => {
+      this.toastService.info("Hoş Geldiniz!");
+    }, 500);
+    setTimeout(() => {
+      this.toastService.error("Bir hata oluştu.");
+    }, 1000);
+    setTimeout(() => {
+      this.toastService.success("İşlem başarıyla tamamlandı.");
+    }, 2000);
+    setTimeout(() => {
+      this.toastService.warning("Dikkatli olun!");
+    }, 3000);
   }
 
   render() {
     return (
       <>
+        <AlertToastContainer messageTimeout={5000}></AlertToastContainer>
         <WebDialog
           padding={this.padding}
           position={this.position}
@@ -36,11 +50,16 @@ export class AppComponent extends NeolitComponent {
               {[1, 2, 3, 4, 5].map((page) => {
                 return {
                   name: `${page}`,
-                  children: <>
-                    {`Bu sayfa ${page}.`}
-                    <Button label="Sonraki" onClick={() => this.selectedPage.set(`${page + 1}`)}></Button>
-                  </>,
-                }
+                  children: (
+                    <>
+                      {`Bu sayfa ${page}.`}
+                      <Button
+                        label="Sonraki"
+                        onClick={() => this.selectedPage.set(`${page + 1}`)}
+                      ></Button>
+                    </>
+                  ),
+                };
               })}
             </Pagination>
           </div>
@@ -85,8 +104,12 @@ export class AppComponent extends NeolitComponent {
             onClick={() => this.showDialog.set(true)}
           ></Button>
 
-          <h1>Sayfalama: </h1>
-
+          <Checkbox label="Şartları kabul ediyorum" checked={state(false)} />
+          <ToggleSwitch
+            label="Bildirimleri aç"
+            checked={state(false)}
+            onChange={(v: boolean) => console.log(v)}
+          />
         </div>
       </>
     );
