@@ -1,47 +1,60 @@
-import { computed, NeolitComponent, state, type StateOrPlain, type NeolitNode } from "@ubs-platform/neolit/core"
+import {
+  computed,
+  NeolitComponent,
+  state,
+  type StateOrPlain,
+  type NeolitNode,
+} from "@ubs-platform/neolit/core";
 import { fromState } from "@ubs-platform/neolit/structural";
 import styles from "./touch.module.scss";
-export type Rotation = 'FORWARD' | 'BACKWARD' | 'HOLD';
+export type Rotation = "FORWARD" | "BACKWARD" | "HOLD";
 
 export interface PaginationPage {
-  children: NeolitNode | (() => NeolitComponent)
-  name: string
+  children: NeolitNode | (() => NeolitComponent);
+  name: string;
 }
 
 export interface PaginationProperties {
-  children: StateOrPlain<PaginationPage[]>
+  children: StateOrPlain<PaginationPage[]>;
+  selectedPage: StateOrPlain<string>;
 }
-
 
 export class Pagination extends NeolitComponent<PaginationProperties> {
   properties = {
     children: state<PaginationPage[]>([]),
-  }
+    selectedPage: state(""),
+  };
 
-  foreground = state('');
+  foreground = state("");
   previousPages = state<string[]>([]);
   backButtonStates = state<(() => void)[]>([]);
-  sentForward = state('');
-  sentBack = state('');
-  rotation = state<Rotation>('HOLD');
+  sentForward = state("");
+  sentBack = state("");
+  rotation = state<Rotation>("HOLD");
   xPercent = state(0);
   backGesture = state(false);
   startPos = state<{ x: number; y: number }>({ x: 0, y: 0 });
   diff = state<{ x: number; y: number }>({ x: 0, y: 0 });
   previousDiff = state<{ x: number; y: number }>({ x: 0, y: 0 });
-  swipeLeftPage = state('');
-  swipeRightPage = state('');
-  delaySecond = state('0s');
-  animationDurationSecond = state('0.22s');
+  swipeLeftPage = state("");
+  swipeRightPage = state("");
+  delaySecond = state("0s");
+  animationDurationSecond = state("0.22s");
 
   onInit() {
-    if (!this.foreground.get()) {
-      // this.foreground.set();
-      this.selectHoldAndClear(this.properties.children.get()?.[0]?.name!);
-      setTimeout(() => {
-        this.select(this.properties.children.get()?.[2]?.name!);
-      }, 1000);
+    if (this.properties.selectedPage.get()) {
+      this.foreground.set(this.properties.selectedPage.get());
     }
+    this.properties.selectedPage.subscribe((selectedPage) => {
+      if (
+        this.rotation.get() === "HOLD" &&
+        selectedPage &&
+        selectedPage != this.foreground.get() &&
+        this.properties.children.get().find((c) => c.name == selectedPage)
+      ) {
+        this.selectInternal(selectedPage);
+      }
+    });
   }
 
   maxSeconds() {
@@ -76,26 +89,23 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
     this.backButtonStates.set([]);
   }
 
-  select(t: string, sendTo: Rotation = 'FORWARD') {
+  selectInternal(t: string, sendTo: Rotation = "FORWARD") {
     this.xPercent.set(0);
     this.setAnimationDuration(this.maxSeconds());
     const oldForeground = this.foreground.get();
-    this.foreground.set(t);
-    this.rotation.set(sendTo);
-    if (sendTo == 'FORWARD') {
+
+    if (sendTo == "FORWARD") {
       this.sentForward.set(oldForeground);
-      this.sentBack.set('');
+      this.sentBack.set("");
       this.backButtonStates.update((a) => [
         ...a,
-        // this.secondaryOverlay.insertBackButtonFlag(() => {
-        //   this.backRaw();
-        // }),
       ]);
     } else {
       this.sentBack.set(oldForeground);
-      this.sentForward.set('');
+      this.sentForward.set("");
     }
-
+    this.foreground.set(t);
+    this.rotation.set(sendTo);
     if (!this.backGesture.get()) {
       setTimeout(() => {
         this.holdAndExitAnimationMode();
@@ -104,12 +114,12 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
   }
 
   private holdAndExitAnimationMode(shouldStoreForwardPage = true) {
-    if (shouldStoreForwardPage && this.sentForward.get()) {
+    if (shouldStoreForwardPage && this.sentForward.get() && !this.previousPages.get().includes(this.sentForward.get())) {
       this.previousPages.update((a) => [...a, this.sentForward.get()]);
     }
-    this.sentForward.set('');
-    this.sentBack.set('');
-    this.rotation.set('HOLD');
+    this.sentForward.set("");
+    this.sentBack.set("");
+    this.rotation.set("HOLD");
     this.setDelay(0);
     // TODO: Callback when animation is done
     // this.pageChange.emit(this.foreground.get());
@@ -120,8 +130,8 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
   mouseDownGroup(e: TouchEvent) {
     const currentTarget = e.currentTarget as HTMLElement | null;
 
-    if (this.previousPages.get().length && currentTarget) {
-      console.debug('back gesture start');
+    if (this.previousPages.get().length && currentTarget === e.target) {
+      console.debug("back gesture start");
       const previousPages = this.previousPages.get();
       const swipeLeftPage = previousPages[previousPages.length - 1];
       if (!swipeLeftPage) {
@@ -141,24 +151,31 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
   }
 
   private setSwipeRotation(showCurrentPage: boolean) {
+    const rightPage = this.swipeRightPage.get();
+    const leftPage = this.swipeLeftPage.get();
+    if (!rightPage || !leftPage) {
+      return;
+    }
     if (showCurrentPage) {
-      this.rotation.set('FORWARD');
-      this.sentForward.set(this.swipeLeftPage.get());
-      this.sentBack.set('');
-      this.foreground.set(this.swipeRightPage.get());
+      this.rotation.set("FORWARD");
+      this.sentForward.set(leftPage);
+      this.sentBack.set("");
+      this.foreground.set(rightPage);
     } else {
-      this.rotation.set('BACKWARD');
-      this.sentBack.set(this.swipeRightPage.get());
-      this.sentForward.set('');
-      this.foreground.set(this.swipeLeftPage.get());
+      this.rotation.set("BACKWARD");
+      this.sentBack.set(rightPage);
+      this.sentForward.set("");
+      this.foreground.set(leftPage);
     }
   }
 
-
   mouseUpGroup() {
     if (this.backGesture.get()) {
-      const shouldCompleteBack = this.diff.get().x > this.backGestureThreshold();
-      const animationSeconds = shouldCompleteBack ? this.maxSeconds() : this.cancelAnimationSeconds();
+      const shouldCompleteBack =
+        this.diff.get().x > this.backGestureThreshold();
+      const animationSeconds = shouldCompleteBack
+        ? this.maxSeconds()
+        : this.cancelAnimationSeconds();
       this.backGesture.set(false);
       this.diff.set({ x: 0, y: 0 });
       this.previousDiff.set({ x: 0, y: 0 });
@@ -171,7 +188,12 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
       } else {
         this.setSwipeRotation(true);
       }
-
+      const selectedPage = shouldCompleteBack
+        ? this.swipeLeftPage.get()
+        : this.swipeRightPage.get();
+      if (selectedPage) {
+        this.properties.selectedPage.set(selectedPage);
+      }
       setTimeout(() => {
         this.holdAndExitAnimationMode(!shouldCompleteBack);
         this.setAnimationDuration(this.maxSeconds());
@@ -188,7 +210,11 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
   }
 
   mouseMoveGroup(e: TouchEvent) {
-    if (!this.startPos.get() || (this.startPos.get().x == 0 && this.startPos.get().y == 0) || !this.backGesture.get()) {
+    if (
+      !this.startPos.get() ||
+      (this.startPos.get().x == 0 && this.startPos.get().y == 0) ||
+      !this.backGesture.get()
+    ) {
       return;
     }
     const nextDiff = {
@@ -211,49 +237,84 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
     console.debug(this.rotation);
 
     this.previousDiff.set(nextDiff);
-    // if (this.previousDiff.get().x != this.diff.get().x) 
+    // if (this.previousDiff.get().x != this.diff.get().x)
     e.preventDefault();
   }
 
   setDelay(d: number) {
     if (!this.backGesture.get()) d = 0;
     this.xPercent.set(-d);
-    this.delaySecond.set(-d + 's');
+    this.delaySecond.set(-d + "s");
   }
-
-
 
   render() {
     return (
-      <div class={styles.touchHostPagination} style={{ 'height': '400px', 'width': '400px' }}>
-        {fromState(this.properties.children).keyFn(a => a.name).renderFor(blockPage => {
-          return <div
-
-            onTouchStart={(e: TouchEvent) => this.mouseDownGroup(e)}
-            onTouchEnd={() => this.mouseUpGroup()}
-            onTouchMove={(e: TouchEvent) => this.mouseMoveGroup(e)}
-            style={{ animationDelay: this.delaySecond, animationDuration: this.animationDurationSecond }}
-            className={{
-              [`${styles.group}`]: true,
-              [`${styles.animPause}`]: this.backGesture,
-              [`${styles.sendLeft}`]: computed([this.sentBack], ([sentBack]) => sentBack == blockPage.name),
-              [`${styles.sendRight}`]: computed([this.sentForward, this.rotation], ([sentForward, rotation]) => sentForward == blockPage.name && rotation == 'FORWARD'),
-              [`${styles.bringItFromLeft}`]:
-                computed([this.foreground, this.rotation], ([foreground, rotation]) => foreground == blockPage.name && rotation == 'BACKWARD'),
-              [`${styles.holdFront}`]: computed([this.foreground, this.rotation], ([foreground, rotation]) => foreground == blockPage.name && rotation == 'HOLD'),
-              [`${styles.bringItFromRight}`]:
-                computed([this.foreground, this.rotation], ([foreground, rotation]) => foreground == blockPage.name && rotation == 'FORWARD'),
-              [`${styles.hidden}`]: computed([this.sentBack, this.sentForward, this.foreground], ([sentBack, sentForward, foreground]) => !(
-                blockPage.name == sentBack ||
-                blockPage.name == sentForward ||
-                blockPage.name == foreground))
-            }}
-          >
-            {typeof blockPage.children == 'function' ? blockPage.children() : blockPage.children}
-          </div>
-        })
-        }
-      </div >
-    )
+      <div
+        class={styles.touchHostPagination}
+        style={{ height: "400px", width: "400px" }}
+      >
+        <div>
+          {computed([this.previousPages], ([previousPages]: string[][]) =>
+            previousPages.join(", "),
+          )}
+        </div>
+        {fromState(this.properties.children)
+          .keyFn((a) => a.name)
+          .renderFor((blockPage) => {
+            return (
+              <div
+                onTouchStart={(e: TouchEvent) => this.mouseDownGroup(e)}
+                onTouchEnd={() => this.mouseUpGroup()}
+                onTouchMove={(e: TouchEvent) => this.mouseMoveGroup(e)}
+                style={{
+                  animationDelay: this.delaySecond,
+                  animationDuration: this.animationDurationSecond,
+                }}
+                className={{
+                  [`${styles.group}`]: true,
+                  [`${styles.animPause}`]: this.backGesture,
+                  [`${styles.sendLeft}`]: computed(
+                    [this.sentBack],
+                    ([sentBack]) => sentBack == blockPage.name,
+                  ),
+                  [`${styles.sendRight}`]: computed(
+                    [this.sentForward, this.rotation],
+                    ([sentForward, rotation]) =>
+                      sentForward == blockPage.name && rotation == "FORWARD",
+                  ),
+                  [`${styles.bringItFromLeft}`]: computed(
+                    [this.foreground, this.rotation],
+                    ([foreground, rotation]) =>
+                      foreground == blockPage.name && rotation == "BACKWARD",
+                  ),
+                  [`${styles.holdFront}`]: computed(
+                    [this.foreground, this.rotation],
+                    ([foreground, rotation]) =>
+                      foreground == blockPage.name && rotation == "HOLD",
+                  ),
+                  [`${styles.bringItFromRight}`]: computed(
+                    [this.foreground, this.rotation],
+                    ([foreground, rotation]) =>
+                      foreground == blockPage.name && rotation == "FORWARD",
+                  ),
+                  [`${styles.hidden}`]: computed(
+                    [this.sentBack, this.sentForward, this.foreground],
+                    ([sentBack, sentForward, foreground]) =>
+                      !(
+                        blockPage.name == sentBack ||
+                        blockPage.name == sentForward ||
+                        blockPage.name == foreground
+                      ),
+                  ),
+                }}
+              >
+                {typeof blockPage.children == "function"
+                  ? blockPage.children()
+                  : blockPage.children}
+              </div>
+            );
+          })}
+      </div>
+    );
   }
 }

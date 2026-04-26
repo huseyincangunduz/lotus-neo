@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "cd apps/$1 && vite",
-    "build": "cd apps/$1 && vite build",
-    "preview": "cd apps/$1 && vite preview",
+    "dev": "cd apps/$1 && vite ${@:2}",
+    "build": "cd apps/$1 && vite build ${@:2}",
+    "preview": "cd apps/$1 && vite preview ${@:2}",
     "clear-cache": "rm -rf node_modules/.vite"
   },
   "devDependencies": {

@@ -12,6 +12,7 @@ export class AppComponent extends NeolitComponent {
   position = state<"center" | "right" | "left" | "bottom-center" | "bottom">(
     "center",
   );
+  selectedPage = state<string>('1');
 
   constructor() {
     super();
@@ -31,7 +32,17 @@ export class AppComponent extends NeolitComponent {
           onClose={() => this.showDialog.set(false)}
         >
           <div style={{ width: "300px" }}>
-            <KeltosKel />
+            <Pagination selectedPage={this.selectedPage}>
+              {[1, 2, 3, 4, 5].map((page) => {
+                return {
+                  name: `${page}`,
+                  children: <>
+                    {`Bu sayfa ${page}.`}
+                    <Button label="Sonraki" onClick={() => this.selectedPage.set(`${page + 1}`)}></Button>
+                  </>,
+                }
+              })}
+            </Pagination>
           </div>
           <div className="mt-2 flex flex-row gap-2 justify-center flex-wrap w-100">
             <Button
@@ -75,16 +86,7 @@ export class AppComponent extends NeolitComponent {
           ></Button>
 
           <h1>Sayfalama: </h1>
-          <Pagination>
-            {[1, 2, 3, 4, 5].map((page) => {
-              return {
-                name: `Sayfa ${page}`,
-                children: <>
-                  {`Bu sayfa ${page}.`}
-                </>,
-              }
-            })}
-          </Pagination>
+
         </div>
       </>
     );
