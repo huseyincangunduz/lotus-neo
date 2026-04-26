@@ -12,7 +12,8 @@ export type ButtonVariant =
   | "filled-secondary"
   | "filled-tertiary"
   | "outline-primary"
-  | "ghost";
+  | "ghost"
+  | "ghost-no-hover";
 
 export interface ButtonProps {
   label?: StateOrPlain<string>;
@@ -26,7 +27,7 @@ export interface ButtonProps {
 export class Button extends NeolitComponent<ButtonProps> {
   properties = {
     label: state<string>(""),
-    onClick: () => {},
+    onClick: () => { },
     variant: state<ButtonVariant>("filled-primary"),
     icon: state<IconProperties | null>(null),
     style: {},
@@ -46,6 +47,7 @@ export class Button extends NeolitComponent<ButtonProps> {
 
         ghost:
           "bg-transparent text-(--color-primary-text) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
+        "ghost-no-hover": "bg-transparent text-(--color-primary-text)",
       }[`${variant}`];
 
       // const visualClass = {

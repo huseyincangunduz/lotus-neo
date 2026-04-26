@@ -121,7 +121,7 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
       <div
         className={
           `neolit-toast flex items-start gap-3 px-4 py-3 rounded-sm shadow-lg` +
-          `backdrop-blur-sm text-sm font-medium leading-snug max-w-sm w-min-300px ${resolvedToastIconStyles.containerClass}`
+          ` backdrop-blur-sm text-sm font-medium leading-snug max-w-sm w-min-300px ${resolvedToastIconStyles.containerClass}`
         }
         role="alert"
       >
@@ -131,7 +131,7 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
 
         {/* Manuel kapat */}
         <Button
-          variant="ghost"
+          variant="ghost-no-hover"
           icon={materialSymbolsOutlined("close")}
           onClick={() => toastService.dismiss(toast.id)}
           aria-label="Kapat"

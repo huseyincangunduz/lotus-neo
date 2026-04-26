@@ -26,8 +26,8 @@ export const materialSymbolsOutlined = (
   return {
     className: "material-symbols-outlined",
     content,
-    lineHeight: lineHeight || "0px",
-    fontSize: fontSize || "1em",
+    lineHeight: lineHeight || "1.25rem",
+    fontSize: fontSize || "1.25rem",
   } as IconProperties;
 };
 

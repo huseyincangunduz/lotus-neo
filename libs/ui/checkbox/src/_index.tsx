@@ -25,14 +25,14 @@ export class Checkbox extends NeolitComponent<CheckboxProps> {
     checked: state<boolean>(false),
     label: state<string>(""),
     disabled: state<boolean>(false),
-    onChange: (_v: boolean) => {},
+    onChange: (_v: boolean) => { },
   };
 
   boxClass = computed(
     [this.properties.checked, this.properties.disabled],
     ([checked, disabled]: [boolean, boolean]) => {
       const base =
-        "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 " +
+        "w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 " +
         "transition-colors duration-150 ";
       if (disabled) {
         return (
@@ -72,7 +72,7 @@ export class Checkbox extends NeolitComponent<CheckboxProps> {
     return (
       <label
         className="inline-flex items-center gap-2.5 select-none"
-        style={{ cursor: getStateValue(this.properties.disabled) ? "not-allowed" : "pointer" }}
+        style={{ cursor: this.properties.disabled.get() ? "not-allowed" : "pointer" }}
         onClick={() => this._toggle()}
       >
         {/* Custom checkbox kutusu */}
@@ -88,14 +88,15 @@ export class Checkbox extends NeolitComponent<CheckboxProps> {
           }}
         >
           {/* Checkmark – material-symbols */}
-          <IconComponent
-            {...materialSymbolsOutlined("check", "1", "0.85rem")}
-            style={{
-              opacity: this.checkmarkOpacity,
-              transition: "opacity 150ms",
-              color: "white",
-            }}
-          />
+          <div style={{
+            opacity: this.checkmarkOpacity,
+          }}>
+            <IconComponent
+              {...materialSymbolsOutlined("check", "2rem", "1.25rem")}
+            />
+
+          </div>
+
         </span>
         <span className="text-sm font-medium text-(--color-fg)">
           {this.properties.label}
