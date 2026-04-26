@@ -4,6 +4,8 @@ import {
   type NeolitNode,
 } from "@ubs-platform/neolit/core";
 import { fromState } from "@ubs-platform/neolit/structural";
+import { Button } from "@libs/ui/button";
+import { materialSymbolsOutlined, type IconProperties, IconComponent, Icon } from "@libs/ui/icon";
 
 // ─── Tipler ──────────────────────────────────────────────────────────────────
 
@@ -17,7 +19,7 @@ export interface ToastItem {
    * Otomatik kapanma süresi (ms). 0 verilirse el ile kapatılana kadar açık kalır.
    * Varsayılan: 3500
    */
-  duration?: number;
+  duration?: number | null;
 }
 
 // ─── Toast Servisi (singleton) ────────────────────────────────────────────────
@@ -28,9 +30,11 @@ class ToastService {
   /** Toast ekler, id döner */
   show(item: Omit<ToastItem, "id">): string {
     const id = crypto.randomUUID();
-    const toast: ToastItem = { duration: 3500, ...item, id };
+    const toast: ToastItem = { ...item, id };
+    // if (toast.duration === undefined) {
+    //   toast.duration = 3500;
+    // }
     this.toasts.update((prev) => [...prev, toast]);
-
     if (toast.duration && toast.duration > 0) {
       setTimeout(() => this.dismiss(id), toast.duration);
     }
@@ -75,33 +79,30 @@ export const toastService = new ToastService();
 
 function resolveToastStyle(type: AlertToastType): {
   containerClass: string;
-  iconPath: string;
+  iconProperties: IconProperties;
 } {
   switch (type) {
     case "success":
       return {
-        containerClass:
-          "bg-emerald-500/90 text-white border border-emerald-400/40",
-        iconPath: "M5 13l4 4L19 7",
-      };
+        iconProperties: materialSymbolsOutlined("check_circle"),
+        containerClass: "border-green-500 bg-green-100 text-green-800",
+      }
     case "error":
       return {
-        containerClass: "bg-red-500/90 text-white border border-red-400/40",
-        iconPath: "M6 18L18 6M6 6l12 12",
-      };
+        iconProperties: materialSymbolsOutlined("error"),
+        containerClass: "border-red-500 bg-red-100 text-red-800",
+      }
     case "warning":
       return {
-        containerClass:
-          "bg-amber-400/90 text-gray-900 border border-amber-300/40",
-        iconPath:
-          "M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z",
-      };
+        iconProperties: materialSymbolsOutlined("warning"),
+        containerClass: "border-yellow-500 bg-yellow-100 text-yellow-800",
+      }
     case "info":
     default:
       return {
-        containerClass: "bg-sky-500/90 text-white border border-sky-400/40",
-        iconPath: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-      };
+        iconProperties: materialSymbolsOutlined("info"),
+        containerClass: "border-blue-500 bg-blue-100 text-blue-800",
+      }
   }
 }
 
@@ -114,66 +115,29 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
 
   render(): NeolitNode | NeolitNode[] {
     const { toast } = this.properties;
-    const { containerClass, iconPath } = resolveToastStyle(toast.type);
+    const resolvedToastIconStyles = resolveToastStyle(toast.type);
 
     return (
       <div
         className={
-          `neolit-toast flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg ` +
-          `backdrop-blur-sm text-sm font-medium leading-snug max-w-sm w-full ${containerClass}`
+          `neolit-toast flex items-start gap-3 px-4 py-3 rounded-sm shadow-lg` +
+          `backdrop-blur-sm text-sm font-medium leading-snug max-w-sm w-min-300px ${resolvedToastIconStyles.containerClass}`
         }
         role="alert"
       >
-        {/* Tip ikonu */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-          style={{
-            width: "20px",
-            height: "20px",
-            flexShrink: "0",
-            marginTop: "1px",
-          }}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d={iconPath} />
-        </svg>
+        <Icon {...resolvedToastIconStyles.iconProperties} />
 
-        {/* Mesaj */}
         <span style={{ flex: "1" }}>{toast.message}</span>
 
         {/* Manuel kapat */}
-        <button
-          style={{
-            lineHeight: "1",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "inherit",
-            padding: "0",
-            opacity: "0.75",
-          }}
-          className="hover:opacity-100 transition-opacity focus:outline-none ml-1"
+        <Button
+          variant="ghost"
+          icon={materialSymbolsOutlined("close")}
           onClick={() => toastService.dismiss(toast.id)}
           aria-label="Kapat"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.5}
-            stroke="currentColor"
-            style={{ width: "16px", height: "16px" }}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+          
+        </Button>
       </div>
     );
   }
@@ -202,20 +166,13 @@ export class AlertToastContainer extends NeolitComponent {
   render(): NeolitNode | NeolitNode[] {
     return (
       <div
-        className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"
+        className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2"
         aria-live="polite"
         aria-atomic="false"
       >
         {fromState(toastService.toasts)
           .keyFn((a) => a.id)
           .renderFor((toast) => {
-            // const wrapper = document.createElement("div");
-            // wrapper.style.pointerEvents = "auto";
-            // const single = new SingleToast({ toast });
-            // single.assignProperties();
-            // single.onInit?.();
-            // single.mount(wrapper);
-            // return wrapper;
             return (
               <>
                 <SingleToast toast={toast} />

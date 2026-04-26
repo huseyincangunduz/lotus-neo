@@ -5,7 +5,7 @@ import {
   computed,
   getStateValue,
 } from "@ubs-platform/neolit/core";
-import { fromState } from "@ubs-platform/neolit/structural";
+import "material-symbols";
 
 export interface IconProperties {
   className?: StateOrPlain<string | null | undefined>;
@@ -31,7 +31,7 @@ export const materialSymbolsOutlined = (
   } as IconProperties;
 };
 
-export class IconComponent extends NeolitComponent {
+export class Icon extends NeolitComponent {
   properties = {
     className: state<string | null | undefined>(null),
     content: state<string | null | undefined>(null),
@@ -78,3 +78,6 @@ export class IconComponent extends NeolitComponent {
     ) : null;
   }
 }
+
+// Alias for simpler imports
+export const IconComponent = Icon;
