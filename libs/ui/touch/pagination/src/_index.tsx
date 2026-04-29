@@ -97,9 +97,7 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
     if (sendTo == "FORWARD") {
       this.sentForward.set(oldForeground);
       this.sentBack.set("");
-      this.backButtonStates.update((a) => [
-        ...a,
-      ]);
+      this.backButtonStates.update((a) => [...a]);
     } else {
       this.sentBack.set(oldForeground);
       this.sentForward.set("");
@@ -114,7 +112,11 @@ export class Pagination extends NeolitComponent<PaginationProperties> {
   }
 
   private holdAndExitAnimationMode(shouldStoreForwardPage = true) {
-    if (shouldStoreForwardPage && this.sentForward.get() && !this.previousPages.get().includes(this.sentForward.get())) {
+    if (
+      shouldStoreForwardPage &&
+      this.sentForward.get() &&
+      !this.previousPages.get().includes(this.sentForward.get())
+    ) {
       this.previousPages.update((a) => [...a, this.sentForward.get()]);
     }
     this.sentForward.set("");
