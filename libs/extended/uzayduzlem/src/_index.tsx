@@ -1,4 +1,9 @@
-import { computed, NeolitComponent, state, type NeolitNode } from "@ubs-platform/neolit/core";
+import {
+  computed,
+  NeolitComponent,
+  state,
+  type NeolitNode,
+} from "@ubs-platform/neolit/core";
 import { TextInput } from "@libs/ui/text-input";
 
 export class Uzayduzlem extends NeolitComponent {
@@ -96,8 +101,12 @@ export class Uzayduzlem extends NeolitComponent {
       const pcY = vbY + ((e.clientY - rect.top) / rect.height) * vbH;
       const newW = vbW * scale;
       const newH = vbH * scale;
-      this.viewBoxX.set(String(pcX - ((e.clientX - rect.left) / rect.width) * newW));
-      this.viewBoxY.set(String(pcY - ((e.clientY - rect.top) / rect.height) * newH));
+      this.viewBoxX.set(
+        String(pcX - ((e.clientX - rect.left) / rect.width) * newW),
+      );
+      this.viewBoxY.set(
+        String(pcY - ((e.clientY - rect.top) / rect.height) * newH),
+      );
       this.viewBoxWidth.set(String(newW));
       this.viewBoxHeight.set(String(newH));
     } else {
@@ -135,43 +144,45 @@ export class Uzayduzlem extends NeolitComponent {
           ></TextInput>
         </div>
         <div
-            className="flex-grow overflow-hidden touch-none"
-            onTouchstart={this._onTouchStart}
-            onTouchmove={this._onTouchMove}
-            onTouchend={this._onTouchEnd}
-            onTouchcancel={this._onTouchEnd}
-            onWheel={this._onWheel}
-          >
+          className="flex-grow overflow-hidden touch-none"
+          onTouchstart={this._onTouchStart}
+          onTouchmove={this._onTouchMove}
+          onTouchend={this._onTouchEnd}
+          onTouchcancel={this._onTouchEnd}
+          onWheel={this._onWheel}
+        >
           <svg
             height="100%"
             width="100%"
             viewBox={this.viewBox}
             xmlns="http://www.w3.org/2000/svg"
           >
-            <circle
-              cx="100"
-              cy="100"
-              r="80"
-              fill="lightblue"
-              stroke="blue"
-              stroke-width="4"
-            />
-            <line
-              x1="100"
-              y1="100"
-              x2="150"
-              y2="50"
-              stroke="red"
-              stroke-width="4"
-            />
-            <line
-              x1="100"
-              y1="100"
-              x2="50"
-              y2="50"
-              stroke="green"
-              stroke-width="4"
-            />
+            <g id="ana-grup">
+              <circle
+                cx="100"
+                cy="100"
+                r="80"
+                fill="lightblue"
+                stroke="blue"
+                stroke-width="4"
+              />
+              <line
+                x1="100"
+                y1="100"
+                x2="150"
+                y2="50"
+                stroke="red"
+                stroke-width="4"
+              />
+              <line
+                x1="100"
+                y1="100"
+                x2="50"
+                y2="50"
+                stroke="green"
+                stroke-width="4"
+              />
+            </g>
           </svg>
         </div>
         {/* Canvas bileşeni burada kullanılabilir */}
