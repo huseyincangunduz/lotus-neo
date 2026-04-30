@@ -19,10 +19,33 @@ export class Uzayduzlem extends NeolitComponent {
   private _lastTouchX = 0;
   private _lastTouchY = 0;
   private _lastPinchDist = 0;
+  private _lastAngle = 0;
   private _isPinching = false;
+  private _matrix = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+  mainGroupTransform = state("matrix(1,0,0,1,0,0)");
 
   private _dist(t1: Touch, t2: Touch): number {
     return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+  }
+
+  private _applyRotation(svgCx: number, svgCy: number, angleDeg: number) {
+    const theta = angleDeg * (Math.PI / 180);
+    const cos = Math.cos(theta);
+    const sin = Math.sin(theta);
+    const { a, b, c, d, e, f } = this._matrix;
+    const re = svgCx * (1 - cos) + svgCy * sin;
+    const rf = -svgCx * sin + svgCy * (1 - cos);
+    this._matrix = {
+      a: cos * a - sin * b,
+      b: sin * a + cos * b,
+      c: cos * c - sin * d,
+      d: sin * c + cos * d,
+      e: cos * e - sin * f + re,
+      f: sin * e + cos * f + rf,
+    };
+    this.mainGroupTransform.set(
+      `matrix(${this._matrix.a},${this._matrix.b},${this._matrix.c},${this._matrix.d},${this._matrix.e},${this._matrix.f})`,
+    );
   }
 
   private _onTouchStart = (e: TouchEvent) => {
@@ -32,6 +55,10 @@ export class Uzayduzlem extends NeolitComponent {
       this._isPinching = false;
     } else if (e.touches.length === 2) {
       this._lastPinchDist = this._dist(e.touches[0], e.touches[1]);
+      this._lastAngle = Math.atan2(
+        e.touches[1].clientY - e.touches[0].clientY,
+        e.touches[1].clientX - e.touches[0].clientX,
+      );
       this._isPinching = true;
     }
   };
@@ -74,6 +101,17 @@ export class Uzayduzlem extends NeolitComponent {
       this.viewBoxY.set(String(pcY - ((cy - rect.top) / rect.height) * newH));
       this.viewBoxWidth.set(String(newW));
       this.viewBoxHeight.set(String(newH));
+
+      // Döndürme
+      const newAngle = Math.atan2(
+        e.touches[1].clientY - e.touches[0].clientY,
+        e.touches[1].clientX - e.touches[0].clientX,
+      );
+      const deltaAngle = (newAngle - this._lastAngle) * (180 / Math.PI);
+      this._lastAngle = newAngle;
+      if (Math.abs(deltaAngle) > 0.01) {
+        this._applyRotation(pcX, pcY, deltaAngle);
+      }
     }
   };
 
@@ -157,31 +195,34 @@ export class Uzayduzlem extends NeolitComponent {
             viewBox={this.viewBox}
             xmlns="http://www.w3.org/2000/svg"
           >
-            <g id="ana-grup">
-              <circle
-                cx="100"
-                cy="100"
-                r="80"
-                fill="lightblue"
-                stroke="blue"
-                stroke-width="4"
-              />
-              <line
-                x1="100"
-                y1="100"
-                x2="150"
-                y2="50"
-                stroke="red"
-                stroke-width="4"
-              />
-              <line
-                x1="100"
-                y1="100"
-                x2="50"
-                y2="50"
-                stroke="green"
-                stroke-width="4"
-              />
+            <g id="main-group" transform={this.mainGroupTransform}>
+              <g id="editable-group">
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="80"
+                  fill="lightblue"
+                  stroke="blue"
+                  stroke-width="4"
+                />
+                <line
+                  x1="100"
+                  y1="100"
+                  x2="150"
+                  y2="50"
+                  stroke="red"
+                  stroke-width="4"
+                />
+                <line
+                  x1="100"
+                  y1="100"
+                  x2="50"
+                  y2="50"
+                  stroke="green"
+                  stroke-width="4"
+                />
+              </g>
+              <g id="fixed-group"></g>
             </g>
           </svg>
         </div>
