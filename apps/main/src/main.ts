@@ -1,4 +1,5 @@
-// import "./style.css";
+import "./tailwind.css";
+import "material-symbols";
 import { AppComponent } from "./components/app";
 
 const app = new AppComponent();
