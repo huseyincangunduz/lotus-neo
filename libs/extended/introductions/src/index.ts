@@ -4,3 +4,4 @@ export * from './_hero-feature';
 export * from './_features-grid';
 export * from './_pricing';
 export * from './_footer';
+export * from "./_hero_depressed";

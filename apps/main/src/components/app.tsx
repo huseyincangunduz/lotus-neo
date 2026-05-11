@@ -7,6 +7,7 @@ import {
   IntroFeaturesGrid,
   IntroPricing,
   IntroFooter,
+  // HeroDepressed,
 } from "@libs/extended/introductions";
 
 const GITHUB_URL = 'https://github.com/huseyincangunduz/sacma-sapan-ui-frameworku';
@@ -33,6 +34,7 @@ export class AppComponent extends NeolitComponent {
           ]}
         />
 
+
         <IntroHeroLarge
           header="Modern, Yalın ve Hızlı UI Geliştirme"
           text="Neolit ile reaktif state yönetimi, esnek bileşen mimarisi ve sezgisel JSX desteğiyle modern web uygulamaları geliştirin. Virtual DOM yok, gereksiz yeniden render yok."
@@ -40,6 +42,7 @@ export class AppComponent extends NeolitComponent {
           secondaryAction={{ label: 'Özellikleri Keşfet', href: '#features' }}
           gradient="from-cyan-50 via-white to-orange-50"
         />
+        {/* <HeroDepressed /> */}
 
         <IntroHeroFeature
           header="Sadece ihtiyacın kadar framework"

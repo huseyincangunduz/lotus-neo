@@ -1,0 +1,10 @@
+import { NeolitComponent } from "@ubs-platform/neolit/core";
+
+export class HeroDepressed extends NeolitComponent {
+    render() {
+        return <div>
+            <h2>Honorable mention: </h2>
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQmCVdEUPb-MaaKrh_CBnnjyXEfwgZBsr7R8w&s"></img>
+        </div>
+    }
+}
