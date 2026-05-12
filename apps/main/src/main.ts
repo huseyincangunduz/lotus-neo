@@ -1,6 +1,6 @@
 import "./tailwind.css";
 import "material-symbols";
-import { AppComponent } from "./components/app";
+import { Application } from "./components/app-context";
 
-const app = new AppComponent();
+const app = new Application();
 app.mount(document.getElementById("app")!);

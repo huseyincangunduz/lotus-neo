@@ -12,7 +12,7 @@ import {
 
 const GITHUB_URL = 'https://github.com/huseyincangunduz/sacma-sapan-ui-frameworku';
 
-export class AppComponent extends NeolitComponent {
+export class MainComponent extends NeolitComponent {
   render(): NeolitNode | NeolitNode[] {
     return (
       <>
