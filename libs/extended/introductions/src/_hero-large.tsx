@@ -31,7 +31,7 @@ export class IntroHeroLarge extends NeolitComponent<HeroLargeProperties> {
     return (
       <section
         id={id}
-        className={`relative w-full py-28 px-6 ${gradient ? `bg-gradient-to-br ${gradient}` : "bg-(--color-surface)"}`}
+        className={`relative w-full py-28 px-6 overflow-x-hidden${gradient ? `bg-gradient-to-br ${gradient}` : "bg-(--color-surface)"}`}
         styles={this.properties.backgroundStyles}
         
       >

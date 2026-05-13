@@ -44,7 +44,6 @@ export class PostralMainPage extends NeolitComponent {
           secondaryAction={{ label: "Özellikleri Keşfet", href: "#features" }}
           backgroundNode={<HeroDepressed></HeroDepressed>}
         />
-        {/* <HeroDepressed /> */}
 
         <IntroHeroFeature
           header="İhtiyacınıza göre özelleştirilebilir, güvenilir ve ölçeklenebilir bir çözüm"
@@ -142,7 +141,7 @@ export class PostralMainPage extends NeolitComponent {
         <IntroFooter
           appCompanyLogo={
             <Icon
-              imgSrc="/public/postral-with-tetakent-logo.svg"
+              imgSrc="/public/postral-with-tetakent-logo-colored.svg"
               imageHeight="40px"
             />
           }

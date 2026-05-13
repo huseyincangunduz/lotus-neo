@@ -23,7 +23,7 @@ export class IntroFeaturesGrid extends NeolitComponent<FeaturesGridProperties> {
     const { id, heading, items } = this.properties;
 
     return (
-      <section id={id} className="w-full py-20 px-6 bg-(--color-surface)">
+      <section id={id} className="w-full py-20 px-6 overflow-x-clip bg-(--color-surface)">
         <div className="mx-auto max-w-7xl flex flex-col gap-12">
 
           {heading ? (

@@ -29,7 +29,7 @@ export class IntroHeroFeature extends NeolitComponent<HeroFeatureProperties> {
     const actionsList = actions ?? [];
 
     return (
-      <section id={id} className="w-full py-20 px-6 bg-(--color-surface)">
+      <section id={id} className="relative w-full py-20 px-6 bg-(--color-surface)">
         <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
           {/* Text column */}
