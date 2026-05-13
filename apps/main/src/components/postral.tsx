@@ -73,9 +73,22 @@ export class PostralMainPage extends NeolitComponent {
                 "Postral sisteminin REST ve Engine5 APIlerinin desteği ile kolay entegrasyon sağlar.",
             },
             {
-              icon: materialSymbolsOutlined("safe", "1.5rem", "1.5rem"),
+              icon: materialSymbolsOutlined(
+                "encrypted_add",
+                "1.5rem",
+                "1.5rem",
+              ),
               itemHead: "Güvenilir",
               itemDesc: "Postral, güvenilir bir ödeme yönetim sistemi sunar.",
+            },
+            {
+              icon: materialSymbolsOutlined(
+                "heart_plus",
+                "1.5rem",
+                "1.5rem",
+              ),
+              itemHead: "Açık kaynak",
+              itemDesc: "Postral Core, MIT Lisansı ile açık kaynak olarak sunulur. Kendi ihtiyacınıza göre özelleştirebilir ve dağıtabilirsiniz. Ayrıca sizin katkılarınızı da bekliyoruz :)",
             },
             // { icon: materialSymbolsOutlined('bolt', '1.5rem', '1.5rem'), itemHead: 'State', itemDesc: 'Reaktif veriyi tutar, set/update ile anlık güncellenir.' },
             // { icon: materialSymbolsOutlined('layers', '1.5rem', '1.5rem'), itemHead: 'Stateful', itemDesc: 'Yalnızca ilgili alt bloğu yeniden çizer, verimli günceller.' },
