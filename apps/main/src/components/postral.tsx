@@ -1,5 +1,5 @@
 import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
-import { materialSymbolsOutlined } from "@libs/ui/icon";
+import { Icon, materialSymbolsOutlined } from "@libs/ui/icon";
 import {
   IntroNavbar,
   IntroHeroLarge,
@@ -7,19 +7,19 @@ import {
   IntroFeaturesGrid,
   IntroPricing,
   IntroFooter,
+  HeroDepressed,
   // HeroDepressed,
 } from "@libs/extended/introductions";
 
-const GITHUB_URL =
-  "https://github.com/huseyincangunduz/sacma-sapan-ui-frameworku";
+const GITHUB_URL = "https://github.com/ubs-platform/postral-core";
 
 export class PostralMainPage extends NeolitComponent {
   render(): NeolitNode | NeolitNode[] {
     return (
       <>
         <IntroNavbar
-          logo="Postral"
           logoHref="#"
+          logo={<Icon imgSrc="/public/postral-logo.svg" imageHeight="40px" />}
           links={[
             { label: "Özellikler", href: "#features" },
             {
@@ -33,6 +33,7 @@ export class PostralMainPage extends NeolitComponent {
               ],
             },
             { label: "Fiyatlandırma", href: "#pricing" },
+            { label: "Dokümantasyon", href: "#documentation" },
           ]}
         />
 
@@ -41,7 +42,7 @@ export class PostralMainPage extends NeolitComponent {
           text="Postral, Lotus'un açık kaynaklı altyapısı UBS Mona üzerine geliştirilen bir ödeme yönetim sistemidir. Her ihtiyacınıza göre özelleştirilebilir, güvenilir ve ölçeklenebilir bir çözüm sunar. Postral ile ödeme süreçlerinizi kolayca yönetin, müşteri deneyimini artırın ve işinizi büyütün."
           primaryAction={{ label: "GitHub'da İncele", href: GITHUB_URL }}
           secondaryAction={{ label: "Özellikleri Keşfet", href: "#features" }}
-          gradient="from-cyan-50 via-white to-orange-50"
+          backgroundNode={<HeroDepressed></HeroDepressed>}
         />
         {/* <HeroDepressed /> */}
 
@@ -51,6 +52,14 @@ export class PostralMainPage extends NeolitComponent {
           image="/assets/neolit-full.png"
           imageAlt="Neolit Logo"
           imagePosition="right"
+        />
+
+        <IntroHeroFeature
+          header="Core ile kendi uygulamanızı canlandırın"
+          text="Postral Core, ödeme yönetimi için temel özellikler sunar. Kendi uygulamanızı geliştirmek veya mevcut sisteminize entegre etmek için esnek bir temel sağlar."
+          image="/assets/neolit-full.png"
+          imageAlt="Neolit Logo"
+          imagePosition="left"
         />
 
         <IntroFeaturesGrid
@@ -81,33 +90,18 @@ export class PostralMainPage extends NeolitComponent {
             // },
           ]}
         />
+        <IntroHeroFeature
+          header="Yerel işletmeniz için mükemmel çözüm"
+          text="Postral Aspava ürünleri, yerel işletmelerin ihtiyaçlarına uygun, esnek ve güvenilir bir ödeme yönetim sistemi sunar."
+          image="/assets/neolit-full.png"
+          imageAlt="Neolit Logo"
+          imagePosition="right"
+        />
 
         <IntroPricing
           id="pricing"
-          heading="Fiyatlandırma"
+          heading="Restaurant ve esnaf işletmeleri için"
           plans={[
-            {
-              name: "Core",
-              price: "Ücretsiz",
-              features: [
-                "Core API ile ödeme yönetimininizi kolaylaştırın",
-                "MIT Lisansı ile kendi ihtiyacınıza göre özelleştirin",
-              ],
-              buttonLabel: "Hemen Başla",
-              onAction: () => window.open(GITHUB_URL, "_blank"),
-            },
-            {
-              name: "E-Commerce",
-              price: "200₺/ay",
-              features: [
-                "Core özellikleri",
-                "Gelişmiş ürün filtreleme",
-                "Stok yönetimi",
-                "Kargo yönetimi",
-                "Müşteri segmentasyonu",
-              ],
-              buttonLabel: "İletişime geç",
-            },
             {
               name: "Aspava Lite",
               price: "Ücretsiz",
@@ -117,24 +111,29 @@ export class PostralMainPage extends NeolitComponent {
                 "Barkod okuyucu entegrasyonu",
                 "Stok yönetimi",
               ],
-              buttonLabel: "İndir",
+              buttonLabel: "Daha fazla bilgi",
             },
             {
               name: "Aspava",
               price: "Ücretsiz",
               features: [
-                "Core özellikleri",
-                "Gelişmiş ürün filtreleme",
-                "Barkod okuyucu entegrasyonu",
-                "Stok yönetimi",
+                "Aspava Lite özellikleri",
+                "Yerleşik Yemeksepeti, Getir, Uber eats (Trendyol) ve Migros Yemek entegrasyonları",
+                "Gelişmiş müşteri segmentasyonu",
               ],
-              buttonLabel: "İndir",
+              buttonLabel: "Daha fazla bilgi",
             },
           ]}
         />
 
         <IntroFooter
-          copyright="© 2026 Tetakent (Hüseyin Can Gündüz). MIT Lisansı ile dağıtılmaktadır."
+          appCompanyLogo={
+            <Icon
+              imgSrc="/public/postral-with-tetakent-logo.svg"
+              imageHeight="40px"
+            />
+          }
+          copyright="© 2026 Tetakent (Hüseyin Can Gündüz). Tüm hakları saklıdır. Postral Core ürününün kaynak kodları MIT Lisansı ile dağıtılmaktadır."
           linkGroups={[
             {
               title: "Kaynaklar",

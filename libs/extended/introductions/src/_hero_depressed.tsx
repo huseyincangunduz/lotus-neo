@@ -44,9 +44,8 @@ export class HeroDepressed extends NeolitComponent {
 ⢸⣿⣝⣢⣘⣤⣩⣜⣢⣧⣱⣌⣧⣸⣑⣮⣱⣭⣿⣷⣾⣿⣷⣾⣷⣿⣾⣿⣿⣅⣴⣋⣿⣇⣰⣛⣁⣀⣰⣾⣋⣴⣟⣏⣠⣾⣃⣀⣀⣀⣲⣛⣋⣀⣁⣀⣀⣈⣛⣔⣠⣌⣄⣺⣿
          * 
          */
-        return <div>
-            <h2>Honorable mention: </h2>
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQmCVdEUPb-MaaKrh_CBnnjyXEfwgZBsr7R8w&s"></img>
+        return <div className="h-full w-full">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQmCVdEUPb-MaaKrh_CBnnjyXEfwgZBsr7R8w&s" className="h-full w-full object-cover"></img>
         </div>
     }
 }

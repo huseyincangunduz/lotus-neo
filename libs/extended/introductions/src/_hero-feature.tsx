@@ -29,15 +29,15 @@ export class IntroHeroFeature extends NeolitComponent<HeroFeatureProperties> {
     const actionsList = actions ?? [];
 
     return (
-      <section id={id} className="w-full py-20 px-6 bg-white">
+      <section id={id} className="w-full py-20 px-6 bg-(--color-surface)">
         <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
           {/* Text column */}
           <div className={`flex flex-col gap-6 ${imageRight ? 'lg:order-1' : 'lg:order-2'}`}>
-            <h2 className="text-4xl font-black tracking-tight text-slate-900 leading-tight">
+            <h2 className="text-4xl font-black tracking-tight text-(--color-fg) leading-tight">
               {header}
             </h2>
-            <p className="text-lg text-slate-600 leading-relaxed">
+            <p className="text-lg text-(--color-fg)/70 leading-relaxed">
               {text}
             </p>
             {actionsList.length > 0 ? (
@@ -48,8 +48,8 @@ export class IntroHeroFeature extends NeolitComponent<HeroFeatureProperties> {
                     onclick={() => action.onClick?.()}
                     className={
                       i === 0
-                        ? 'inline-block rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-slate-700 transition-colors'
-                        : 'inline-block rounded-xl border-2 border-slate-300 px-6 py-3 text-sm font-bold text-slate-700 hover:border-slate-500 hover:bg-slate-50 transition-colors'
+                        ? 'inline-block rounded-(--radius-md) bg-(--color-primary) px-6 py-3 text-sm font-bold text-(--color-primary-text-on-bg) shadow-md hover:bg-(--color-primary-hover) transition-colors'
+                        : 'inline-block rounded-(--radius-md) border-2 border-(--color-border) px-6 py-3 text-sm font-bold text-(--color-fg) hover:border-(--color-primary) hover:bg-(--color-surface-1) transition-colors'
                     }
                   >
                     {action.label}

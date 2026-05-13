@@ -1,5 +1,6 @@
-import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
+import { NeolitComponent, state, type NeolitNode, type StateOrPlain } from "@ubs-platform/neolit/core";
 import { Button } from "@libs/ui/button";
+import type { BackgroundViewProperties } from "./common";
 
 export interface ActionItem {
   label: string;
@@ -7,20 +8,20 @@ export interface ActionItem {
   onClick?: () => void;
 }
 
-export interface HeroLargeProperties {
+export interface HeroLargeProperties extends BackgroundViewProperties {
   id?: string;
-  header?: string;
-  text?: string;
+  header?: StateOrPlain<string>;
+  text?: StateOrPlain<string>;
   primaryAction?: ActionItem;
   secondaryAction?: ActionItem;
-  gradient?: string;
+  gradient?: StateOrPlain<string>;
 }
 
 export class IntroHeroLarge extends NeolitComponent<HeroLargeProperties> {
   properties: HeroLargeProperties = {
-    header: "Başlık",
-    text: "Açıklama metni.",
-    gradient: "from-cyan-50 via-white to-blue-50",
+    header: state("Başlık"),
+    text: state("Açıklama metni."),
+    gradient: state(""),
   };
 
   render(): NeolitNode {
@@ -30,19 +31,21 @@ export class IntroHeroLarge extends NeolitComponent<HeroLargeProperties> {
     return (
       <section
         id={id}
-        className={`w-full bg-gradient-to-br ${gradient ?? "from-cyan-50 via-white to-blue-50"} py-28 px-6`}
+        className={`relative w-full py-28 px-6 ${gradient ? `bg-gradient-to-br ${gradient}` : "bg-(--color-surface)"}`}
+        styles={this.properties.backgroundStyles}
+        
       >
         <div className="mx-auto max-w-4xl text-center flex flex-col items-center gap-10">
-          <div className="flex flex-col gap-5">
-            <h1 className="text-5xl sm:text-6xl font-black tracking-tight text-slate-900 leading-tight">
+          <div className="flex flex-col gap-5 z-2">
+            <h1 className="text-5xl sm:text-6xl font-black tracking-tight text-(--color-fg) leading-tight">
               {header}
             </h1>
-            <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl text-(--color-fg)/70 max-w-2xl mx-auto leading-relaxed">
               {text}
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-4 justify-center">
+          <div className="flex flex-wrap gap-4 justify-center z-1">
             {primaryAction ? (
               <Button
                 onClick={() => primaryAction.onClick?.()}
@@ -68,6 +71,15 @@ export class IntroHeroLarge extends NeolitComponent<HeroLargeProperties> {
               </Button>
             ) : null}
           </div>
+
+            
+          {
+            this.properties.backgroundNode && (
+              <div className="absolute w-full h-full overflow-hidden inset-0 z-0">
+                {this.properties.backgroundNode}
+              </div>
+            )
+          }
         </div>
       </section>
     );

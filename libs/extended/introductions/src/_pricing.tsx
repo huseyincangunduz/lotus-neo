@@ -25,12 +25,12 @@ export class IntroPricing extends NeolitComponent<PricingProperties> {
     const { id, heading, plans } = this.properties;
 
     return (
-      <section id={id} className="w-full py-20 px-6 bg-white">
+      <section id={id} className="w-full py-20 px-6 bg-(--color-surface)">
         <div className="mx-auto max-w-7xl flex flex-col gap-12">
           {heading ? (
             <div className="text-center flex flex-col gap-3">
-              <h2 className="text-3xl font-black text-slate-900">{heading}</h2>
-              <p className="text-slate-500 text-base">
+              <h2 className="text-3xl font-black text-(--color-fg)">{heading}</h2>
+              <p className="text-(--color-fg)/60 text-base">
                 İhtiyacınıza uygun planı seçin.
               </p>
             </div>
@@ -41,19 +41,19 @@ export class IntroPricing extends NeolitComponent<PricingProperties> {
               <div
                 className={
                   plan.highlight
-                    ? "rounded-2xl border-2 border-slate-900 bg-slate-900 p-8 shadow-2xl flex flex-col gap-6 scale-[1.03]"
-                    : "rounded-2xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col gap-6"
+                    ? "rounded-(--radius-md) border-2 border-(--color-border) bg-(--color-primary) p-8 shadow-2xl flex flex-col gap-6 scale-[1.03]"
+                    : "rounded-(--radius-md) border border-(--color-border) bg-(--color-surface-1) p-8 shadow-sm flex flex-col gap-6"
                 }
               >
                 {/* Plan name + price */}
                 <div className="flex flex-col gap-1">
                   <h3
-                    className={`text-sm font-bold uppercase tracking-widest ${plan.highlight ? "text-slate-400" : "text-slate-500"}`}
+                    className={`text-sm font-bold uppercase tracking-widest ${plan.highlight ? "text-(--color-primary-text-on-bg)" : "text-(--color-fg)/60"}`}
                   >
                     {plan.name}
                   </h3>
                   <p
-                    className={`text-4xl font-black tracking-tight ${plan.highlight ? "text-white" : "text-slate-900"}`}
+                    className={`text-4xl font-black tracking-tight ${plan.highlight ? "text-(--color-primary-fg-active)" : "text-(--color-primary-fg-active)"}`}
                   >
                     {plan.price}
                   </p>
@@ -63,14 +63,14 @@ export class IntroPricing extends NeolitComponent<PricingProperties> {
                 <ul className="flex flex-col gap-2.5">
                   {plan.features.map((feature) => (
                     <li
-                      className={`flex items-center gap-2 text-sm ${plan.highlight ? "text-slate-300" : "text-slate-600"}`}
+                      className={`flex items-center gap-2 text-sm ${plan.highlight ? "text-(--color-primary-text-on-bg)" : "text-(--color-fg)/70"}`}
                     >
                       <i
                         class="material-symbols-outlined"
                         style={{
                           fontSize: "1rem",
                           lineHeight: "1rem",
-                          color: plan.highlight ? "#86efac" : "#16a34a",
+                          color: "var(--color-primary-card-bg-text)",
                         }}
                       >
                         check_circle
