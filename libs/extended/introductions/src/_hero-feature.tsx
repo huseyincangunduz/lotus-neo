@@ -9,7 +9,7 @@ export interface HeroFeatureActionItem {
 export interface HeroFeatureProperties {
   id?: string;
   header?: string;
-  text?: string;
+  text?: string | NeolitNode;
   actions?: HeroFeatureActionItem[];
   image?: string;
   imageAlt?: string;

@@ -26,10 +26,10 @@ export class PostralMainPage extends NeolitComponent {
               label: "Ürün&Hizmetler",
               children: [
                 { label: "Core", href: "#features" },
-                { label: "E-Commerce", href: "#features" },
-                { label: "ASPAVA Lite", href: "#features" },
-                { label: "ASPAVA", href: "#features" },
-                { label: "Zincir", href: "#features" },
+                { label: "E-Commerce (Çok yakında)", href: "#features" },
+                { label: "ASPAVA Lite (Çok yakında)", href: "#features" },
+                { label: "ASPAVA (Çok yakında)", href: "#features" },
+                { label: "Zincir (Çok yakında)", href: "#features" },
               ],
             },
             { label: "Fiyatlandırma", href: "#pricing" },
@@ -48,7 +48,7 @@ export class PostralMainPage extends NeolitComponent {
         <IntroHeroFeature
           header="İhtiyacınıza göre özelleştirilebilir, güvenilir ve ölçeklenebilir bir çözüm"
           text="Postral mimarisi ile ödeme hizmetlerini ekleyebilirsiniz, alınmış ödemeleri yönetebilir ve gelirlerinizi yönetebilirsiniz."
-          image="/assets/neolit-full.png"
+          image="/scability.png"
           imageAlt="Neolit Logo"
           imagePosition="right"
         />
@@ -56,7 +56,7 @@ export class PostralMainPage extends NeolitComponent {
         <IntroHeroFeature
           header="Core ile kendi uygulamanızı canlandırın"
           text="Postral Core, ödeme yönetimi için temel özellikler sunar. Kendi uygulamanızı geliştirmek veya mevcut sisteminize entegre etmek için esnek bir temel sağlar."
-          image="/assets/neolit-full.png"
+          image="/teknisyen-tetakun.png"
           imageAlt="Neolit Logo"
           imagePosition="left"
         />
@@ -81,13 +81,10 @@ export class PostralMainPage extends NeolitComponent {
               itemDesc: "Postral, güvenilir bir ödeme yönetim sistemi sunar.",
             },
             {
-              icon: materialSymbolsOutlined(
-                "heart_plus",
-                "1.5rem",
-                "1.5rem",
-              ),
+              icon: materialSymbolsOutlined("heart_plus", "1.5rem", "1.5rem"),
               itemHead: "Açık kaynak",
-              itemDesc: "Postral Core, MIT Lisansı ile açık kaynak olarak sunulur. Kendi ihtiyacınıza göre özelleştirebilir ve dağıtabilirsiniz. Ayrıca sizin katkılarınızı da bekliyoruz :)",
+              itemDesc:
+                "Postral Core, MIT Lisansı ile açık kaynak olarak sunulur. Kendi ihtiyacınıza göre özelleştirebilir ve dağıtabilirsiniz. Ayrıca sizin katkılarınızı da bekliyoruz :)",
             },
             // { icon: materialSymbolsOutlined('bolt', '1.5rem', '1.5rem'), itemHead: 'State', itemDesc: 'Reaktif veriyi tutar, set/update ile anlık güncellenir.' },
             // { icon: materialSymbolsOutlined('layers', '1.5rem', '1.5rem'), itemHead: 'Stateful', itemDesc: 'Yalnızca ilgili alt bloğu yeniden çizer, verimli günceller.' },
@@ -103,13 +100,25 @@ export class PostralMainPage extends NeolitComponent {
           ]}
         />
         <IntroHeroFeature
+          header="Çok daha fazlası yolda"
+          text={<>
+          Postral'in güçlü altyapısı ile gelecekteki özellikler için hazır olun. 
+          E-Ticaret uygulamalarınızda sizi öne çıkaracak <b>E-Commerce</b> sürümü, 
+          restoran ve esnaf işletmeleri için özel olarak tasarlanmış <b>ASPAVA</b> sürümleri 
+          ve son olarak tüm şubelerinizi ve işletmelerinizi tek bir çatı altında yönetmenizi sağlayacak <b>Zincir</b> gibi ürünler üzerinde yoğun bir şekilde
+          üstünde çalışıyoruz ve sizlere en kısa sürede sunabilmek için sabırsızlanıyoruz.</>}
+          image="/tetakun-with-lotuschan.png"
+          imageAlt="Neolit Logo"
+          imagePosition="right"
+        />
+        {/* <IntroHeroFeature
           header="Yerel işletmeniz için mükemmel çözüm"
           text="Postral Aspava ürünleri, yerel işletmelerin ihtiyaçlarına uygun, esnek ve güvenilir bir ödeme yönetim sistemi sunar."
           image="/assets/neolit-full.png"
           imageAlt="Neolit Logo"
           imagePosition="right"
-        />
-
+        /> */}
+        {/* 
         <IntroPricing
           id="pricing"
           heading="Restaurant ve esnaf işletmeleri için"
@@ -136,7 +145,7 @@ export class PostralMainPage extends NeolitComponent {
               buttonLabel: "Daha fazla bilgi",
             },
           ]}
-        />
+        /> */}
 
         <IntroFooter
           appCompanyLogo={
