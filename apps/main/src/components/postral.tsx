@@ -42,7 +42,7 @@ export class PostralMainPage extends NeolitComponent {
           text="Postral, Lotus'un açık kaynaklı altyapısı UBS Mona üzerine geliştirilen bir ödeme yönetim sistemidir. Her ihtiyacınıza göre özelleştirilebilir, güvenilir ve ölçeklenebilir bir çözüm sunar. Postral ile ödeme süreçlerinizi kolayca yönetin, müşteri deneyimini artırın ve işinizi büyütün."
           primaryAction={{ label: "GitHub'da İncele", href: GITHUB_URL }}
           secondaryAction={{ label: "Özellikleri Keşfet", href: "#features" }}
-          backgroundNode={<HeroDepressed></HeroDepressed>}
+          // backgroundNode={<HeroDepressed></HeroDepressed>}
         />
 
         <IntroHeroFeature
