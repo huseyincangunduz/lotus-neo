@@ -34,9 +34,8 @@ export class Application extends NeolitComponent {
   readonly router = appBaseInjector.resolve(Router);
   render() {
     return (
-      <div class="w-screen h-screen flex flex-col">
         <Outlet router={this.router}></Outlet>
-      </div>
+
     );
   }
 }
