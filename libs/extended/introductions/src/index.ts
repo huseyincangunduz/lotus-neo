@@ -1,4 +1,5 @@
 export * from './_navbar';
+export * from './_downloads';
 export * from './_hero-large';
 export * from './_hero-feature';
 export * from './_features-grid';

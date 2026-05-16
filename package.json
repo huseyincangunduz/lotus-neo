@@ -15,8 +15,10 @@
     "vite": "^8.0.4"
   },
   "dependencies": {
+    "@iconify/icons-fa-brands": "^1.2.4",
     "@tailwindcss/vite": "^4.2.2",
     "@ubs-platform/neolit": "^1.3.1",
+    "iconify-icon": "^3.0.2",
     "inter-ui": "^4.1.1",
     "material-symbols": "^0.44.2",
     "tailwindcss": "^4.2.2"

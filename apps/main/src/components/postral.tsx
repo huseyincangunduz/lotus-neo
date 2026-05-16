@@ -10,37 +10,18 @@ import {
   HeroDepressed,
   // HeroDepressed,
 } from "@libs/extended/introductions";
+import { inject } from "@ubs-platform/neolit/injectables";
 
-const GITHUB_URL = "https://github.com/ubs-platform/postral-core";
 
 export class PostralMainPage extends NeolitComponent {
   render(): NeolitNode | NeolitNode[] {
     return (
       <>
-        <IntroNavbar
-          logoHref="#"
-          logo={<Icon imgSrc="/public/postral-logo.svg" imageHeight="40px" />}
-          links={[
-            { label: "Özellikler", href: "#features" },
-            {
-              label: "Ürün&Hizmetler",
-              children: [
-                { label: "Core", href: "#features" },
-                { label: "E-Commerce (Çok yakında)", href: "#features" },
-                { label: "ASPAVA Lite (Çok yakında)", href: "#features" },
-                { label: "ASPAVA (Çok yakında)", href: "#features" },
-                { label: "Zincir (Çok yakında)", href: "#features" },
-              ],
-            },
-            { label: "Fiyatlandırma", href: "#pricing" },
-            { label: "Dokümantasyon", href: "#documentation" },
-          ]}
-        />
 
         <IntroHeroLarge
           header="Postral ile ödeme yönetimini kolaylaştırın"
           text="Postral, Lotus'un açık kaynaklı altyapısı UBS Mona üzerine geliştirilen bir ödeme yönetim sistemidir. Her ihtiyacınıza göre özelleştirilebilir, güvenilir ve ölçeklenebilir bir çözüm sunar. Postral ile ödeme süreçlerinizi kolayca yönetin, müşteri deneyimini artırın ve işinizi büyütün."
-          primaryAction={{ label: "GitHub'da İncele", href: GITHUB_URL }}
+          primaryAction={{ label: "GitHub'da İncele", href: inject("GITHUB_URL") }}
           secondaryAction={{ label: "Özellikleri Keşfet", href: "#features" }}
           // backgroundNode={<HeroDepressed></HeroDepressed>}
         />
@@ -111,74 +92,7 @@ export class PostralMainPage extends NeolitComponent {
           imageAlt="Neolit Logo"
           imagePosition="right"
         />
-        {/* <IntroHeroFeature
-          header="Yerel işletmeniz için mükemmel çözüm"
-          text="Postral Aspava ürünleri, yerel işletmelerin ihtiyaçlarına uygun, esnek ve güvenilir bir ödeme yönetim sistemi sunar."
-          image="/assets/neolit-full.png"
-          imageAlt="Neolit Logo"
-          imagePosition="right"
-        /> */}
-        {/* 
-        <IntroPricing
-          id="pricing"
-          heading="Restaurant ve esnaf işletmeleri için"
-          plans={[
-            {
-              name: "Aspava Lite",
-              price: "Ücretsiz",
-              features: [
-                "Core özellikleri",
-                "Gelişmiş ürün filtreleme",
-                "Barkod okuyucu entegrasyonu",
-                "Stok yönetimi",
-              ],
-              buttonLabel: "Daha fazla bilgi",
-            },
-            {
-              name: "Aspava",
-              price: "Ücretsiz",
-              features: [
-                "Aspava Lite özellikleri",
-                "Yerleşik Yemeksepeti, Getir, Uber eats (Trendyol) ve Migros Yemek entegrasyonları",
-                "Gelişmiş müşteri segmentasyonu",
-              ],
-              buttonLabel: "Daha fazla bilgi",
-            },
-          ]}
-        /> */}
 
-        <IntroFooter
-          appCompanyLogo={
-            <Icon
-              imgSrc="/public/postral-with-tetakent-logo-colored.svg"
-              imageHeight="40px"
-            />
-          }
-          copyright="© 2026 Tetakent (Hüseyin Can Gündüz). Tüm hakları saklıdır. Postral Core ürününün kaynak kodları MIT Lisansı ile dağıtılmaktadır."
-          linkGroups={[
-            {
-              title: "Kaynaklar",
-              links: [
-                { label: "GitHub", href: GITHUB_URL },
-                { label: "Dokümantasyon", href: "#" },
-              ],
-            },
-            {
-              title: "Topluluk",
-              links: [
-                { label: "Discord", href: "#" },
-                { label: "Katkıda Bulun", href: GITHUB_URL },
-              ],
-            },
-          ]}
-          socialLinks={[
-            {
-              icon: materialSymbolsOutlined("code"),
-              href: GITHUB_URL,
-              label: "GitHub",
-            },
-          ]}
-        />
       </>
     );
   }

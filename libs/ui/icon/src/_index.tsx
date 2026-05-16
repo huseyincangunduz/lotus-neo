@@ -6,6 +6,23 @@ import {
   getStateValue,
 } from "@ubs-platform/neolit/core";
 import "material-symbols";
+import "iconify-icon";
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "iconify-icon": {
+        icon?: string;
+        width?: string | number;
+        height?: string | number;
+        style?: Record<string, string>;
+        class?: string;
+      };
+    }
+  }
+}
+
+
 
 export interface IconProperties {
   className?: StateOrPlain<string | null | undefined>;
@@ -16,6 +33,10 @@ export interface IconProperties {
   fontSize?: StateOrPlain<string>;
   imageWidth?: StateOrPlain<string>;
   imageHeight?: StateOrPlain<string>;
+  /** fa-brands, mdi, vs. — "fa-brands:apple" gibi tam iconify adı */
+  iconifyName?: string;
+  color?: string;
+  size?: string;
 }
 
 export const materialSymbolsOutlined = (
@@ -31,6 +52,21 @@ export const materialSymbolsOutlined = (
   } as IconProperties;
 };
 
+/**
+ * fa-brands prefix otomatik eklenir. Örn: iconifyIcon("apple") → "fa-brands:apple"
+ * Farklı bir set için tam adı verin: iconifyIcon("mdi:home")
+ */
+export const iconifyIcon = (
+  iconClass: string,
+  size?: string,
+  color?: string,
+): IconProperties => {
+  const iconifyName = iconClass.includes(":")
+    ? iconClass
+    : `fa-brands:${iconClass}`;
+  return { iconifyName, size: size || "1.25rem", color } as IconProperties;
+}
+
 export class Icon extends NeolitComponent {
   properties = {
     className: state<string | null | undefined>(null),
@@ -41,6 +77,9 @@ export class Icon extends NeolitComponent {
     fontSize: state<string | null | undefined>(null),
     imageWidth: state<string | null | undefined>(null),
     imageHeight: state<string | null | undefined>(null),
+    iconifyName: state<string | null | undefined>(null),
+    color: state<string | null | undefined>(null),
+    size: state<string | null | undefined>(null),
   };
 
   combineContentAndClass = computed(
@@ -53,15 +92,32 @@ export class Icon extends NeolitComponent {
     // Zaten büyük bir component değil, bu kadar kontrolü tek bir componentte toplamak daha mantıklı geldi.
     this.watchToRerender(this.combineContentAndClass);
     this.watchToRerender(this.properties.imgSrc);
+    this.watchToRerender(this.properties.iconifyName);
   }
 
   render() {
+    const iconifyName = this.properties.iconifyName.get();
+    const size = getStateValue(this.properties.size) || getStateValue(this.properties.fontSize) || "1.25rem";
+    const color = getStateValue(this.properties.color);
+
+    if (iconifyName) {
+      return (
+        <iconify-icon
+          icon={iconifyName}
+          width={size}
+          height={size}
+          style={color ? { color } : undefined}
+        ></iconify-icon>
+      );
+    }
+
     return this.combineContentAndClass.get() ? (
       <i
         class={getStateValue(this.properties.className) || undefined}
         style={{
           lineHeight: getStateValue(this.properties.lineHeight) || undefined,
           fontSize: getStateValue(this.properties.fontSize) || undefined,
+          color: color || undefined,
         }}
       >
         {getStateValue(this.properties.content)}
