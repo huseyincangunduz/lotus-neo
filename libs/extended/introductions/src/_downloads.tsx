@@ -87,6 +87,9 @@ export class IntroDownloads extends NeolitComponent<DownloadsProperties> {
 
     return (
       <section id={id} className="w-full py-20 px-6 bg-(--color-surface)">
+        {/* <div className="bg-orange-100 mt-4">
+            Warning: Always verify the SHA256 checksums of the files you download. The download links are provided from official sources, but it's important to be cautious against potential third-party tampering.
+        </div> */}
         <div className="mx-auto max-w-7xl flex flex-col gap-12">
           {heading ? (
             <div className="text-center flex flex-col gap-3">
@@ -95,7 +98,37 @@ export class IntroDownloads extends NeolitComponent<DownloadsProperties> {
               </h2>
             </div>
           ) : null}
-
+          <div>
+            <div className="bg-orange-200 p-3">
+              <h2>Önemli uyarılar</h2>
+              <ul className="list-disc list-inside text-sm text-(--color-fg)/80">
+                <li>
+                  Resmi olarak sağlanan dosyalar ve terminal kodları güvenlidir,
+                  ancak her ihtimale karşı eğer emin değilseniz, ya da
+                  bağlantınız güvenli değilse çalıştırmadan önce bilgili
+                  teknisyenlere danışmanız şiddetle tavsiye edilir.
+                </li>
+                <li>
+                  Her ihtimale karşı indirdiğiniz dosyaların SHA256
+                  checksumlarını doğrulayın. İndirme bağlantıları resmi
+                  kaynaklardan sağlanmaktadır, ancak üçüncü taraf müdahalelerine
+                  karşı dikkatli olmak önemlidir.
+                </li>
+                <li>
+                  Çalıştırdığınızda bilgisayarınız normalden fazla tuhaf
+                  davranırsa, lütfen derhal uygulamayı kapatın, internet
+                  bağlantılarını kesin ve bir teknisyene danışın. Bu hatayı
+                  info@tetakent.com adresine ya da resmi Tetakent sosyal medya
+                  hesaplarına bildirmeniz halinde yaşadığınız sorunun size ya da
+                  bir başkasına tekrarlanmamasına yardımcı olacaktır.
+                </li>
+                {/* <li>
+                  Eğer yine de şüpheleriniz varsa, GitHub sayfamızda kaynak
+                  kodlarına erişebilir ve kendi sisteminizde derleyebilirsiniz.
+                </li> */}
+              </ul>
+            </div>
+          </div>
           <div className="flex flex-col gap-10">
             {osGroups.map(([osGroup, subGroups]) => (
               <div className="flex flex-col gap-4">

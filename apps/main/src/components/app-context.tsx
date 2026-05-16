@@ -34,6 +34,8 @@ rootInjector.registerValue(
 rootInjector.registerValue(
   Router,
   new Router({
+    // parentPath: "/postral",
+    // initialPath: "/postral" + window.location.pathname.replace("/postral", ""),
     routeMap: rootInjector.resolve(RouteMap),
   }),
 );

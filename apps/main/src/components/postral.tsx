@@ -11,9 +11,11 @@ import {
   // HeroDepressed,
 } from "@libs/extended/introductions";
 import { inject } from "@ubs-platform/neolit/injectables";
+import { Router } from "@ubs-platform/neolit/routing";
 
 
 export class PostralMainPage extends NeolitComponent {
+  readonly router = inject(Router)
   render(): NeolitNode | NeolitNode[] {
     return (
       <>
@@ -21,7 +23,7 @@ export class PostralMainPage extends NeolitComponent {
         <IntroHeroLarge
           header="Postral ile ödeme yönetimini kolaylaştırın"
           text="Postral, Lotus'un açık kaynaklı altyapısı UBS Mona üzerine geliştirilen bir ödeme yönetim sistemidir. Her ihtiyacınıza göre özelleştirilebilir, güvenilir ve ölçeklenebilir bir çözüm sunar. Postral ile ödeme süreçlerinizi kolayca yönetin, müşteri deneyimini artırın ve işinizi büyütün."
-          primaryAction={{ label: "GitHub'da İncele", href: inject("GITHUB_URL") }}
+          primaryAction={{ label: "İndir", onClick: () => this.router.navigate("/download") }}
           secondaryAction={{ label: "Özellikleri Keşfet", href: "#features" }}
           // backgroundNode={<HeroDepressed></HeroDepressed>}
         />

@@ -24,7 +24,7 @@ export class DownloadLinks extends NeolitComponent {
       ],
     },
     {
-      os: "Windows",
+      os: "Windows 10 ve üzeri",
       osGroup: "Windows",
       downloads: [
         {
@@ -57,8 +57,8 @@ export class DownloadLinks extends NeolitComponent {
         },
         {
           processorArchitecture: "arm64",
-          url: "",
-          checksum: "",
+          url: "https://google.com",
+          checksum: "sadas",
           size: 0,
           title: "ARM tabanlı işlemci için RPM Paketi",
         },
@@ -72,7 +72,7 @@ export class DownloadLinks extends NeolitComponent {
           processorArchitecture: "x64",
           terminalCommand:
             "sudo rm -rf \\ #şaka yapıyorum, bu şeyi çalıştırmayın! Bu sadece bir örnek komut.",
-          title: "64bit Intel/AMD tabanlı işlemci için Generic Linux Paketi",
+          title: "Listelenmeyen GNU/Linux dağıtımları için 64bit Intel/AMD tabanlı işlemci için kurulum komutu",
         },
       ],
     },
