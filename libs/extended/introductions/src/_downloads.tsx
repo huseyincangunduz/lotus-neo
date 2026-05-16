@@ -44,6 +44,8 @@ function osIcon(osGroup: string): IconProperties {
       return iconifyIcon("windows");
     case "linux":
       return iconifyIcon("linux");
+    case "docker":
+      return iconifyIcon("logos:docker-icon");
     default:
       return iconifyIcon("terminal");
   }
