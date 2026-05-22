@@ -1,8 +1,25 @@
-import { IntroDownloads } from "@libs/extended/introductions";
+import { DownloadWarning, IntroDownloads } from "@libs/extended/introductions";
 import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
 
 export class DownloadLinks extends NeolitComponent {
-  readonly links = [
+  readonly serviceEditionLinks = [
+    {
+      os: "Docker Compose",
+      osGroup: "docker",
+      downloads: [
+        {
+          processorArchitecture: "x64",
+          title:
+            "64bit Intel/AMD tabanlı işlemci tam paket docker konfigürasyonu",
+          url: "https://github.com/ubs-platform/postral-core/blob/master/infrastructure/docker-compose.yml",
+          terminalCommand:
+            "docker pull ghcr.io/ubs-platform/postral-core:latest",
+        },
+      ],
+    },
+  ];
+
+  readonly allInOneEditionLinks = [
     {
       os: "macOS",
       osGroup: "macOS",
@@ -72,7 +89,8 @@ export class DownloadLinks extends NeolitComponent {
           processorArchitecture: "x64",
           terminalCommand:
             "sudo rm -rf \\ #şaka yapıyorum, bu şeyi çalıştırmayın! Bu sadece bir örnek komut.",
-          title: "Listelenmeyen GNU/Linux dağıtımları için 64bit Intel/AMD tabanlı işlemci için kurulum komutu",
+          title:
+            "Listelenmeyen GNU/Linux dağıtımları için 64bit Intel/AMD tabanlı işlemci için kurulum komutu",
         },
       ],
     },
@@ -80,13 +98,23 @@ export class DownloadLinks extends NeolitComponent {
 
   render(): NeolitNode {
     return (
-      <IntroDownloads
-        groups={this.links}
-        heading={"İndir"}
-        description={
-          "Postral Core'u bu bölümden size uygun işletim sistemine göre indirebilirsiniz."
-        }
-      />
+      <>
+        <DownloadWarning />
+        <IntroDownloads
+          groups={this.serviceEditionLinks}
+          heading={"Sunucu Sürümü İndirme"}
+          description={
+            "Postral Core'un mikroservis versiyonu docker üzerinden dağıtılmaktadır. Aşağıdaki bağlantılardan docker-compose konfigürasyonunu indirerek hızlıca kurulum yapabilirsiniz."
+          }
+        />
+        <IntroDownloads
+          groups={this.allInOneEditionLinks}
+          heading={"Hepsi Bir Arada Sürümü İndirme"}
+          description={
+            "Postral Core'un masaüstü uygulaması, tüm platformlarda çalışacak şekilde tasarlanmıştır. Aşağıdaki bağlantılardan işletim sisteminize uygun paketi indirerek kolayca kurulum yapabilirsiniz."
+          }
+        />
+      </>
     );
   }
 }
