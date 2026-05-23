@@ -13,6 +13,7 @@ import { PostralNavbar } from "./postral-navbar";
 import { Icon, materialSymbolsOutlined } from "@libs/ui/icon";
 import { IntroFooter } from "@libs/extended/introductions";
 import { DownloadLinks } from "./download-links";
+import { Documentation } from "./documentation";
 
 // const appBaseInjector = createInjector();
 const GITHUB_URL = "https://github.com/ubs-platform/postral-core";
@@ -27,6 +28,10 @@ rootInjector.registerValue(
     {
       path: "/download",
       componentFactory: () => <DownloadLinks />,
+    },
+    {
+      path: "/documentation",
+      componentFactory: () => <Documentation />,
     },
   ]),
 );
@@ -61,13 +66,13 @@ export class Application extends NeolitComponent {
               title: "Kaynaklar",
               links: [
                 { label: "GitHub", href: inject("GITHUB_URL") },
-                { label: "Dokümantasyon", href: "#" },
+                { label: "Dokümantasyon", href: "/documentation" },
               ],
             },
             {
               title: "Topluluk",
               links: [
-                { label: "Discord", href: "#" },
+                { label: "Discord", href: "" },
                 { label: "Katkıda Bulun", href: inject("GITHUB_URL") },
               ],
             },
