@@ -9,14 +9,14 @@ const mdTemplateTest = `
 \`\`\`javascript
 console.log("Hello, world!");
 \`\`\`
-`
+`;
 export class Documentation extends NeolitComponent {
   render(): NeolitNode {
     return (
       <>
-        <MarkdownReader
-          markdown={mdTemplateTest}
-        ></MarkdownReader>
+        <div class="p-2 md:p-10">
+          <MarkdownReader markdown={mdTemplateTest}></MarkdownReader>
+        </div>
       </>
     );
   }
