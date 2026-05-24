@@ -11,6 +11,7 @@ import { materialSymbolsOutlined } from "@libs/ui/icon";
 import { Pagination } from "@libs/ui/touch/pagination";
 import { Checkbox } from "@libs/ui/checkbox";
 import { ToggleSwitch } from "@libs/ui/toggle-switch";
+import { Trackbar } from "@libs/ui/trackbar";
 import { toastService } from "@libs/ui/alert-toast";
 
 export class MainPage extends NeolitComponent {
@@ -21,6 +22,7 @@ export class MainPage extends NeolitComponent {
     "center",
   );
   selectedPage = state<string>("1");
+  volume = state<number>(42);
   toastService = toastService;
 
   onInit(): void {}
@@ -111,6 +113,16 @@ export class MainPage extends NeolitComponent {
             checked={state(false)}
             onChange={(v: boolean) => console.log(v)}
           />
+          <div className="max-w-sm mt-3">
+            <Trackbar
+              label="Ses"
+              min={0}
+              max={100}
+              step={1}
+              value={this.volume}
+              onChange={(v: number) => this.volume.set(v)}
+            />
+          </div>
         </div>
       </div>
     );
