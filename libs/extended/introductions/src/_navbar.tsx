@@ -6,6 +6,8 @@ import {
 import { WebDialog } from "@libs/ui/webdialog";
 import { Accordion } from "@libs/ui/accordion";
 import { HeroDepressed } from "./_hero_depressed";
+import { Router } from "@ubs-platform/neolit/routing";
+import { inject } from "@ubs-platform/neolit/injectables";
 
 export interface NavLink {
   label: string;
@@ -20,6 +22,7 @@ export interface NavbarProperties {
   logo?: NeolitNode;
   logoHref?: string;
   links?: NavLink[];
+  router: Router;
 }
 
 export class IntroNavbar extends NeolitComponent<NavbarProperties> {
@@ -29,17 +32,25 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
     logo: <HeroDepressed></HeroDepressed>,
     logoHref: "#",
     links: [],
+    router: inject(Router),
   };
 
   render(): NeolitNode {
     const { id, logo, logoHref, links } = this.properties;
 
     return (
-      <nav id={id} className="sticky top-0 z-50 w-full border-b border-(--color-border) text-(--color-primary-text-on-bg) bg-(--color-primary) backdrop-blur-md">
+      <nav
+        id={id}
+        className="sticky top-0 z-50 w-full border-b border-(--color-border) text-(--color-primary-text-on-bg) bg-(--color-primary) backdrop-blur-md"
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           {/* Logo */}
           <a
-            href={logoHref ?? "#"}
+            href={logoHref}
+            onclick={(e: Event) => {
+              e.preventDefault();
+              this.properties.router.navigate(logoHref!)
+            }}
             className="text-xl font-black tracking-tight text-(--color-primary-text-on-bg)"
           >
             {logo}
@@ -62,7 +73,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                   <div className="absolute right-0 top-full mt-1.5 min-w-[160px] rounded-(--radius-md) border border-(--color-border) bg-(--color-surface) py-1 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
                     {link.children.map((child) => (
                       <a
-                        href={child.href ?? "#"}
+                        href={child.href}
                         target={child.target}
                         onclick={() => child.onClick?.()}
                         className="block px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-1) transition-colors"
@@ -74,14 +85,14 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                 </div>
               ) : (
                 <a
-                  href={link.href ?? "#"}
+                  href={link.href}
                   target={link.target}
                   onclick={() => link.onClick?.()}
                   className="rounded-(--radius-sm) px-3 py-2 text-sm font-medium text-(--color-primary-text-on-bg) hover:bg-(--color-primary-hover) transition-colors"
                 >
                   {link.label}
                 </a>
-              )
+              ),
             )}
           </div>
 
@@ -134,7 +145,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                   <div>
                     {link.children.map((child) => (
                       <a
-                        href={child.href ?? "#"}
+                        href={child.href}
                         target={child.target}
                         onclick={() => {
                           child.onClick?.();
@@ -149,7 +160,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                 </Accordion>
               ) : (
                 <a
-                  href={link.href ?? "#"}
+                  href={link.href}
                   target={link.target}
                   onclick={() => {
                     link.onClick?.();
