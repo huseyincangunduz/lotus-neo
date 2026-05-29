@@ -81,7 +81,7 @@ export class DownloadLinks extends NeolitComponent {
         />
         <IntroDownloads
           groups={this.allInOneEditionLinks}
-          heading={"Hepsi Bir Arada Sürümü İndirme"}
+          heading={"ÇOK YAKINDA - Hepsi Bir Arada Sürümü"}
           description={
             // Şu anda hepsi bir arada sürümü üstünde çalışıyorum. Bu yüzden bağlantılar 'Çok yakında' olarak görünecek ve açıklamada çok yakında olduğunu yazacağız
             <>Postral'in AIO sürümü, docker tabanlı sunucu sürümünün aksine, tek bir uygulama olarak dağıtılacak ve özellikle teknik olmayan kullanıcıların kurulumunu kolaylaştırmak için tasarlanmıştır. Bu sürüm üstünde çalışıyoruz ve sizinle en kısa sürede paylaşmak için sabırsızlanıyoruz. <b>Çok yakında</b></>

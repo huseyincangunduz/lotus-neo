@@ -51,7 +51,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
               e.preventDefault();
               this.properties.router.navigate(logoHref!)
             }}
-            className="text-xl font-black tracking-tight text-(--color-primary-text-on-bg)"
+            className="text-xl font-black tracking-tight text-(--color-primary-text-on-bg) cursor-pointer"
           >
             {logo}
           </a>
@@ -61,7 +61,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
             {(links ?? []).map((link) =>
               link.children && link.children.length > 0 ? (
                 <div className="relative group">
-                  <button className="flex items-center gap-0.5 rounded-(--radius-sm) px-3 py-2 text-sm font-medium text-(--color-primary-text-on-bg) hover:bg-(--color-primary-hover) transition-colors">
+                  <button className="flex items-center gap-0.5 rounded-(--radius-sm) px-3 py-2 text-sm font-medium text-(--color-primary-text-on-bg) hover:bg-(--color-primary-hover) transition-colors cursor-pointer">
                     {link.label}
                     <i
                       class="material-symbols-outlined"
@@ -70,7 +70,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                       keyboard_arrow_down
                     </i>
                   </button>
-                  <div className="absolute right-0 top-full mt-1.5 min-w-[160px] rounded-(--radius-md) border border-(--color-border) bg-(--color-surface) py-1 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
+                  <div className="absolute right-0 top-full mt-1.5 min-w-[160px] rounded-(--radius-md) border border-(--color-border) bg-(--color-surface) py-1 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10 cursor-pointer">
                     {link.children.map((child) => (
                       <a
                         href={child.href}
@@ -88,7 +88,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                   href={link.href}
                   target={link.target}
                   onclick={() => link.onClick?.()}
-                  className="rounded-(--radius-sm) px-3 py-2 text-sm font-medium text-(--color-primary-text-on-bg) hover:bg-(--color-primary-hover) transition-colors"
+                  className="rounded-(--radius-sm) px-3 py-2 text-sm font-medium text-(--color-primary-text-on-bg) hover:bg-(--color-primary-hover) transition-colors cursor-pointer"
                 >
                   {link.label}
                 </a>
@@ -127,7 +127,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                 Menü
               </span>
               <button
-                className="inline-flex items-center justify-center rounded-(--radius-sm) p-1 text-(--color-fg) hover:bg-(--color-surface-1)"
+                className="inline-flex items-center justify-center rounded-(--radius-sm) p-1 text-(--color-fg) hover:bg-(--color-surface-1) cursor-pointer"
                 onClick={() => this.mobileMenuOpen.set(false)}
                 aria-label="Menüyü kapat"
               >
@@ -151,7 +151,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                           child.onClick?.();
                           this.mobileMenuOpen.set(false);
                         }}
-                        className="block px-3 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-1)"
+                        className="block px-3 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-1) cursor-pointer"
                       >
                         {child.label}
                       </a>
@@ -166,7 +166,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
                     link.onClick?.();
                     this.mobileMenuOpen.set(false);
                   }}
-                  className="rounded-(--radius-sm) px-3 py-2 text-sm font-medium text-(--color-fg) hover:bg-(--color-surface-1)"
+                  className="rounded-(--radius-sm) px-3 py-2 text-sm font-medium text-(--color-fg) hover:bg-(--color-surface-1) cursor-pointer"
                 >
                   {link.label}
                 </a>
