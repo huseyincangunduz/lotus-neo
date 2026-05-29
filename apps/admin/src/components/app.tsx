@@ -11,6 +11,7 @@ import { AlertToastContainer, toastService } from "@libs/ui/alert-toast";
 import { Outlet, RouteMap } from "@ubs-platform/neolit/routing";
 import { MainPage } from "./main";
 import { CanvasTest } from "./canvas-test";
+import { Test2 } from "./test2";
 
 export class AppComponent extends NeolitComponent {
   routeMap = new RouteMap([
@@ -19,6 +20,10 @@ export class AppComponent extends NeolitComponent {
       componentFactory: () => <MainPage></MainPage>,
       // TODO: Lazyload desteği
       // componentFactory: () => import("./main").then((mod) => mod.MainPage),
+    },
+    {
+      path: "/test2",
+      componentFactory: () => <Test2></Test2>,
     },
     {
       path: "/canvas-test",
