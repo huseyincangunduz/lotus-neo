@@ -14,7 +14,7 @@ export class PostralNavbar extends NeolitComponent {
         links={[
           { label: "Ana sayfa", onClick: () => this.router.navigate("/") },
           { label: "İndir", onClick: () => this.router.navigate("/download") },
-          { label: "Dokümantasyon", onClick: () => this.router.navigate("/documentation") },
+          { label: "Dokümantasyon", onClick: () => window.open("https://github.com/ubs-platform/postral-core/blob/master/docs/tr-tr/README.md", "_blank") },
         ]}
       />
     );

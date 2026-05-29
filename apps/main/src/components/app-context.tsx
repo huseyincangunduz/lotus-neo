@@ -10,7 +10,7 @@ import {
 import { MainComponent } from "./main";
 import { PostralMainPage } from "./postral";
 import { PostralNavbar } from "./postral-navbar";
-import { Icon, materialSymbolsOutlined } from "@libs/ui/icon";
+import { Icon, iconifyIcon, materialSymbolsOutlined } from "@libs/ui/icon";
 import { IntroFooter } from "@libs/extended/introductions";
 import { DownloadLinks } from "./download-links";
 import { Documentation } from "./documentation";
@@ -39,7 +39,7 @@ rootInjector.registerValue(
 rootInjector.registerValue(
   Router,
   new Router({
-    // parentPath: "/postral",
+    parentPath: import.meta.env.VITE_BASE_PATH || "",
     // initialPath: "/postral" + window.location.pathname.replace("/postral", ""),
     routeMap: rootInjector.resolve(RouteMap),
   }),
@@ -65,23 +65,35 @@ export class Application extends NeolitComponent {
             {
               title: "Kaynaklar",
               links: [
-                { label: "GitHub", href: inject("GITHUB_URL") },
+                { label: "Core Backend - GitHub", href: inject("GITHUB_URL") },
                 { label: "Dokümantasyon", href: "/documentation" },
               ],
             },
             {
               title: "Topluluk",
-              links: [
-                { label: "Discord", href: "" },
-                { label: "Katkıda Bulun", href: inject("GITHUB_URL") },
-              ],
+              links: [{ label: "Katkıda Bulun", href: inject("GITHUB_URL") }],
             },
           ]}
           socialLinks={[
             {
-              icon: materialSymbolsOutlined("code"),
+              icon: iconifyIcon("github"),
               href: GITHUB_URL,
               label: "GitHub",
+            },
+            {
+              icon: iconifyIcon("mdi:instagram"),
+              href: "https://www.instagram.com/tetakentofficial",
+              label: "Instagram",
+            },
+            {
+              icon: iconifyIcon("fa6-brands:x-twitter"),
+              href: "https://x.com/tetakent",
+              label: "X (Twitter)",
+            },
+            {
+              icon: iconifyIcon("mdi:linkedin"),
+              href: "https://www.linkedin.com/company/tetakent",
+              label: "Linkedin",
             },
           ]}
         />

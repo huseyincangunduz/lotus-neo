@@ -38,7 +38,7 @@ export class Button extends NeolitComponent<ButtonProps> {
     ([variant]: ButtonVariant[]) => {
       const variantClass = {
         "filled-primary":
-          "bg-(--color-primary) text-(--color-surface) hover:bg-(--color-primary-bg-hover) hover:text-(--color-primary-fg-hover)",
+          "bg-(--color-primary) text-white hover:bg-(--color-primary-bg-hover) hover:text-(--color-primary-fg-hover)",
         "filled-secondary": "bg-gray-500 text-white hover:bg-gray-600",
         "filled-tertiary":
           "bg-(--color-primary-bg-hover) text-(--color-fg) hover:bg-(--color-primary-bg-hover)",
