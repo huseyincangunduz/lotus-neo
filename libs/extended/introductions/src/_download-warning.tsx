@@ -3,9 +3,9 @@ import { NeolitComponent } from "@ubs-platform/neolit/core";
 export class DownloadWarning extends NeolitComponent {
   render() {
     return (
-      <div className="bg-orange-200 p-3">
+      <div className="bg-orange-200 text-black p-3">
         <h2>Önemli uyarılar</h2>
-        <ul className="list-disc list-inside text-sm text-(--color-fg)/80">
+        <ul className="list-disc list-inside text-sm">
           <li>
             Resmi olarak sağlanan dosyalar ve terminal kodları güvenlidir, ancak
             her ihtimale karşı eğer emin değilseniz, ya da bağlantınız güvenli
