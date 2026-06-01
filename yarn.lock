@@ -29,6 +29,13 @@
   dependencies:
     tslib "^2.4.0"
 
+"@iconify-json/fa7-brands@^1.2.2":
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/@iconify-json/fa7-brands/-/fa7-brands-1.2.2.tgz#f8afd324702db3a6118402cb28d9b2c4d836541e"
+  integrity sha512-y6ZBdlLS4v1suB6fuMI5kqSO0B91Y19nlqTz7VfBYu9lI948tbRh+6lU2kNMOlo8I4qgSWX0SEdN7jkhOzI5gA==
+  dependencies:
+    "@iconify/types" "*"
+
 "@iconify/icons-fa-brands@^1.2.4":
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/@iconify/icons-fa-brands/-/icons-fa-brands-1.2.4.tgz#09f76f76ec583e066fddedf5f15c10cf4e4fc068"

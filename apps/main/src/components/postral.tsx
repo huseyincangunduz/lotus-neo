@@ -43,7 +43,20 @@ export class PostralMainPage extends NeolitComponent {
           imageAlt="Neolit Logo"
           imagePosition="left"
         />
-
+        {/* 
+        Özellikler:
+        - Esnek: Postral sisteminin REST ve Engine5 APIlerinin desteği ile kolay entegrasyon sağlar.
+        - Çoklu ödeme yöntemleri: Kredi kartları, banka kartları, dijital cüzdanlar ve daha fazlasını destekler.
+        - Çoklu pazar: Postral, dilediğiniz zaman farklı satıcıları ve pazarları ekleyip yönetmenize olanak tanır, böylece işinizi kolayca ölçeklendirebilirsiniz.
+        - Çoklu para birimi: Postral, farklı para birimlerini destekler, böylece uluslararası müşterilere hizmet verebilirsiniz.
+        - Komisyon yönetimi: Postral, satıcılarınız için esnek komisyon oranları belirlemenize ve yönetmenize olanak tanır.
+        - Türk Vergi Sistemine uyumlu: Postral, Türkiye'nin vergi mevzuatına uygun olarak tasarlanmıştır, böylece yasal gereklilikleri karşılar.
+        - Gelir yönetimi: Sizin ve satıcılarınızın gelirlerini günlük, haftalık veya aylık olarak takip edebilirsiniz.
+        - Faturalama: Postral'in event yönetimi ile faturalama süreçlerinizi otomatikleştirebilir ve kolaylaştırabilirsiniz. Ayrıca UBL export ile e-fatura entegrasyonununuzu zahmetsizce gerçekleştirebilirsiniz.
+        - Güvenilir: Postral, güvenilir bir ödeme yönetim sistemi sunar.
+        - Açık kaynak: Postral Core, MIT Lisansı ile açık kaynak olarak sunulur. Kendi ihtiyacınıza göre özelleştirebilir ve dağıtabilirsiniz. Ayrıca sizin katkılarınızı da bekliyoruz :)
+        
+        */}
         <IntroFeaturesGrid
           id="features"
           heading="Temel Özellikler"
@@ -53,6 +66,47 @@ export class PostralMainPage extends NeolitComponent {
               itemHead: "Esnek",
               itemDesc:
                 "Postral sisteminin REST ve Engine5 APIlerinin desteği ile kolay entegrasyon sağlar.",
+            },
+            {
+              icon: materialSymbolsOutlined("payment", "1.5rem", "1.5rem"),
+              itemHead: "Çoklu ödeme yöntemleri",
+              itemDesc:
+                "Kredi kartları, banka kartları, dijital cüzdanlar ve daha fazlasını destekler.",
+            },
+            {
+              icon: materialSymbolsOutlined("storefront", "1.5rem", "1.5rem"),
+              itemHead: "Çoklu pazar",
+              itemDesc:
+                "Postral, dilediğiniz zaman farklı satıcıları ve pazarları ekleyip yönetmenize olanak tanır, böylece işinizi kolayca ölçeklendirebilirsiniz.",
+            },
+            {
+              icon: materialSymbolsOutlined("currency_exchange", "1.5rem", "1.5rem"),
+              itemHead: "Çoklu para birimi",
+              itemDesc:
+                "Postral, farklı para birimlerini destekler, böylece uluslararası müşterilere hizmet verebilirsiniz.",
+            },
+            {
+              icon: materialSymbolsOutlined("account_balance", "1.5rem", "1.5rem"),
+              itemHead: "Komisyon yönetimi",
+              itemDesc:
+                "Postral, satıcılarınız için esnek komisyon oranları belirlemenize ve yönetmenize olanak tanır.",
+            },
+            {
+              icon: materialSymbolsOutlined("receipt_long", "1.5rem", "1.5rem"),
+              itemHead: "Türk Vergi Sistemine uyumlu",
+              itemDesc:
+                "Postral, Türkiye'nin vergi mevzuatına uygun olarak tasarlanmıştır, böylece yasal gereklilikleri karşılar.",
+            },
+            {
+              icon: materialSymbolsOutlined("account_balance_wallet", "1.5rem", "1.5rem"),
+              itemHead: "Gelir yönetimi",
+              itemDesc:
+                "Sizin ve satıcılarınızın gelirlerini günlük, haftalık veya aylık olarak takip edebilirsiniz.", 
+            },{
+              icon: materialSymbolsOutlined("receipt", "1.5rem", "1.5rem"),
+              itemHead: "Faturalama",
+              itemDesc:
+                "Postral'in event yönetimi ile faturalama süreçlerinizi otomatikleştirebilir ve kolaylaştırabilirsiniz. Ayrıca UBL export ile e-fatura entegrasyonununuzu zahmetsizce gerçekleştirebilirsiniz.",
             },
             {
               icon: materialSymbolsOutlined(
