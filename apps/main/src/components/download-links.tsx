@@ -1,57 +1,27 @@
-import { DownloadWarning, IntroDownloads } from "@libs/extended/introductions";
+import {
+  DownloadWarning,
+  IntroDownloads,
+  type DownloadGroup,
+} from "@libs/extended/introductions";
+import { Icon, iconifyIcon } from "@libs/ui/icon";
 import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
 
 export class DownloadLinks extends NeolitComponent {
   readonly serviceEditionLinks = [
-    {
-      os: "Docker Compose",
-      osGroup: "docker",
-      downloads: [
-        {
-          processorArchitecture: "x64",
-          title:
-            "64bit Intel/AMD tabanlı işlemci tam paket docker konfigürasyonu",
-          url: "https://github.com/ubs-platform/postral-core/blob/master/infrastructure/docker-compose.yml",
-          terminalCommand:
-            "docker pull ghcr.io/ubs-platform/postral-core:latest",
-        },
-      ],
-    },
-  ];
-
-  readonly allInOneEditionLinks = [
-    // {
-    //   os: "macOS",
-    //   osGroup: "macOS",
-    //   downloads: [
-    //     {
-    //       processorArchitecture: "x64",
-    //       url: "",
-    //       checksum: "",
-    //       size: 0,
-    //       title: "64bit Intel/AMD tabanlı işlemci için DMG Paketi",
-    //     },
-    //     {
-    //       processorArchitecture: "arm64",
-    //       url: "",
-    //       checksum: "",
-    //       size: 0,
-    //       title: "Apple Silicon (M serisi) tabanlı işlemci için DMG Paketi",
-    //     },
-    //   ],
-    // },
     {
       os: "Windows 10 ve üzeri",
       osGroup: "Windows",
       downloads: [
         {
           processorArchitecture: "x64",
-          url: "",
+          terminalCommand:
+            "irm https://raw.githubusercontent.com/ubs-platform/postral-core/master/install.ps1 | iex",
+          url: "https://raw.githubusercontent.com/ubs-platform/postral-core/master/infrastructure/docker-compose.yml",
           checksum: "",
           size: 0,
           title:
-            "64bit Intel/AMD tabanlı işlemci için Windows Kurulum uygulaması",
-        }
+            "64bit Intel/AMD tabanlı işlemci için Windows powershell komutu ile kurulum",
+        },
       ],
     },
     {
@@ -60,7 +30,50 @@ export class DownloadLinks extends NeolitComponent {
       downloads: [
         {
           processorArchitecture: "x64",
-          
+          terminalCommand:
+            "curl -fsSL https://raw.githubusercontent.com/ubs-platform/postral-core/master/install.sh | bash",
+          title:
+            "Bir çok genel GNU/Linux dağıtımlarında çalışacak bash komutu ile kurulum.",
+        },
+      ],
+    },
+    {
+      os: "MacOS 10.15 ve üzeri",
+      osGroup: "MacOS",
+      downloads: [
+        {
+          processorArchitecture: "x64",
+          terminalCommand:
+            "curl -fsSL https://raw.githubusercontent.com/ubs-platform/postral-core/master/install.sh | bash",
+          title:
+            "2019 model Mac cihazlarda ve Güncel MacOS çalışacak bash komutu ile kurulum. (Resmi olarak Apple Silicon şu anda desteklenmemektedir. Rosetta ile çalıştırılabilir ancak test edilmemiştir.)",
+        },
+      ],
+    },
+  ] as DownloadGroup[];
+
+  readonly allInOneEditionLinks = [
+    {
+      os: "Windows 10 ve üzeri",
+      osGroup: "Windows",
+      downloads: [
+        {
+          processorArchitecture: "x64",
+          // url: "https://raw.githubusercontent.com/ubs-platform/postral-core/master/infrastructure/docker-compose.yml",
+          checksum: "",
+          size: 0,
+          title:
+            "64bit Intel/AMD tabanlı işlemci için Windows Kurulum uygulaması",
+        },
+      ],
+    },
+    {
+      os: "Generic GNU/Linux",
+      osGroup: "Linux",
+      downloads: [
+        {
+          processorArchitecture: "x64",
+
           title:
             "Bir çok genel GNU/Linux dağıtımlarında çalışacak tar.gz paketi.",
         },
@@ -74,7 +87,12 @@ export class DownloadLinks extends NeolitComponent {
         <DownloadWarning />
         <IntroDownloads
           groups={this.serviceEditionLinks}
-          heading={"Sunucu Sürümü İndirme"}
+          heading={
+            <>
+              {<Icon {...iconifyIcon("docker", "2rem")} />} Docker destekli
+              Sunucu Sürümü
+            </>
+          }
           description={
             "Postral Core'un mikroservis versiyonu docker üzerinden dağıtılmaktadır. Aşağıdaki bağlantılardan docker-compose konfigürasyonunu indirerek hızlıca kurulum yapabilirsiniz."
           }
@@ -84,7 +102,13 @@ export class DownloadLinks extends NeolitComponent {
           heading={"ÇOK YAKINDA - Hepsi Bir Arada Sürümü"}
           description={
             // Şu anda hepsi bir arada sürümü üstünde çalışıyorum. Bu yüzden bağlantılar 'Çok yakında' olarak görünecek ve açıklamada çok yakında olduğunu yazacağız
-            <>Postral'in AIO sürümü, docker tabanlı sunucu sürümünün aksine, tek bir uygulama olarak dağıtılacak ve özellikle teknik olmayan kullanıcıların kurulumunu kolaylaştırmak için tasarlanmıştır. Bu sürüm üstünde çalışıyoruz ve sizinle en kısa sürede paylaşmak için sabırsızlanıyoruz. <b>Çok yakında</b></>
+            <>
+              Postral'in AIO sürümü, docker tabanlı sunucu sürümünün aksine, tek
+              bir uygulama olarak dağıtılacak ve özellikle teknik olmayan
+              kullanıcıların kurulumunu kolaylaştırmak için tasarlanmıştır. Bu
+              sürüm üstünde çalışıyoruz ve sizinle en kısa sürede paylaşmak için
+              sabırsızlanıyoruz. <b>Çok yakında</b>
+            </>
           }
         />
       </>
