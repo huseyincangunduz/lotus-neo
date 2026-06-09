@@ -11,7 +11,7 @@ export interface HeroFeatureProperties {
   header?: string;
   text?: string | NeolitNode;
   actions?: HeroFeatureActionItem[];
-  image?: string;
+  image?: string | NeolitNode;
   imageAlt?: string;
   imagePosition?: 'left' | 'right';
 }
@@ -62,11 +62,13 @@ export class IntroHeroFeature extends NeolitComponent<HeroFeatureProperties> {
           {/* Image column */}
           {image ? (
             <div className={`flex justify-center items-center ${imageRight ? 'lg:order-2' : 'lg:order-1'}`}>
-              <img
-                src={image}
-                alt={imageAlt ?? ''}
-                className="max-w-full max-h-80 object-contain drop-shadow-xl"
-              />
+              {typeof image === 'string' ? (
+                <img
+                  src={image}
+                  alt={imageAlt ?? ''}
+                  className="max-w-full max-h-80 object-contain drop-shadow-xl"
+                />
+              ) : image}
             </div>
           ) : null}
 

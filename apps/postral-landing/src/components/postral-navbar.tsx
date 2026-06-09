@@ -10,7 +10,7 @@ export class PostralNavbar extends NeolitComponent {
     return (
       <IntroNavbar
         logoHref="/"
-        logo={<Icon imgSrc="/public/postral-logo.svg" imageHeight="40px" />}
+        logo={<Icon imgSrc="postral-logo.svg" imageHeight="40px" />}
         links={[
           { label: "Ana sayfa", onClick: () => this.router.navigate("/") },
           { label: "İndir", onClick: () => this.router.navigate("/download") },

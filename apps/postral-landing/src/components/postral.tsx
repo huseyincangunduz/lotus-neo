@@ -12,6 +12,7 @@ import {
 } from "@libs/extended/introductions";
 import { inject } from "@ubs-platform/neolit/injectables";
 import { Router } from "@ubs-platform/neolit/routing";
+import { asset } from "@libs/asset";
 
 
 export class PostralMainPage extends NeolitComponent {
@@ -31,16 +32,14 @@ export class PostralMainPage extends NeolitComponent {
         <IntroHeroFeature
           header="İhtiyacınıza göre özelleştirilebilir, güvenilir ve ölçeklenebilir bir çözüm"
           text="Postral mimarisi ile ödeme hizmetlerini ekleyebilirsiniz, alınmış ödemeleri yönetebilir ve gelirlerinizi yönetebilirsiniz."
-          image="/scability.png"
-          imageAlt="Neolit Logo"
+          image={<img src={asset('scability.png')} alt="Neolit Logo" class="max-w-full max-h-80 object-contain drop-shadow-xl" />}
           imagePosition="right"
         />
 
         <IntroHeroFeature
           header="Core ile kendi uygulamanızı canlandırın"
           text="Postral Core, ödeme yönetimi için temel özellikler sunar. Kendi uygulamanızı geliştirmek veya mevcut sisteminize entegre etmek için esnek bir temel sağlar."
-          image="/teknisyen-tetakun.png"
-          imageAlt="Neolit Logo"
+          image={<img src={asset('teknisyen-tetakun.png')} alt="Neolit Logo" class="max-w-full max-h-80 object-contain drop-shadow-xl" />}
           imagePosition="left"
         />
         {/* 
@@ -144,8 +143,7 @@ export class PostralMainPage extends NeolitComponent {
           restoran ve esnaf işletmeleri için özel olarak tasarlanmış <b>ASPAVA</b> sürümleri 
           ve son olarak tüm şubelerinizi ve işletmelerinizi tek bir çatı altında yönetmenizi sağlayacak <b>Zincir</b> gibi ürünler üzerinde yoğun bir şekilde
           üstünde çalışıyoruz ve sizlere en kısa sürede sunabilmek için sabırsızlanıyoruz.</>}
-          image="/tetakun-with-lotuschan.png"
-          imageAlt="Neolit Logo"
+          image={<img src={asset('tetakun-with-lotuschan.png')} alt="Neolit Logo" class="max-w-full max-h-80 object-contain drop-shadow-xl" />}
           imagePosition="right"
         />
 

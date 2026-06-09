@@ -1,16 +1,12 @@
 import { NeolitComponent } from "@ubs-platform/neolit/core";
 import { Router, RouteMap, Outlet } from "@ubs-platform/neolit/routing";
 import {
-  provideClass,
-  provideValue,
-  createInjector,
   rootInjector,
   inject,
 } from "@ubs-platform/neolit/injectables";
-import { MainComponent } from "./main";
 import { PostralMainPage } from "./postral";
 import { PostralNavbar } from "./postral-navbar";
-import { Icon, iconifyIcon, materialSymbolsOutlined } from "@libs/ui/icon";
+import { Icon, iconifyIcon } from "@libs/ui/icon";
 import { IntroFooter } from "@libs/extended/introductions";
 import { DownloadLinks } from "./download-links";
 import { Documentation } from "./documentation";
@@ -40,7 +36,7 @@ rootInjector.registerValue(
   Router,
   new Router({
     // vite config base path
-    parentPath: import.meta.env.VITE_BASE_PATH || "",
+    parentPath: import.meta.env.BASE_URL || "",
     // initialPath: "/postral" + window.location.pathname.replace("/postral", ""),
     routeMap: rootInjector.resolve(RouteMap),
   }),
@@ -57,7 +53,7 @@ export class Application extends NeolitComponent {
         <IntroFooter
           appCompanyLogo={
             <Icon
-              imgSrc="/public/postral-with-tetakent-logo-colored.svg"
+              imgSrc="postral-with-tetakent-logo-colored.svg"
               imageHeight="40px"
             />
           }
