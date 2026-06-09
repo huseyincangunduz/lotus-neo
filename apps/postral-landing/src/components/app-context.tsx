@@ -10,6 +10,7 @@ import { Icon, iconifyIcon } from "@libs/ui/icon";
 import { IntroFooter } from "@libs/extended/introductions";
 import { DownloadLinks } from "./download-links";
 import { Documentation } from "./documentation";
+import { asset } from "@libs/asset";
 
 // const appBaseInjector = createInjector();
 const GITHUB_URL = "https://github.com/ubs-platform/postral-core";
@@ -53,7 +54,7 @@ export class Application extends NeolitComponent {
         <IntroFooter
           appCompanyLogo={
             <Icon
-              imgSrc="postral-with-tetakent-logo-colored.svg"
+              imgSrc={asset("postral-with-tetakent-logo-colored.svg")}
               imageHeight="40px"
             />
           }

@@ -1,3 +1,4 @@
+import { asset } from "@libs/asset";
 import { IntroNavbar } from "@libs/extended/introductions";
 import { Icon } from "@libs/ui/icon";
 import { NeolitComponent } from "@ubs-platform/neolit/core";
@@ -10,7 +11,7 @@ export class PostralNavbar extends NeolitComponent {
     return (
       <IntroNavbar
         logoHref="/"
-        logo={<Icon imgSrc="postral-logo.svg" imageHeight="40px" />}
+        logo={<Icon imgSrc={asset("postral-logo.svg")} imageHeight="40px" />}
         links={[
           { label: "Ana sayfa", onClick: () => this.router.navigate("/") },
           { label: "İndir", onClick: () => this.router.navigate("/download") },

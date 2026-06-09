@@ -1,13 +1,9 @@
 import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
-import { Icon, materialSymbolsOutlined } from "@libs/ui/icon";
+import { materialSymbolsOutlined } from "@libs/ui/icon";
 import {
-  IntroNavbar,
   IntroHeroLarge,
   IntroHeroFeature,
   IntroFeaturesGrid,
-  IntroPricing,
-  IntroFooter,
-  HeroDepressed,
   // HeroDepressed,
 } from "@libs/extended/introductions";
 import { inject } from "@ubs-platform/neolit/injectables";
