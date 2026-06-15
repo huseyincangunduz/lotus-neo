@@ -16,7 +16,7 @@ export class DownloadLinks extends NeolitComponent {
           processorArchitecture: "x64",
           terminalCommand:
             "irm https://raw.githubusercontent.com/ubs-platform/postral-core/master/install.ps1 | iex",
-          url: "https://raw.githubusercontent.com/ubs-platform/postral-core/master/infrastructure/docker-compose.yml",
+          // url: "https://raw.githubusercontent.com/ubs-platform/postral-core/master/infrastructure/docker-compose.yml",
           checksum: "",
           size: 0,
           title:
@@ -46,7 +46,7 @@ export class DownloadLinks extends NeolitComponent {
           terminalCommand:
             "curl -fsSL https://raw.githubusercontent.com/ubs-platform/postral-core/master/install.sh | bash",
           title:
-            "2019 model Mac cihazlarda ve Güncel MacOS çalışacak bash komutu ile kurulum. (Resmi olarak Apple Silicon şu anda desteklenmemektedir. Rosetta ile çalıştırılabilir ancak test edilmemiştir.)",
+            "2019 model Mac cihazlarda ve Güncel MacOS çalışacak bash komutu ile kurulum. (Apple Silicon işlemcilerinde Rosetta ile çalıştırılabilir.)",
         },
       ],
     },

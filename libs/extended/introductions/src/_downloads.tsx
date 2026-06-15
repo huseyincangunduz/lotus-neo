@@ -55,9 +55,16 @@ function detectCurrentOsGroup(): string {
   const platform: string =
     (navigator as any).userAgentData?.platform ?? navigator.platform ?? "";
   const ua = navigator.userAgent.toLocaleLowerCase();
-  const lc = platform.toLowerCase();
+  const lc = platform.toLocaleLowerCase();
+  // const lc = "macos";
+  if (
+    lc.includes("mac") ||
+    lc.includes("macos") ||
+    ua.includes("mac os") ||
+    ua.includes("macintosh")
+  )
+    return "macOS";
 
-  if (lc.includes("mac") || ua.includes("mac os") || ua.includes("macintosh")) return "macOS";
   if (ua.includes("windows") || lc.includes("win")) return "Windows";
   if (lc.includes("linux") || ua.includes("linux")) return "Linux";
   return "";
