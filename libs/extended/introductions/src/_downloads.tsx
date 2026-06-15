@@ -54,12 +54,12 @@ function osIcon(osGroup: string): IconProperties {
 function detectCurrentOsGroup(): string {
   const platform: string =
     (navigator as any).userAgentData?.platform ?? navigator.platform ?? "";
-  const ua = navigator.userAgent;
+  const ua = navigator.userAgent.toLocaleLowerCase();
   const lc = platform.toLowerCase();
 
-  if (lc.includes("mac") || ua.includes("Mac OS")) return "macOS";
-  if (lc.includes("win") || ua.includes("Windows")) return "Windows";
-  if (lc.includes("linux") || ua.includes("Linux")) return "Linux";
+  if (lc.includes("mac") || ua.includes("mac os") || ua.includes("macintosh")) return "macOS";
+  if (ua.includes("windows") || lc.includes("win")) return "Windows";
+  if (lc.includes("linux") || ua.includes("linux")) return "Linux";
   return "";
 }
 
