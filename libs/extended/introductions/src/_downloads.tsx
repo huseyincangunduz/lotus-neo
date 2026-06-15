@@ -5,6 +5,10 @@ import {
 } from "@ubs-platform/neolit/core";
 import { Button } from "@libs/ui/button";
 import { Icon, iconifyIcon, type IconProperties } from "@libs/ui/icon";
+export const WINDOWS = "Windows";
+export const MACOS = "MacOS";
+export const LINUX = "Linux";
+export const DOCKER = "Docker";
 
 export interface DownloadItem {
   processorArchitecture: string;
@@ -57,16 +61,19 @@ function detectCurrentOsGroup(): string {
   const ua = navigator.userAgent.toLocaleLowerCase();
   const lc = platform.toLocaleLowerCase();
   // const lc = "macos";
+  // alert(`Detected platform: ${platform}, userAgent: ${ua}`);
   if (
     lc.includes("mac") ||
     lc.includes("macos") ||
+    lc.includes("macintel") ||
+    lc.includes("macıntel") ||
     ua.includes("mac os") ||
     ua.includes("macintosh")
   )
-    return "macOS";
+    return MACOS;
 
-  if (ua.includes("windows") || lc.includes("win")) return "Windows";
-  if (lc.includes("linux") || ua.includes("linux")) return "Linux";
+  if (ua.includes("windows") || lc.includes("win")) return WINDOWS;
+  if (lc.includes("linux") || ua.includes("linux")) return LINUX;
   return "";
 }
 
