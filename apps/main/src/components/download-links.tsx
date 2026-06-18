@@ -1,6 +1,8 @@
 import {
   DownloadWarning,
   IntroDownloads,
+  MACOS,
+  WINDOWS,LINUX,
   type DownloadGroup,
 } from "@libs/extended/introductions";
 import { Icon, iconifyIcon } from "@libs/ui/icon";
@@ -10,7 +12,7 @@ export class DownloadLinks extends NeolitComponent {
   readonly serviceEditionLinks = [
     {
       os: "Windows 10 ve üzeri",
-      osGroup: "Windows",
+      osGroup: WINDOWS,
       downloads: [
         {
           processorArchitecture: "x64",
@@ -26,7 +28,7 @@ export class DownloadLinks extends NeolitComponent {
     },
     {
       os: "Generic GNU/Linux",
-      osGroup: "Linux",
+      osGroup: LINUX,
       downloads: [
         {
           processorArchitecture: "x64",
@@ -39,7 +41,7 @@ export class DownloadLinks extends NeolitComponent {
     },
     {
       os: "MacOS 10.15 ve üzeri",
-      osGroup: "MacOS",
+      osGroup: MACOS,
       downloads: [
         {
           processorArchitecture: "x64",
