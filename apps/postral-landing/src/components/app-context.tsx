@@ -64,7 +64,7 @@ export class Application extends NeolitComponent {
               title: "Kaynaklar",
               links: [
                 { label: "Core Backend - GitHub", href: inject("GITHUB_URL") },
-                { label: "Dokümantasyon", href: "/documentation" },
+                { label: "Dokümantasyon", href: inject("GITHUB_URL") + "/blob/master/docs/tr-tr/README.md" },
               ],
             },
             {
