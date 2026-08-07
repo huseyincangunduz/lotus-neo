@@ -135,6 +135,7 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
           icon={materialSymbolsOutlined("close")}
           onClick={() => toastService.dismiss(toast.id)}
           aria-label="Kapat"
+          label="Kapat"
         >
           
         </Button>
@@ -175,7 +176,7 @@ export class AlertToastContainer extends NeolitComponent {
           .renderFor((toast) => {
             return (
               <>
-                <SingleToast toast={toast} />
+                <SingleToast toast={toast}  />
               </>
             );
           })}
