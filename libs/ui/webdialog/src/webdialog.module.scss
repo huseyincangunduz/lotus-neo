@@ -31,6 +31,15 @@
     animation-duration: var(--duration);
     animation-direction: reverse;
   }
+
+  &[dialog-mode="popover"] {
+    background-color: transparent;
+    animation: none;
+
+    &[show-mask-in-popover="true"] {
+      background-color: rgba(0, 0, 0, 0.12);
+    }
+  }
 }
 
 @keyframes bgColor {
@@ -129,7 +138,25 @@
     width: 100%;
   }
 
-  &[dialog-align="center"] {
+  &[dialog-mode="popover"] {
+    position: fixed;
+    width: max-content;
+    max-height: calc(100dvh - 16px);
+    transform-origin: top left;
+
+    &[animation-state="BEGIN"] {
+      animation: dialog-popover-in;
+      animation-duration: var(--duration);
+    }
+
+    &[animation-state="OUT"] {
+      animation: dialog-popover-in;
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+
+  &[dialog-mode="modal"][dialog-align="center"] {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%) scale(1);
@@ -152,7 +179,7 @@
     }
   }
 
-  &[dialog-align="right"] {
+  &[dialog-mode="modal"][dialog-align="right"] {
     right: 0px;
     height: 100dvh;
 
@@ -170,7 +197,7 @@
     }
   }
 
-  &[dialog-align="left"] {
+  &[dialog-mode="modal"][dialog-align="left"] {
     left: 0px;
     height: 100dvh;
     transform: translateX(-100%);
@@ -191,7 +218,7 @@
     }
   }
 
-  &[dialog-align="bottom-center"] {
+  &[dialog-mode="modal"][dialog-align="bottom-center"] {
     bottom: 0px;
     left: 50%;
 
@@ -213,7 +240,7 @@
     }
   }
 
-  &[dialog-align="bottom-left"] {
+  &[dialog-mode="modal"][dialog-align="bottom-left"] {
     bottom: 0px;
     left: 0;
 
@@ -235,7 +262,7 @@
     }
   }
 
-  &[dialog-align="bottom-right"] {
+  &[dialog-mode="modal"][dialog-align="bottom-right"] {
     bottom: 0px;
     right: 0;
 
@@ -278,5 +305,16 @@
       text-transform: uppercase;
       text-align: center;
     }
+  }
+}
+
+@keyframes dialog-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

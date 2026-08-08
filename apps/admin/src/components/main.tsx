@@ -16,6 +16,7 @@ import { toastService } from "@libs/ui/alert-toast";
 
 export class MainPage extends NeolitComponent {
   showDialog = state(false);
+  showPopover = state(false);
   staticText = state("Hello, World!");
   padding = state(true);
   position = state<"center" | "right" | "left" | "bottom-center" | "bottom">(
@@ -94,6 +95,31 @@ export class MainPage extends NeolitComponent {
             ></Button>
           </div>
         </WebDialog>
+
+        <WebDialog
+          show={this.showPopover}
+          mode="popover"
+          anchorSelector="#popover-menu-button"
+          placement="bottom-start"
+          width="280px"
+          maxHeight="320px"
+          displayHeader={false}
+          padding={false}
+          onClose={() => this.showPopover.set(false)}
+        >
+          <div className="flex flex-col py-1">
+            <button className="px-3 py-2 text-left hover:bg-(--color-surface-1)">
+              Profili goruntule
+            </button>
+            <button className="px-3 py-2 text-left hover:bg-(--color-surface-1)">
+              Ayarlar
+            </button>
+            <button className="px-3 py-2 text-left hover:bg-(--color-surface-1)">
+              Yardim
+            </button>
+          </div>
+        </WebDialog>
+
         <div>
           <h1>Admin sayfasına hoş geldiniz!</h1>
           <Button
@@ -101,6 +127,13 @@ export class MainPage extends NeolitComponent {
             variant="outline-primary"
             onClick={() => this.showDialog.set(true)}
           ></Button>
+          <button
+            id="popover-menu-button"
+            className="ml-2 rounded-sm border border-(--color-border) px-3 py-2 hover:bg-(--color-surface-1)"
+            onClick={() => this.showPopover.update((v) => !v)}
+          >
+            Hizli menu
+          </button>
           <Button
             label="Toast göster"
             variant="outline-primary"
