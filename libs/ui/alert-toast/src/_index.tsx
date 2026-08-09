@@ -29,7 +29,8 @@ class ToastService {
 
   /** Toast ekler, id döner */
   show(item: Omit<ToastItem, "id">): string {
-    const id = crypto.randomUUID();
+    // TODO: Rastgele id üretimi daha önce UUID ile yapılıyordu ancak remote bağlanırken sorun çıkardı. Bu yüzden sonra bu id işlerine bakacağım...
+    const id = Math.random().toString(36).substring(2, 9);
     const toast: ToastItem = { ...item, id };
     // if (toast.duration === undefined) {
     //   toast.duration = 3500;

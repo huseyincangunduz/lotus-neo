@@ -114,7 +114,8 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   private renderDialog = state<boolean>(false);
   private animationState = state<AnimationState>("HIDE");
   private beginTimeout!: ReturnType<typeof setTimeout>;
-  private dialogDomId = crypto.randomUUID();
+    // TODO: Rastgele id üretimi daha önce crypto.randomUUID(); ile yapılıyordu ancak remote bağlanırken sorun çıkardı. Bu yüzden sonra bu id işlerine bakacağım...
+  private dialogDomId = Math.random().toString(36).substring(2, 9);
   private popoverTop = state<string>("0px");
   private popoverLeft = state<string>("0px");
   private popoverMaxWidth = state<string>("calc(100dvw - 16px)");
