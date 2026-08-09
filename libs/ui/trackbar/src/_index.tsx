@@ -6,6 +6,7 @@ import {
   type NeolitNode,
   type StateOrPlain,
 } from "@ubs-platform/neolit/core";
+import { fromState } from "@ubs-platform/neolit/structural";
 
 export interface TrackbarProps {
   label?: StateOrPlain<string>;
@@ -30,10 +31,7 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
     onChange: (_v: number) => {},
   };
 
-  hasLabel = computed(
-    [this.properties.label],
-    ([label]: string[]) => !!label,
-  );
+  hasLabel = computed([this.properties.label], ([label]: string[]) => !!label);
 
   fillPercent = computed(
     [this.properties.value, this.properties.min, this.properties.max],
@@ -44,12 +42,9 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
     },
   );
 
-  trackStyle = computed(
-    [this.fillPercent],
-    ([fillPercent]: [number]) => ({
-      background: `linear-gradient(90deg, var(--color-primary) ${fillPercent}%, var(--color-border) ${fillPercent}%)`,
-    }),
-  );
+  trackStyle = computed([this.fillPercent], ([fillPercent]: [number]) => ({
+    background: `linear-gradient(90deg, var(--color-primary) ${fillPercent}%, var(--color-border) ${fillPercent}%)`,
+  }));
 
   private _handleInput(nextValue: number) {
     if (this.properties.value instanceof State) {
@@ -62,16 +57,17 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
     return (
       <div className="flex flex-col gap-2 w-full">
         <div className="flex items-center justify-between gap-3">
-          {this.hasLabel.get() && (
-            <label className="text-xs font-medium text-(--color-fg) opacity-70 select-none">
+          {fromState(this.hasLabel).renderIf(() => (
+            <span className="text-sm font-medium text-(--color-fg) opacity-80">
               {this.properties.label}
-            </label>
-          )}
-          {this.properties.showValue && (
+            </span>
+          ))}
+
+          {fromState(this.properties.showValue).renderIf(() => (
             <span className="text-xs font-medium text-(--color-fg) opacity-80 tabular-nums min-w-[3ch] text-right">
               {this.properties.value}
             </span>
-          )}
+          ))}
         </div>
         <input
           type="range"
