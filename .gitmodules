@@ -1,0 +1,3 @@
+[submodule "apps/xdraw-mobile"]
+	path = apps/xdraw-mobile
+	url = https://github.com/huseyincangunduz/xdraw-mobile
