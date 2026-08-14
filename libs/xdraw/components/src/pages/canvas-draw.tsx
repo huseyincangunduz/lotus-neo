@@ -7,7 +7,7 @@ import {
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
 import { CanvasDrawSidebar } from "../elements/canvas-sidebar";
 import { inject } from "@ubs-platform/neolit/injectables";
-import { CanvasDrawTools, XDrawDataHolder, XDrawSettingsConfig, type XDrawSnapshot } from "@libs/xdraw/core"
+import { CanvasDrawTools, ColorUtils, listenKey, listenPinch, XDrawDataHolder, XDrawSettingsConfig, type XDrawSnapshot } from "@libs/xdraw/core"
 
 export const XDRAW_SETTING_KEYS = {
     appTheme: "xdraw.settings.appTheme",
@@ -40,11 +40,7 @@ const MAX_SCALE = 40;
 
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDraw extends NeolitComponent {
-    // showColorPickerDialog = state(false);
-    // showPencilSettingsDialog = state(false);
-    // showSizeSelectorDialog = state(false);
-    // menuDialog = state(false);
-    // layerSettingsDialog = state(false);
+
     worldX = state(0);
     worldY = state(0);
     clickedCameraX = state(0);
