@@ -12,20 +12,39 @@ import { Checkbox } from "@libs/ui/checkbox";
 import { Trackbar } from "@libs/ui/trackbar";
 import { fromState } from "@ubs-platform/neolit/structural";
 import { inject } from "@ubs-platform/neolit/injectables";
-import { XDrawDataHolder, XDrawSettingsConfig, type XDrawSnapshot, ColorUtils } from "@libs/xdraw/core"
+import {
+  XDrawDataHolder,
+  XDrawSettingsConfig,
+  type XDrawSnapshot,
+  ColorUtils,
+} from "@libs/xdraw/core";
+import {
+  APP_NATIVE_CONTROLLER_TOKEN,
+  type IAppNativeController,
+} from "../app-native-controller";
 
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDrawSidebar extends NeolitComponent {
   properties = {
     xdrawDataHolder: state(new XDrawDataHolder()),
-    onDownloadProject: () => { },
-    onOpenProjectFromFile: () => { },
-    flushAutosave: () => { },
-    redo: () => { },
-    undo: () => { },
-    canRedo: state(false, { notifyIncomingWhenSetState: true, subscribeIncomingWhenSetState: true }),
-    canUndo: state(false, { notifyIncomingWhenSetState: true, subscribeIncomingWhenSetState: true }),
-    pushHistorySnapshotOperation: (old: XDrawSnapshot, newData: XDrawSnapshot) => { },
+    onDownloadProject: (saveAs?: boolean) => {},
+    onOpenProjectFromFile: () => {},
+    flushAutosave: () => {},
+    redo: () => {},
+    undo: () => {},
+    generateNew: () => {},
+    canRedo: state(false, {
+      notifyIncomingWhenSetState: true,
+      subscribeIncomingWhenSetState: true,
+    }),
+    canUndo: state(false, {
+      notifyIncomingWhenSetState: true,
+      subscribeIncomingWhenSetState: true,
+    }),
+    pushHistorySnapshotOperation: (
+      old: XDrawSnapshot,
+      newData: XDrawSnapshot,
+    ) => {},
   };
   showColorPickerDialog = state(false);
   showPencilSettingsDialog = state(false);
@@ -36,7 +55,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
   settings = inject(XDrawSettingsConfig);
   layersState = state<any[]>([]);
   xdrawHolder?: XDrawDataHolder = undefined;
-
+  appController = inject(
+    APP_NATIVE_CONTROLLER_TOKEN,
+  ) as any as IAppNativeController;
 
   private colorDialogLastCommittedColor: string | null = null;
 
@@ -57,11 +78,10 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
   private readonly alphaPresets = [1, 0.8, 0.6, 0.4, 0.2, 0.1];
 
-
-
-
   private setStrokeAlpha(alpha: number): void {
-    this.settings.strokeAlpha.set(Number(Math.max(0, Math.min(1, alpha)).toFixed(2)));
+    this.settings.strokeAlpha.set(
+      Number(Math.max(0, Math.min(1, alpha)).toFixed(2)),
+    );
   }
 
   private applyColorPreset(color: string): void {
@@ -69,7 +89,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
   }
 
   private applyAlphaPreset(alpha: number): void {
-    this.settings.strokeAlpha.set(Number(Math.max(0, Math.min(1, alpha)).toFixed(2)));
+    this.settings.strokeAlpha.set(
+      Number(Math.max(0, Math.min(1, alpha)).toFixed(2)),
+    );
   }
 
   private openColorPickerDialog(): void {
@@ -98,14 +120,14 @@ export class CanvasDrawSidebar extends NeolitComponent {
     this.colorDialogLastCommittedColor = currentColor;
   }
 
-  private downloadProject(): void {
-    this.properties.onDownloadProject();
+  private downloadProject(saveAs?: boolean): void {
+    this.properties.onDownloadProject(saveAs);
+    this.menuDialog.set(false);
   }
 
   private openProjectFromFile(): void {
     this.properties.onOpenProjectFromFile();
   }
-
 
   private getColorChannels(): { r: number; g: number; b: number } {
     const rgb = ColorUtils.hexToRgb(this.settings.strokeColor.get());
@@ -117,19 +139,19 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
   private setStrokeChannel(channel: "r" | "g" | "b", rawValue: string): void {
     const parsed = Number(rawValue);
-    const value = Number.isFinite(parsed) ? Math.max(0, Math.min(255, Math.round(parsed))) : 0;
+    const value = Number.isFinite(parsed)
+      ? Math.max(0, Math.min(255, Math.round(parsed)))
+      : 0;
     const current = this.getColorChannels();
     const next = { ...current, [channel]: value };
     this.settings.strokeColor.set(ColorUtils.rgbToHex(next.r, next.g, next.b));
   }
-
 
   private closeColorPickerDialog(): void {
     this.commitColorDialogSelection();
     this.colorDialogLastCommittedColor = null;
     this.showColorPickerDialog.set(false);
   }
-
 
   onInit(): void {
     this.properties.xdrawDataHolder.subscribe((holder) => {
@@ -144,13 +166,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
     this.flushAutosave();
   }
 
-
-
-
   render(): NeolitNode {
     return (
-
-
       <div className="flex flex-col gap-2 flex-wrap" id="toolbar">
         <Button
           variant="ghost"
@@ -233,8 +250,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
         <div className="border-t border-(--color-border)"></div>
 
         <Button
-          variant={computed<ButtonVariant>([this.properties.canUndo], ([canUndo]) =>
-            canUndo ? "filled-primary" : "ghost",
+          variant={computed<ButtonVariant>(
+            [this.properties.canUndo],
+            ([canUndo]) => (canUndo ? "filled-primary" : "ghost"),
           )}
           onClick={() => {
             if (this.properties.canUndo.get()) {
@@ -244,8 +262,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
           icon={materialSymbolsOutlined("undo")}
         ></Button>
         <Button
-          variant={computed<ButtonVariant>([this.properties.canRedo], ([canRedo]) =>
-            canRedo ? "filled-primary" : "ghost",
+          variant={computed<ButtonVariant>(
+            [this.properties.canRedo],
+            ([canRedo]) => (canRedo ? "filled-primary" : "ghost"),
           )}
           onClick={() => {
             if (this.properties.canRedo.get()) {
@@ -256,16 +275,15 @@ export class CanvasDrawSidebar extends NeolitComponent {
         ></Button>
         <div className="border-t border-(--color-border)"></div>
 
-
         <Button
           variant={computed<ButtonVariant>(
             [this.settings.backgroundPatternMode],
             ([enabled]) => (enabled ? "filled-primary" : "ghost"),
           )}
           onClick={() => {
-
-            this.settings.backgroundPatternMode.update((currentMode) => (currentMode + 1) % 3 as 0 | 1 | 2);
-
+            this.settings.backgroundPatternMode.update(
+              (currentMode) => ((currentMode + 1) % 3) as 0 | 1 | 2,
+            );
 
             // this.properties.xdrawDataHolder.get().setBackgroundPattern((currentMode + 1) % 3 as 0 | 1 | 2);
           }}
@@ -298,9 +316,12 @@ export class CanvasDrawSidebar extends NeolitComponent {
         </div>
 
         {/*Katmanlar */}
-        <Button icon={materialSymbolsOutlined("layers")} onClick={() => {
-          this.layerSettingsDialog.set(true);
-        }}></Button>
+        <Button
+          icon={materialSymbolsOutlined("layers")}
+          onClick={() => {
+            this.layerSettingsDialog.set(true);
+          }}
+        ></Button>
         <WebDialog
           show={this.menuDialog}
           mode="popover"
@@ -310,11 +331,24 @@ export class CanvasDrawSidebar extends NeolitComponent {
           maxHeight="320px"
           displayHeader={false}
         >
-
-          <img src={computed([this.settings.appTheme], ([theme]) => theme === "light" ? "xdraw-logo-blk.png" : "xdraw-logo.png")} alt="XDraw Logo" style="height: 60px" />
+          <img
+            src={computed([this.settings.appTheme], ([theme]) =>
+              theme === "light" ? "xdraw-logo-blk.png" : "xdraw-logo.png",
+            )}
+            alt="XDraw Logo"
+            style="height: 60px"
+          />
 
           <div className="flex flex-col gap-1">
             <h2>Dosya</h2>
+
+            <Button
+              variant="ghost"
+              label="Yeni"
+              onClick={() => {
+                void this.generateNew();
+              }}
+            ></Button>
             <Button
               variant="ghost"
               label="Aç"
@@ -324,11 +358,28 @@ export class CanvasDrawSidebar extends NeolitComponent {
             ></Button>
             <Button
               variant="ghost"
-              label="İndir"
+              label={
+                this.appController.isMobileApp ||
+                this.appController.isElectronApp
+                  ? "Kaydet"
+                  : "İndir"
+              }
               onClick={() => {
                 this.downloadProject();
               }}
             ></Button>
+
+            {(this.appController.isMobileApp ||
+              this.appController.isElectronApp) && (
+              <Button
+                variant="ghost"
+                label={"Farklı Kaydet"}
+                onClick={() => {
+                  this.downloadProject(true);
+                }}
+              ></Button>
+            )}
+
             {/* <Button variant="ghost" label="Kütüphane" ></Button> */}
 
             <div>
@@ -351,13 +402,22 @@ export class CanvasDrawSidebar extends NeolitComponent {
           </div>
           <sub>
             <p className="text-xs text-(--color-text-muted)">
-              XDraw v{import.meta.env.PACKAGE_VERSION} - {import.meta.env.PACKAGE_BUILD_DATE}<br></br>
-
-              (c) 2026 <a href="https://tetakent.com" target="_blank" rel="noopener noreferrer">Tetakent (H.C.G)</a><br></br>
+              XDraw v{import.meta.env.PACKAGE_VERSION} -{" "}
+              {import.meta.env.PACKAGE_BUILD_DATE}
+              <br></br>
+              (c) 2026{" "}
+              <a
+                href="https://tetakent.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Tetakent (H.C.G)
+              </a>
+              <br></br>
               Tüm hakları saklıdır
             </p>
           </sub>
-          <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo" ></img>
+          <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo"></img>
         </WebDialog>
         <WebDialog
           show={this.showPencilSettingsDialog}
@@ -412,7 +472,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
               this.settings.zoomDirection.set(checked ? -1 : 1);
             }}
           ></Checkbox>
-
         </WebDialog>
 
         <WebDialog
@@ -455,7 +514,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
               width="100%"
             />
 
-
             {/* <div
               className="h-8 rounded border border-(--color-border)"
               style={computed(
@@ -470,8 +528,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
               min={0}
               max={255}
               step={1}
-              value={computed([this.settings.strokeColor], () => this.getColorChannels().r)}
-              onChange={(value: number) => this.setStrokeChannel("r", String(value))}
+              value={computed(
+                [this.settings.strokeColor],
+                () => this.getColorChannels().r,
+              )}
+              onChange={(value: number) =>
+                this.setStrokeChannel("r", String(value))
+              }
               onChangeEnd={() => this.commitColorDialogSelection()}
             ></Trackbar>
             <Trackbar
@@ -479,8 +542,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
               min={0}
               max={255}
               step={1}
-              value={computed([this.settings.strokeColor], () => this.getColorChannels().g)}
-              onChange={(value: number) => this.setStrokeChannel("g", String(value))}
+              value={computed(
+                [this.settings.strokeColor],
+                () => this.getColorChannels().g,
+              )}
+              onChange={(value: number) =>
+                this.setStrokeChannel("g", String(value))
+              }
               onChangeEnd={() => this.commitColorDialogSelection()}
             ></Trackbar>
             <Trackbar
@@ -488,8 +556,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
               min={0}
               max={255}
               step={1}
-              value={computed([this.settings.strokeColor], () => this.getColorChannels().b)}
-              onChange={(value: number) => this.setStrokeChannel("b", String(value))}
+              value={computed(
+                [this.settings.strokeColor],
+                () => this.getColorChannels().b,
+              )}
+              onChange={(value: number) =>
+                this.setStrokeChannel("b", String(value))
+              }
               onChangeEnd={() => this.commitColorDialogSelection()}
             ></Trackbar>
             <Trackbar
@@ -528,23 +601,32 @@ export class CanvasDrawSidebar extends NeolitComponent {
           title={"Katman ayarları"}
         >
           <div className="flex flex-col gap-1">
-
             <div className="flex flex-col gap-1">
               {fromState(this.layersState)
                 .keyFn((a) => a.id)
                 .renderForLegacy((layer) => (
                   <>
                     <Button
-                      style={{ width: '100%' }}
+                      style={{ width: "100%" }}
                       onClick={() => {
-                        if (this.properties.xdrawDataHolder.get().getActiveLayerId() === layer.id) {
+                        if (
+                          this.properties.xdrawDataHolder
+                            .get()
+                            .getActiveLayerId() === layer.id
+                        ) {
                           this.layerSettingsDialog.set(true);
                           return;
                         }
 
-                        this.runMutationWithHistory(() => this.properties.xdrawDataHolder.get().setActiveLayer(layer.id));
+                        this.runMutationWithHistory(() =>
+                          this.properties.xdrawDataHolder
+                            .get()
+                            .setActiveLayer(layer.id),
+                        );
                       }}
-                      variant={layer.currentSessionActive ? "filled-primary" : "ghost"}
+                      variant={
+                        layer.currentSessionActive ? "filled-primary" : "ghost"
+                      }
                       label={layer.id === "base" ? undefined : layer.id}
                       icon={
                         layer.id === "base"
@@ -554,30 +636,30 @@ export class CanvasDrawSidebar extends NeolitComponent {
                     ></Button>
                   </>
                 ))}
-
             </div>
             <Button
-              style={{ width: '100%' }}
-              onClick={
-                this.runMutationWithHistory.bind(this, () => {
-                  this.xdrawHolder?.createLayer();
-                })
-              }
+              style={{ width: "100%" }}
+              onClick={this.runMutationWithHistory.bind(this, () => {
+                this.xdrawHolder?.createLayer();
+              })}
               label="Yeni Katman"
               icon={materialSymbolsOutlined("add")}
               variant={"outline-primary"}
             ></Button>
           </div>
 
-
           <h2>Katman Ayarları</h2>
 
           <Button
             onClick={() => {
-              const activeLayerId = this.properties.xdrawDataHolder.get().getActiveLayerId();
+              const activeLayerId = this.properties.xdrawDataHolder
+                .get()
+                .getActiveLayerId();
               if (activeLayerId !== "base") {
                 this.runMutationWithHistory(() => {
-                  this.properties.xdrawDataHolder.get().deleteLayer(activeLayerId);
+                  this.properties.xdrawDataHolder
+                    .get()
+                    .deleteLayer(activeLayerId);
                 });
               } else {
                 alert("Base katmanı silinemez.");
@@ -600,13 +682,21 @@ export class CanvasDrawSidebar extends NeolitComponent {
                     step={0.01}
                     value={a?.opacity ?? 1}
                     onChange={(value: number) => {
-                      const activeLayerId = this.properties.xdrawDataHolder.get().getActiveLayerId();
-                      this.properties.xdrawDataHolder.get().setLayerOpacity(activeLayerId, value);
+                      const activeLayerId = this.properties.xdrawDataHolder
+                        .get()
+                        .getActiveLayerId();
+                      this.properties.xdrawDataHolder
+                        .get()
+                        .setLayerOpacity(activeLayerId, value);
                     }}
                     onChangeEnd={(value: number) => {
-                      const activeLayerId = this.properties.xdrawDataHolder.get().getActiveLayerId();
+                      const activeLayerId = this.properties.xdrawDataHolder
+                        .get()
+                        .getActiveLayerId();
                       this.runMutationWithHistory(() => {
-                        this.properties.xdrawDataHolder.get().setLayerOpacity(activeLayerId, value);
+                        this.properties.xdrawDataHolder
+                          .get()
+                          .setLayerOpacity(activeLayerId, value);
                       });
                     }}
                   ></Trackbar>
@@ -616,11 +706,12 @@ export class CanvasDrawSidebar extends NeolitComponent {
           }
         </WebDialog>
       </div>
-
-
     );
   }
-
+  generateNew() {
+    this.properties.generateNew();
+    this.menuDialog.set(false);
+  }
 
   private runMutationWithHistory(mutate: () => void): void {
     const before = this.captureHistorySnapshot();
@@ -633,7 +724,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
   flushAutosave(): void {
     this.properties.flushAutosave();
   }
-
 
   captureHistorySnapshot(): XDrawSnapshot {
     if (!this.xdrawHolder) {
@@ -648,6 +738,4 @@ export class CanvasDrawSidebar extends NeolitComponent {
   ): void {
     this.properties.pushHistorySnapshotOperation(before, after);
   }
-
-
 }
