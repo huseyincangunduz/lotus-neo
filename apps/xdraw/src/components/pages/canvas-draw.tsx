@@ -4,17 +4,10 @@ import {
     state,
     type NeolitNode,
 } from "@ubs-platform/neolit/core";
-import {
-    XDrawDataHolder,
-    type XDrawSnapshot,
-} from "../../core/data-holder";
-import { CanvasDrawTools } from "../../utils/canvas-draw-tools";
-import { listenKey, listenPinch } from "../../utils/canvas-gesture-listeners";
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
-import { ColorUtils } from "../../utils/color-utils";
 import { CanvasDrawSidebar } from "../elements/canvas-sidebar";
-import { XDrawSettingsConfig } from "../../core/xdraw-settings-config";
 import { inject } from "@ubs-platform/neolit/injectables";
+import { CanvasDrawTools, XDrawDataHolder, XDrawSettingsConfig, type XDrawSnapshot } from "@libs/xdraw/core"
 
 export const XDRAW_SETTING_KEYS = {
     appTheme: "xdraw.settings.appTheme",

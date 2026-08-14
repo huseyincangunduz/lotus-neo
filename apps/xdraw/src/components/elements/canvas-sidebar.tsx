@@ -4,20 +4,15 @@ import {
   state,
   type NeolitNode,
 } from "@ubs-platform/neolit/core";
-import {
-  XDrawDataHolder,
-  type XDrawSnapshot,
-} from "../../core/data-holder";
+
 import { Button, type ButtonVariant } from "@libs/ui/button";
 import { WebDialog } from "@libs/ui/webdialog";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
 import { Checkbox } from "@libs/ui/checkbox";
 import { Trackbar } from "@libs/ui/trackbar";
 import { fromState } from "@ubs-platform/neolit/structural";
-import { ColorUtils } from "../../utils/color-utils";
-import { XDrawSettingsConfig } from "../../core/xdraw-settings-config";
 import { inject } from "@ubs-platform/neolit/injectables";
-
+import { XDrawDataHolder, XDrawSettingsConfig, type XDrawSnapshot, ColorUtils } from "@libs/xdraw/core"
 
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDrawSidebar extends NeolitComponent {
