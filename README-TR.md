@@ -67,6 +67,45 @@ TypeScript'in çözümleyebilmesi için kök `tsconfig.json` içinde path alias 
 
 > Yeni kütüphaneler bu wildcard sayesinde otomatik olarak TypeScript tarafından da tanınır.
 
+## Ayrı Repo Uygulamalar ve Git Submodule
+
+Monorepo içinde geliştirilen bir uygulamayı ayrı bir repository'de tutup `apps/` altında kullanmak için Git submodule tercih edilebilir. Örneğin xdraw'ın private repository'sini eklemek için:
+
+```bash
+# lotus-neo kök dizininden
+git submodule add git@github.com:<kullanici>/xdraw.git apps/xdraw
+git add .gitmodules apps/xdraw
+git commit -m "Add xdraw as submodule"
+git push
+```
+
+Private repository için ekip üyelerinin ilgili GitHub repository'sine erişimi ve SSH anahtarı veya HTTPS kimlik doğrulaması olmalıdır.
+
+Yeni bir çalışma kopyası oluştururken submodule'leri de indirmek için:
+
+```bash
+git clone --recurse-submodules git@github.com:<kullanici>/lotus-neo.git
+```
+
+Mevcut clone'a submodule'leri sonradan indirmek için:
+
+```bash
+git submodule update --init --recursive
+```
+
+xdraw repository'sinde yeni bir commit yayınlandıktan sonra `lotus-neo` içindeki referansı güncellemek için:
+
+```bash
+cd apps/xdraw
+git pull origin main
+cd ../..
+git add apps/xdraw
+git commit -m "Update xdraw submodule"
+git push
+```
+
+Ana repository yalnızca submodule'ün belirli commit'ini takip eder. Bu nedenle `lotus-neo`'nun güncellenmesi, xdraw repository'sinin de otomatik olarak en son commit'e geçmesini sağlamaz.
+
 ## Neolit Kullanımı
 
 [Neolit](https://github.com/ubs-platform/neolit), bu monoreponun dayandığı UI framework'üdür. Bileşenler `NeolitComponent`'i genişletir ve `render()` metodundan JSX döner.
