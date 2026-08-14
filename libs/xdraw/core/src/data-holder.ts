@@ -10,7 +10,7 @@ import type {
     XDrawLayer,
 } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
-import { ColorUtils } from "../utils/color-utils";
+import { ColorUtils } from "./color-utils";
 
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "./xdraw-data";
 

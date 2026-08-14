@@ -1,4 +1,4 @@
-import { ColorUtils } from "../utils/color-utils";
+import { ColorUtils } from "./color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 
