@@ -90,9 +90,7 @@ export class Icon extends NeolitComponent {
   onInit(): void {
     // Kullanmamayı umuyordum ama fragment aligmentleri bozuyor... mecbur :d
     // Zaten büyük bir component değil, bu kadar kontrolü tek bir componentte toplamak daha mantıklı geldi.
-    this.watchToRerender(this.combineContentAndClass);
-    this.watchToRerender(this.properties.imgSrc);
-    this.watchToRerender(this.properties.iconifyName);
+    this.watchToRerender(computed([this.combineContentAndClass, this.properties.imgSrc, this.properties.iconifyName], ([combineContentAndClass, imgSrc, iconifyName]) => combineContentAndClass || imgSrc || iconifyName));
   }
 
   render() {

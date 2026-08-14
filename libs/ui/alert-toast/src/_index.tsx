@@ -29,7 +29,7 @@ class ToastService {
 
   /** Toast ekler, id döner */
   show(item: Omit<ToastItem, "id">): string {
-    // TODO: Rastgele id üretimi daha önce UUID ile yapılıyordu ancak remote bağlanırken sorun çıkardı. Bu yüzden sonra bu id işlerine bakacağım...
+    // TODO: Rastgele id üretimi daha önce crypto.randomUUID(); ile yapılıyordu ancak remote bağlanırken sorun çıkardı. Bu yüzden sonra bu id işlerine bakacağım...
     const id = Math.random().toString(36).substring(2, 9);
     const toast: ToastItem = { ...item, id };
     // if (toast.duration === undefined) {
@@ -136,7 +136,6 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
           icon={materialSymbolsOutlined("close")}
           onClick={() => toastService.dismiss(toast.id)}
           aria-label="Kapat"
-          label="Kapat"
         >
           
         </Button>
@@ -177,7 +176,7 @@ export class AlertToastContainer extends NeolitComponent {
           .renderFor((toast) => {
             return (
               <>
-                <SingleToast toast={toast}  />
+                <SingleToast toast={toast} />
               </>
             );
           })}

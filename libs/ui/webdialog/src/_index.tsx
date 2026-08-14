@@ -98,7 +98,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     popoverOffset: state<number>(8),
     popoverBoundaryPadding: state<number>(8),
     showMaskInPopover: state<boolean>(false),
-    onClose: () => {},
+    onClose: () => { },
     children: <></>,
   };
 
@@ -114,7 +114,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   private renderDialog = state<boolean>(false);
   private animationState = state<AnimationState>("HIDE");
   private beginTimeout!: ReturnType<typeof setTimeout>;
-    // TODO: Rastgele id üretimi daha önce crypto.randomUUID(); ile yapılıyordu ancak remote bağlanırken sorun çıkardı. Bu yüzden sonra bu id işlerine bakacağım...
+  // TODO: Rastgele id üretimi daha önce crypto.randomUUID(); ile yapılıyordu ancak remote bağlanırken sorun çıkardı. Bu yüzden sonra bu id işlerine bakacağım...
   private dialogDomId = Math.random().toString(36).substring(2, 9);
   private popoverTop = state<string>("0px");
   private popoverLeft = state<string>("0px");
@@ -438,6 +438,8 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
         (this.properties.onClose as () => void)();
       }
     }
+
+    (this.properties.show as State<boolean>).set(false);
   }
 
   maskClick(event: MouseEvent) {
@@ -456,37 +458,36 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     // If neolit JSX, when parsing, encounters a prop value that is a state, it subscribes to it and updates the corresponding property of the HTML element when the state changes.
     // Therefore, there is no need to call get() here; simply passing the state is sufficient.
     return (
-      <>
+      <div
+        className={styles.modal}
+        animation-state={this.animationState}
+        dialog-mode={this.properties.mode}
+        show-mask-in-popover={this.properties.showMaskInPopover}
+        data-webdialog-id={this.dialogDomId}
+        style={{
+          "--duration": this.durationMs,
+          "--animDelay": this.delayMs,
+        }}
+        onClick={(e: MouseEvent) => this.maskClick(e)}
+      >
         <div
-          className={styles.modal}
+          className={styles.dialog}
           animation-state={this.animationState}
+          dialog-align={this.properties.position}
           dialog-mode={this.properties.mode}
-          show-mask-in-popover={this.properties.showMaskInPopover}
-          data-webdialog-id={this.dialogDomId}
           style={{
-            "--duration": this.durationMs,
-            "--animDelay": this.delayMs,
+            top: this.dialogTopStyle,
+            left: this.dialogLeftStyle,
+            maxWidth: this.dialogMaxWidthStyle,
+            width: this.properties.width,
+            height: this.properties.height,
+            maxHeight: this.properties.maxHeight,
           }}
-          onClick={(e: MouseEvent) => this.maskClick(e)}
         >
-          <div
-            className={styles.dialog}
-            animation-state={this.animationState}
-            dialog-align={this.properties.position}
-            dialog-mode={this.properties.mode}
-            style={{
-              top: this.dialogTopStyle,
-              left: this.dialogLeftStyle,
-              maxWidth: this.dialogMaxWidthStyle,
-              width: this.properties.width,
-              height: this.properties.height,
-              maxHeight: this.properties.maxHeight,
-            }}
-          >
-            {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
-            {getStateValue(
-              this.properties.displayHeader as StateOrPlain<boolean>,
-            ) && (
+          {/* Burada eğer dinamik olarak displayHeader gizlenebilmesi isteniyorsa fromState(...).renderIf gerekecek. */}
+          {getStateValue(
+            this.properties.displayHeader as StateOrPlain<boolean>,
+          ) && (
               <div
                 className={`${styles.header} flex items-center justify-between px-3 pt-3`}
               >
@@ -495,7 +496,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
                   this.properties.displayCloseButton as State<boolean>,
                 ).renderIf(() => (
                   <Button
-                    icon={materialSymbolsOutlined("close","0", "1.5em")}
+                    icon={materialSymbolsOutlined("close", "0", "1.5em")}
                     variant="ghost"
                     onClick={() => this.closeDialog()}
                     style={{ padding: "0.25em" }}
@@ -503,21 +504,20 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
                 ))}
               </div>
             )}
-            <div
-              className={[
-                "dialog-inner",
-                "flex-grow-1",
-                "overflow-auto",
-                computed([this.properties.padding], ([padding]) =>
-                  padding ? "px-3 pb-3" : "",
-                ),
-              ]}
-            >
-              {this.properties.children}
-            </div>
+          <div
+            className={[
+              "dialog-inner",
+              "flex-grow-1",
+              "overflow-auto",
+              computed([this.properties.padding], ([padding]) =>
+                padding ? "px-3 pb-3" : "",
+              ),
+            ]}
+          >
+            {this.properties.children}
           </div>
         </div>
-      </>
+      </div>
     );
   }
 }

@@ -5,7 +5,9 @@ import {
   State,
   type NeolitNode,
   type StateOrPlain,
+
 } from "@ubs-platform/neolit/core";
+
 import { fromState } from "@ubs-platform/neolit/structural";
 
 export interface TrackbarProps {
@@ -17,6 +19,7 @@ export interface TrackbarProps {
   disabled?: StateOrPlain<boolean>;
   showValue?: StateOrPlain<boolean>;
   onChange?: (value: number) => void;
+  onChangeEnd?: (value: number) => void;
 }
 
 export class Trackbar extends NeolitComponent<TrackbarProps> {
@@ -29,9 +32,13 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
     disabled: state<boolean>(false),
     showValue: state<boolean>(true),
     onChange: (_v: number) => {},
+    onChangeEnd: (_v: number) => {},
   };
 
-  hasLabel = computed([this.properties.label], ([label]: string[]) => !!label);
+  hasLabel = computed(
+    [this.properties.label],
+    ([label]: string[]) => !!label,
+  );
 
   fillPercent = computed(
     [this.properties.value, this.properties.min, this.properties.max],
@@ -42,9 +49,12 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
     },
   );
 
-  trackStyle = computed([this.fillPercent], ([fillPercent]: [number]) => ({
-    background: `linear-gradient(90deg, var(--color-primary) ${fillPercent}%, var(--color-border) ${fillPercent}%)`,
-  }));
+  trackStyle = computed(
+    [this.fillPercent],
+    ([fillPercent]: [number]) => ({
+      background: `linear-gradient(90deg, var(--color-primary) ${fillPercent}%, var(--color-border) ${fillPercent}%)`,
+    }),
+  );
 
   private _handleInput(nextValue: number) {
     if (this.properties.value instanceof State) {
@@ -53,21 +63,27 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
     this.properties.onChange?.(nextValue);
   }
 
+  private _handleChangeEnd(nextValue: number) {
+    if (this.properties.value instanceof State) {
+      this.properties.value.set(nextValue);
+    }
+    this.properties.onChangeEnd?.(nextValue);
+  }
+
   render(): NeolitNode | NeolitNode[] {
     return (
       <div className="flex flex-col gap-2 w-full">
         <div className="flex items-center justify-between gap-3">
-          {fromState(this.hasLabel).renderIf(() => (
+          {fromState(this.properties.label).renderIf((label) => (
             <span className="text-sm font-medium text-(--color-fg) opacity-80">
-              {this.properties.label}
+              {label}
             </span>
           ))}
-
-          {fromState(this.properties.showValue).renderIf(() => (
+          {this.properties.showValue && (
             <span className="text-xs font-medium text-(--color-fg) opacity-80 tabular-nums min-w-[3ch] text-right">
               {this.properties.value}
             </span>
-          ))}
+          )}
         </div>
         <input
           type="range"
@@ -77,12 +93,12 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
           value={this.properties.value}
           disabled={this.properties.disabled}
           className={
-            "w-full h-2 rounded-lg appearance-none outline-none transition-opacity duration-150 " +
-            "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 " +
+            "w-full h-3 md:h-4 rounded-lg appearance-none outline-none transition-opacity duration-150 " +
+            "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 md:[&::-webkit-slider-thumb]:h-6 md:[&::-webkit-slider-thumb]:w-6 " +
             "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-(--color-primary) " +
             "[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-(--color-surface) " +
             "[&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer " +
-            "[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full " +
+            "[&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 md:[&::-moz-range-thumb]:h-6 md:[&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full " +
             "[&::-moz-range-thumb]:bg-(--color-primary) [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer " +
             "disabled:opacity-50 disabled:cursor-not-allowed"
           }
@@ -93,7 +109,7 @@ export class Trackbar extends NeolitComponent<TrackbarProps> {
           }}
           onChange={(e: Event) => {
             const nextValue = Number((e.target as HTMLInputElement).value);
-            this._handleInput(nextValue);
+            this._handleChangeEnd(nextValue);
           }}
         />
       </div>
