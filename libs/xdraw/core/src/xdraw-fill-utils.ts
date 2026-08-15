@@ -1,94 +1,47 @@
-import type { XDrawDrawElement, XDrawElement, XDrawLayer } from "./xdraw-data";
+import type { XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawLayer, XDrawPoint } from "./xdraw-data";
 
 export class XdrawFillUtils {
     private static readonly FILL_MASK_ALPHA_THRESHOLD = 16;
     private static readonly FILL_BOUNDS_PADDING = 4;
-
-    public static allEmptyFillablePoints(worldX: number, worldY: number, elements: XDrawElement[]): Map<number, Map<number, boolean>> {
-        const emptyPointsMatrix: Map<number, Map<number, boolean>> = new Map();
-        const allPoints = elements.flatMap((element) => {
-            if (element.type === "draw") {
-                const drawElement = element as XDrawDrawElement;
-                return drawElement.points.map((point) => ({ x: point.x, y: point.y, size: point.size }));
-            }
-            return [];
-        });
-
-        const radius = 5;
-        const nearbyPoints = allPoints.filter((point) => {
-            const dx = point.x - worldX;
-            const dy = point.y - worldY;
-            return (dx * dx + dy * dy) <= (radius * radius);
-        });
-
-        for (const point of nearbyPoints) {
-            if (!emptyPointsMatrix.has(point.x)) {
-                emptyPointsMatrix.set(point.x, new Map());
-            }
-            const yMap = emptyPointsMatrix.get(point.x)!;
-            if (!yMap.has(point.y)) {
-                yMap.set(point.y, true);
-            }
-        }
-
-        return emptyPointsMatrix;
-    }
+    private static readonly FILL_MASK_DILATE_PX = 1;
+    private static readonly FILL_SIMPLIFY_EPSILON = 0.75;
 
     public static fillDye(activeLayer: XDrawLayer, x: number, y: number, color: string): boolean {
-        const fillResult = this.collectFloodFillSegments(activeLayer.elements, x, y);
-        if (!fillResult || fillResult.segments.length === 0) {
+        const fillElements = this.collectFloodFillElements(activeLayer.elements, x, y);
+        if (fillElements.length === 0) {
             return false;
         }
 
-        for (const segment of fillResult.segments) {
-            activeLayer.elements.push({
-                type: "draw",
-                color,
-                points: segment.points,
-                id: this.generateUniqueId(),
-            } as XDrawDrawElement);
+        for (const element of fillElements) {
+            element.color = color;
         }
-
+        // Dolgu, mevcut cizgilerin altinda kalsin diye baslangica eklenir.
+        activeLayer.elements.unshift(...fillElements);
         return true;
     }
 
-    public static fillPoints(activeLayer: XDrawLayer, fillablePoints: Map<number, Map<number, boolean>>, color: string): void {
-        for (const [x, yMap] of fillablePoints.entries()) {
-            for (const y of yMap.keys()) {
-                activeLayer.elements.push({
-                    type: "draw",
-                    color,
-                    points: [{ x, y, size: 10 }],
-                    id: this.generateUniqueId(),
-                } as XDrawDrawElement);
-            }
-        }
-    }
-
-    private static collectFloodFillSegments(
+    private static collectFloodFillElements(
         elements: XDrawElement[],
         worldX: number,
         worldY: number,
-    ): { segments: XDrawDrawElement[] } | null {
+    ): XDrawFillElement[] {
         const mask = this.rasterizeFillMask(elements, worldX, worldY);
         if (!mask) {
-            return null;
+            return [];
         }
 
         const fillPixels = this.floodFillMask(mask.imageData, mask.startX, mask.startY);
         if (!fillPixels) {
-            return null;
+            return [];
         }
 
-        return {
-            segments: this.convertFilledPixelsToDrawElements(
-                fillPixels,
-                mask.width,
-                mask.height,
-                mask.originX,
-                mask.originY,
-            ),
-        };
+        return this.convertFilledPixelsToFillElements(
+            fillPixels,
+            mask.width,
+            mask.height,
+            mask.originX,
+            mask.originY,
+        );
     }
 
     private static rasterizeFillMask(
@@ -133,6 +86,26 @@ export class XdrawFillUtils {
         context.fillStyle = "#000000";
 
         for (const element of elements) {
+            if (element.type === "fill") {
+                const fillElement = element as XDrawFillElement;
+                if (fillElement.rings.length === 0) {
+                    continue;
+                }
+                const path = new Path2D();
+                for (const ring of fillElement.rings) {
+                    if (ring.length === 0) {
+                        continue;
+                    }
+                    path.moveTo(ring[0].x, ring[0].y);
+                    for (let i = 1; i < ring.length; i++) {
+                        path.lineTo(ring[i].x, ring[i].y);
+                    }
+                    path.closePath();
+                }
+                context.fill(path, "evenodd");
+                continue;
+            }
+
             if (element.type !== "draw") {
                 continue;
             }
@@ -233,161 +206,216 @@ export class XdrawFillUtils {
         stack.push(pixelIndex);
     }
 
-    private static convertFilledPixelsToDrawElements(
+    private static convertFilledPixelsToFillElements(
         fillPixels: Uint8Array,
         width: number,
         height: number,
         originX: number,
         originY: number,
-    ): XDrawDrawElement[] {
-        type FillRun = { y: number; startX: number; endX: number };
-        type FillChain = {
-            points: Array<{ x: number; y: number; size: number }>;
-            lastRun: FillRun;
+    ): XDrawFillElement[] {
+        const dilated = this.dilateMask(fillPixels, width, height, this.FILL_MASK_DILATE_PX);
+        const rawRings = this.traceMaskContours(dilated, width, height);
+
+        const rings = rawRings
+            .map((ring) => this.simplifyRing(ring, this.FILL_SIMPLIFY_EPSILON))
+            .filter((ring) => ring.length >= 3)
+            .map((ring) => ring.map((point) => ({ x: originX + point.x, y: originY + point.y })));
+
+        if (rings.length === 0) {
+            return [];
+        }
+
+        return [{
+            type: "fill",
+            color: "#000000",
+            rings,
+            id: this.generateUniqueId(),
+        }];
+    }
+
+    private static dilateMask(mask: Uint8Array, width: number, height: number, iterations: number): Uint8Array {
+        let current = mask;
+        for (let iteration = 0; iteration < iterations; iteration++) {
+            const next = new Uint8Array(current);
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const index = y * width + x;
+                    if (current[index] === 1) {
+                        continue;
+                    }
+                    const left = x > 0 && current[index - 1] === 1;
+                    const right = x + 1 < width && current[index + 1] === 1;
+                    const up = y > 0 && current[index - width] === 1;
+                    const down = y + 1 < height && current[index + width] === 1;
+                    if (left || right || up || down) {
+                        next[index] = 1;
+                    }
+                }
+            }
+            current = next;
+        }
+        return current;
+    }
+
+    // Mask kenarlarini (piksel koseleri) izleyerek kapali halkalar cikarir.
+    // Evenodd doldurma kurali sayesinde dis sinir/delik ayrimi yapmaya gerek yok;
+    // tum halkalar duz bir liste olarak dondurulur.
+    private static traceMaskContours(mask: Uint8Array, width: number, height: number): XDrawPoint[][] {
+        const isFilled = (x: number, y: number): boolean =>
+            x >= 0 && y >= 0 && x < width && y < height && mask[y * width + x] === 1;
+
+        const edgesFrom = new Map<string, Array<[number, number]>>();
+        const addEdge = (x1: number, y1: number, x2: number, y2: number): void => {
+            const key = `${x1},${y1}`;
+            const list = edgesFrom.get(key);
+            if (list) {
+                list.push([x2, y2]);
+            } else {
+                edgesFrom.set(key, [[x2, y2]]);
+            }
         };
 
-        const runs = this.extractFillRuns(fillPixels, width, height);
-        const completedChains: FillChain[] = [];
-        let activeChains: FillChain[] = [];
-
-        for (const rowRuns of runs) {
-            const nextChains: FillChain[] = [];
-            const usedActiveChains = new Set<FillChain>();
-
-            for (const run of rowRuns) {
-                const candidates = activeChains.filter((chain) =>
-                    !usedActiveChains.has(chain) &&
-                    chain.lastRun.y === run.y - 1 &&
-                    this.fillRunsOverlap(chain.lastRun, run),
-                );
-
-                if (candidates.length !== 1) {
-                    nextChains.push({
-                        points: this.createRunPoints(run, originX, originY),
-                        lastRun: run,
-                    });
-                    continue;
-                }
-
-                const chain = candidates[0];
-                usedActiveChains.add(chain);
-                this.appendRunToChain(chain, run, originX, originY);
-                nextChains.push(chain);
-            }
-
-            for (const chain of activeChains) {
-                if (!usedActiveChains.has(chain)) {
-                    completedChains.push(chain);
-                }
-            }
-
-            activeChains = nextChains;
-        }
-
-        completedChains.push(...activeChains);
-
-        return completedChains
-            .filter((chain) => chain.points.length > 0)
-            .map((chain) => ({
-                type: "draw" as const,
-                color: "#000000",
-                points: chain.points,
-                id: this.generateUniqueId(),
-            }));
-    }
-
-    private static extractFillRuns(fillPixels: Uint8Array, width: number, height: number): Array<Array<{ y: number; startX: number; endX: number }>> {
-        const runs: Array<Array<{ y: number; startX: number; endX: number }>> = [];
-
         for (let y = 0; y < height; y++) {
-            const rowRuns: Array<{ y: number; startX: number; endX: number }> = [];
-            let x = 0;
-            while (x < width) {
-                if (fillPixels[y * width + x] === 0) {
-                    x++;
+            for (let x = 0; x < width; x++) {
+                if (!isFilled(x, y)) {
                     continue;
                 }
+                if (!isFilled(x, y - 1)) addEdge(x, y, x + 1, y);
+                if (!isFilled(x, y + 1)) addEdge(x + 1, y + 1, x, y + 1);
+                if (!isFilled(x - 1, y)) addEdge(x, y + 1, x, y);
+                if (!isFilled(x + 1, y)) addEdge(x + 1, y, x + 1, y + 1);
+            }
+        }
 
-                const startX = x;
-                while (x + 1 < width && fillPixels[y * width + x + 1] === 1) {
-                    x++;
+        const rings: XDrawPoint[][] = [];
+        const maxSteps = width * height * 4 + 10;
+
+        for (const [startKey, list] of edgesFrom) {
+            while (list.length > 0) {
+                const [startX, startY] = startKey.split(",").map(Number);
+                const ring: XDrawPoint[] = [];
+                let cx = startX;
+                let cy = startY;
+                let steps = 0;
+
+                do {
+                    ring.push({ x: cx, y: cy });
+                    const options = edgesFrom.get(`${cx},${cy}`);
+                    if (!options || options.length === 0) {
+                        break;
+                    }
+                    const [nextX, nextY] = options.shift()!;
+                    cx = nextX;
+                    cy = nextY;
+                    steps++;
+                } while (!(cx === startX && cy === startY) && steps < maxSteps);
+
+                if (ring.length >= 3) {
+                    rings.push(ring);
                 }
-
-                rowRuns.push({ y, startX, endX: x });
-                x++;
-            }
-
-            if (rowRuns.length > 0) {
-                runs.push(rowRuns);
             }
         }
 
-        return runs;
+        return rings;
     }
 
-    private static fillRunsOverlap(
-        left: { startX: number; endX: number },
-        right: { startX: number; endX: number },
-    ): boolean {
-        return left.startX <= right.endX && right.startX <= left.endX;
-    }
-
-    private static appendRunToChain(
-        chain: { points: Array<{ x: number; y: number; size: number }>; lastRun: { y: number; startX: number; endX: number } },
-        run: { y: number; startX: number; endX: number },
-        originX: number,
-        originY: number,
-    ): void {
-        const previousRun = chain.lastRun;
-        const lastPoint = chain.points[chain.points.length - 1];
-        const overlapStart = Math.max(previousRun.startX, run.startX);
-        const overlapEnd = Math.min(previousRun.endX, run.endX);
-        const connectorX = Math.max(overlapStart, Math.min(overlapEnd, lastPoint.x - originX));
-
-        if (lastPoint.x !== originX + connectorX || lastPoint.y !== originY + previousRun.y) {
-            chain.points.push(this.createFillPoint(connectorX, previousRun.y, originX, originY));
+    private static removeCollinearPoints(ring: XDrawPoint[]): XDrawPoint[] {
+        const count = ring.length;
+        if (count <= 2) {
+            return ring;
         }
 
-        chain.points.push(this.createFillPoint(connectorX, run.y, originX, originY));
-
-        const distanceToStart = Math.abs(connectorX - run.startX);
-        const distanceToEnd = Math.abs(run.endX - connectorX);
-        if (distanceToStart <= distanceToEnd) {
-            if (connectorX !== run.startX) {
-                chain.points.push(this.createFillPoint(run.startX, run.y, originX, originY));
-            }
-            if (run.startX !== run.endX) {
-                chain.points.push(this.createFillPoint(run.endX, run.y, originX, originY));
-            }
-        } else {
-            if (connectorX !== run.endX) {
-                chain.points.push(this.createFillPoint(run.endX, run.y, originX, originY));
-            }
-            if (run.startX !== run.endX) {
-                chain.points.push(this.createFillPoint(run.startX, run.y, originX, originY));
+        const result: XDrawPoint[] = [];
+        for (let i = 0; i < count; i++) {
+            const prev = ring[(i - 1 + count) % count];
+            const cur = ring[i];
+            const next = ring[(i + 1) % count];
+            const dx1 = cur.x - prev.x;
+            const dy1 = cur.y - prev.y;
+            const dx2 = next.x - cur.x;
+            const dy2 = next.y - cur.y;
+            if (dx1 * dy2 - dy1 * dx2 !== 0) {
+                result.push(cur);
             }
         }
 
-        chain.lastRun = run;
+        return result.length >= 3 ? result : ring;
     }
 
-    private static createRunPoints(
-        run: { y: number; startX: number; endX: number },
-        originX: number,
-        originY: number,
-    ): Array<{ x: number; y: number; size: number }> {
-        if (run.startX === run.endX) {
-            return [this.createFillPoint(run.startX, run.y, originX, originY)];
+    private static perpendicularDistance(point: XDrawPoint, a: XDrawPoint, b: XDrawPoint): number {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const lengthSq = dx * dx + dy * dy;
+        if (lengthSq === 0) {
+            const ddx = point.x - a.x;
+            const ddy = point.y - a.y;
+            return Math.sqrt(ddx * ddx + ddy * ddy);
         }
 
-        return [
-            this.createFillPoint(run.startX, run.y, originX, originY),
-            this.createFillPoint(run.endX, run.y, originX, originY),
-        ];
+        const t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq;
+        const projX = a.x + t * dx;
+        const projY = a.y + t * dy;
+        const ddx = point.x - projX;
+        const ddy = point.y - projY;
+        return Math.sqrt(ddx * ddx + ddy * ddy);
     }
 
-    private static createFillPoint(x: number, y: number, originX: number, originY: number): { x: number; y: number; size: number } {
-        return { x: originX + x, y: originY + y, size: 1 };
+    // Ramer-Douglas-Peucker (acik polyline uzerinde).
+    private static simplifyOpenPath(points: XDrawPoint[], epsilon: number): XDrawPoint[] {
+        if (points.length <= 2) {
+            return points;
+        }
+
+        const first = points[0];
+        const last = points[points.length - 1];
+        let maxDist = 0;
+        let maxIndex = 0;
+        for (let i = 1; i < points.length - 1; i++) {
+            const dist = this.perpendicularDistance(points[i], first, last);
+            if (dist > maxDist) {
+                maxDist = dist;
+                maxIndex = i;
+            }
+        }
+
+        if (maxDist <= epsilon) {
+            return [first, last];
+        }
+
+        const left = this.simplifyOpenPath(points.slice(0, maxIndex + 1), epsilon);
+        const right = this.simplifyOpenPath(points.slice(maxIndex), epsilon);
+        return left.slice(0, -1).concat(right);
+    }
+
+    // Kapali halkayi en uzak iki noktasindan ikiye bolup her parcayi RDP ile sadelestirir.
+    private static simplifyRing(ring: XDrawPoint[], epsilon: number): XDrawPoint[] {
+        const reduced = this.removeCollinearPoints(ring);
+        if (reduced.length <= 3) {
+            return reduced;
+        }
+
+        let maxDistSq = -1;
+        let splitA = 0;
+        let splitB = 1;
+        for (let i = 0; i < reduced.length; i++) {
+            for (let j = i + 1; j < reduced.length; j++) {
+                const dx = reduced[i].x - reduced[j].x;
+                const dy = reduced[i].y - reduced[j].y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq > maxDistSq) {
+                    maxDistSq = distSq;
+                    splitA = i;
+                    splitB = j;
+                }
+            }
+        }
+
+        const chainA = reduced.slice(splitA, splitB + 1);
+        const chainB = reduced.slice(splitB).concat(reduced.slice(0, splitA + 1));
+        const simplifiedA = this.simplifyOpenPath(chainA, epsilon);
+        const simplifiedB = this.simplifyOpenPath(chainB, epsilon);
+        const merged = simplifiedA.slice(0, -1).concat(simplifiedB.slice(0, -1));
+        return merged.length >= 3 ? merged : reduced;
     }
 
     private static findBoundingBox(elements: XDrawElement[]): { minX: number; minY: number; maxX: number; maxY: number } {
@@ -397,15 +425,26 @@ export class XdrawFillUtils {
         let maxY = -Infinity;
 
         for (const element of elements) {
-            if (element.type !== "draw") {
+            if (element.type === "draw") {
+                const drawElement = element as XDrawDrawElement;
+                for (const point of drawElement.points) {
+                    if (point.x < minX) minX = point.x;
+                    if (point.y < minY) minY = point.y;
+                    if (point.x > maxX) maxX = point.x;
+                    if (point.y > maxY) maxY = point.y;
+                }
                 continue;
             }
-            const drawElement = element as XDrawDrawElement;
-            for (const point of drawElement.points) {
-                if (point.x < minX) minX = point.x;
-                if (point.y < minY) minY = point.y;
-                if (point.x > maxX) maxX = point.x;
-                if (point.y > maxY) maxY = point.y;
+            if (element.type === "fill") {
+                const fillElement = element as XDrawFillElement;
+                for (const ring of fillElement.rings) {
+                    for (const point of ring) {
+                        if (point.x < minX) minX = point.x;
+                        if (point.y < minY) minY = point.y;
+                        if (point.x > maxX) maxX = point.x;
+                        if (point.y > maxY) maxY = point.y;
+                    }
+                }
             }
         }
 

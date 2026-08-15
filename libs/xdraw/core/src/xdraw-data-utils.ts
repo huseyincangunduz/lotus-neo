@@ -1,4 +1,4 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawLayer } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawLayer } from "./xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 
 export class XdrawDataUtils {
@@ -33,6 +33,13 @@ export class XdrawDataUtils {
 
     public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number): XDrawElement[] {
         return elements.filter(element => {
+            if (element.type === "fill") {
+                const fillElement = element as XDrawFillElement;
+                return fillElement.rings.some((ring) => ring.some((point) =>
+                    point.x >= left && point.x <= right &&
+                    point.y >= top && point.y <= bottom
+                ));
+            }
             if (element.type !== "draw") {
                 return false;
             }
@@ -61,39 +68,30 @@ export class XdrawDataUtils {
                 const drawElement = element as XDrawDrawElement; // Tip güvenliği için uygun bir tip tanımlayın
                 return drawElement.points.length > 0;
             }
+            if (element.type === "fill") {
+                // Silgi bir dolguya degdiyse tum dolgu elementi silinir (v1: delik acma yok).
+                const fillElement = element as XDrawFillElement;
+                const touchesEraser = fillElement.rings.some((ring) => ring.some((point) => {
+                    const dx = point.x - x;
+                    const dy = point.y - y;
+                    return (dx * dx + dy * dy) <= (radius * radius);
+                }));
+                return !touchesEraser;
+            }
             return true;
         });
-
-        
     }
 
     public static generateUniqueId(): string {
         return 'id-' + Math.random().toString(36).slice(2, 18);
     }
 
-    /**
-     * Doldurulabilir boş noktaları belirler ve bir Map yapısı döndürür. Bu Map, 
-     * x koordinatlarını anahtar olarak kullanır ve her x koordinatı için y koordinatlarını içeren bir alt Map içerir. 
-     * Alt Map, y koordinatlarını anahtar olarak kullanır ve değer olarak true döner.
-     * @param worldX 
-     * @param worldY 
-     * @param elements 
-     * @returns 
-     */
-    public static allEmptyFillablePoints(worldX: number, worldY: number, elements: XDrawElement[]): Map<number, Map<number, boolean>> {
-        return XdrawFillUtils.allEmptyFillablePoints(worldX, worldY, elements);
-    }
-
     public static fillDye(activeLayer: XDrawLayer, x: number, y: number, color: string): boolean {
         return XdrawFillUtils.fillDye(activeLayer, x, y, color);
     }
 
-    public static fillPoints(activeLayer: XDrawLayer, fillablePoints: Map<number, Map<number, boolean>>, color: string): void {
-        XdrawFillUtils.fillPoints(activeLayer, fillablePoints, color);
-    }
 
-
-    // Bu fonksiyon, verilen XDrawElement dizisindeki tüm "draw" tipindeki elementlerin minimum ve maksimum x ve y koordinatlarını hesaplar.
+    // Bu fonksiyon, verilen XDrawElement dizisindeki tüm "draw" ve "fill" tipindeki elementlerin minimum ve maksimum x ve y koordinatlarını hesaplar.
     public static findBoundingBox(elements: XDrawElement[], maxWorldX?: number, maxWorldY?: number): { minX: number, minY: number, maxX: number, maxY: number } {
         let minX = Infinity;
         let minY = Infinity;
@@ -108,6 +106,16 @@ export class XdrawDataUtils {
                     if (point.y < minY) minY = point.y;
                     if (point.x > maxX) maxX = point.x;
                     if (point.y > maxY) maxY = point.y;
+                }
+            } else if (element.type === "fill") {
+                const fillElement = element as XDrawFillElement;
+                for (const ring of fillElement.rings) {
+                    for (const point of ring) {
+                        if (point.x < minX) minX = point.x;
+                        if (point.y < minY) minY = point.y;
+                        if (point.x > maxX) maxX = point.x;
+                        if (point.y > maxY) maxY = point.y;
+                    }
                 }
             }
         }

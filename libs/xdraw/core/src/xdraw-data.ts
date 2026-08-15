@@ -47,6 +47,19 @@ export interface XDrawDrawElement extends XDrawElement {
     points: Array<XDrawElementPosition>;
 }
 
+export interface XDrawPoint {
+    x: number;
+    y: number;
+}
+
+// Ilk ring dis sinir, sonraki ring'ler delik (evenodd kurali ile doldurulur).
+export interface XDrawFillElement extends XDrawElement {
+    type: "fill";
+    color: string;
+    rings: XDrawPoint[][];
+    seed?: XDrawPoint;
+}
+
 
 // Katmanlar
 

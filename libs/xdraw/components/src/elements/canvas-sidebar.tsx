@@ -232,8 +232,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
           }}
           icon={materialSymbolsOutlined("ink_eraser")}
         ></Button>
-        {/* Şu anlık disable ediyorum fill modunu, çünkü düzgün çalışmıyor. Yine az buçuk çalışıyor ama onu yapabilmek için ya da en azından doğru düzgün mantığını kavramam için 40 fırın ekmek yemem lazım */}
-        {/* <Button
+        <Button
           variant={computed<ButtonVariant>(
             [this.settings.mode, this.settings.drawType],
             ([mode, drawType]) =>
@@ -246,7 +245,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             this.settings.drawType.set("fill");
           }}
           icon={materialSymbolsOutlined("format_color_fill")}
-        ></Button> */}
+        ></Button>
         <div className="border-t border-(--color-border)"></div>
 
         <Button

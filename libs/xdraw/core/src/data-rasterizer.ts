@@ -1,5 +1,5 @@
 import { ColorUtils } from "./color-utils";
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, CanvasBackgroundPatternOptions } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 
 export class ProjectDataRasterizer {
@@ -9,6 +9,7 @@ export class ProjectDataRasterizer {
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
     private renderScheduled = false;
+    private fillPathCache = new Map<string, { element: XDrawFillElement; path: Path2D }>();
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
@@ -143,6 +144,10 @@ export class ProjectDataRasterizer {
             context.globalAlpha = layer.opacity ?? 1;
 
             for (const element of layer.elements) {
+                if (element.type === "fill") {
+                    this.drawFillElement(context, element as XDrawFillElement);
+                    continue;
+                }
                 if (element.type !== "draw") {
                     continue;
                 }
@@ -172,6 +177,38 @@ export class ProjectDataRasterizer {
                 context.stroke();
             }
         }
+    }
+
+    private drawFillElement(context: CanvasRenderingContext2D, fill: XDrawFillElement) {
+        if (fill.rings.length === 0) {
+            return;
+        }
+        const color = ColorUtils.regularizeToHexColor(fill.color);
+        if (!color) {
+            return;
+        }
+
+        const cached = this.fillPathCache.get(fill.id);
+        let path: Path2D;
+        if (cached && cached.element === fill) {
+            path = cached.path;
+        } else {
+            path = new Path2D();
+            for (const ring of fill.rings) {
+                if (ring.length === 0) {
+                    continue;
+                }
+                path.moveTo(ring[0].x, ring[0].y);
+                for (let i = 1; i < ring.length; i++) {
+                    path.lineTo(ring[i].x, ring[i].y);
+                }
+                path.closePath();
+            }
+            this.fillPathCache.set(fill.id, { element: fill, path });
+        }
+
+        context.fillStyle = color;
+        context.fill(path, "evenodd");
     }
 
     // Dunya koordinatli XDrawData'yi kameraya gore canvas'a cizer.
