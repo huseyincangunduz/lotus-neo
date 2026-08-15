@@ -232,20 +232,23 @@ export class CanvasDrawSidebar extends NeolitComponent {
           }}
           icon={materialSymbolsOutlined("ink_eraser")}
         ></Button>
-        <Button
-          variant={computed<ButtonVariant>(
-            [this.settings.mode, this.settings.drawType],
-            ([mode, drawType]) =>
-              mode === "draw" && drawType === "fill"
-                ? "filled-primary"
-                : "ghost",
-          )}
-          onClick={() => {
-            this.settings.mode.set("draw");
-            this.settings.drawType.set("fill");
-          }}
-          icon={materialSymbolsOutlined("format_color_fill")}
-        ></Button>
+        {/* Fill dye arkada canvas oluşturup sürekli çizdiğimiz için çok yavaşlıyor... o yüzden şimdilik ekranda gözükmesin */}
+        {false && (
+          <Button
+            variant={computed<ButtonVariant>(
+              [this.settings.mode, this.settings.drawType],
+              ([mode, drawType]) =>
+                mode === "draw" && drawType === "fill"
+                  ? "filled-primary"
+                  : "ghost",
+            )}
+            onClick={() => {
+              this.settings.mode.set("draw");
+              this.settings.drawType.set("fill");
+            }}
+            icon={materialSymbolsOutlined("format_color_fill")}
+          ></Button>
+        )}
         <div className="border-t border-(--color-border)"></div>
 
         <Button
