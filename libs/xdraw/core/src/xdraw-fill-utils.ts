@@ -5,6 +5,7 @@ export class XdrawFillUtils {
     private static readonly FILL_BOUNDS_PADDING = 4;
     private static readonly FILL_MASK_DILATE_PX = 1;
     private static readonly FILL_SIMPLIFY_EPSILON = 0.75;
+    private static internalMaskCanvas: HTMLCanvasElement | null = null;
 
     public static fillDye(activeLayer: XDrawLayer, x: number, y: number, color: string): boolean {
         const fillElements = this.collectFloodFillElements(activeLayer.elements, x, y);
@@ -69,8 +70,11 @@ export class XdrawFillUtils {
         const maxY = Math.ceil(Math.max(bounds.maxY, worldY) + padding);
         const width = Math.max(1, maxX - minX + 1);
         const height = Math.max(1, maxY - minY + 1);
-
-        const canvas = document.createElement("canvas");
+        if (!this.internalMaskCanvas) {
+            this.internalMaskCanvas = document.createElement("canvas");
+        }
+        const canvas = this.internalMaskCanvas;
+        // const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
         const context = canvas.getContext("2d", { willReadFrequently: true });
@@ -158,52 +162,48 @@ export class XdrawFillUtils {
         }
 
         const visited = new Uint8Array(width * height);
-        const stack: number[] = [startY * width + startX];
+        // Sabit boyutlu tipli dizi: push/pop ile buyuyen number[] yerine yeniden tahsis olmadan calisir.
+        const stack = new Int32Array(width * height);
+        let stackSize = 0;
+        stack[stackSize++] = startY * width + startX;
         visited[startY * width + startX] = 1;
 
-        while (stack.length > 0) {
-            const pixelIndex = stack.pop()!;
+        while (stackSize > 0) {
+            const pixelIndex = stack[--stackSize];
             const x = pixelIndex % width;
-            const y = Math.floor(pixelIndex / width);
+            const y = (pixelIndex - x) / width;
 
             if (x > 0) {
-                this.visitFillNeighbor(x - 1, y, width, data, threshold, visited, stack);
+                const neighborIndex = pixelIndex - 1;
+                if (visited[neighborIndex] === 0 && data[neighborIndex * 4 + 3] <= threshold) {
+                    visited[neighborIndex] = 1;
+                    stack[stackSize++] = neighborIndex;
+                }
             }
             if (x + 1 < width) {
-                this.visitFillNeighbor(x + 1, y, width, data, threshold, visited, stack);
+                const neighborIndex = pixelIndex + 1;
+                if (visited[neighborIndex] === 0 && data[neighborIndex * 4 + 3] <= threshold) {
+                    visited[neighborIndex] = 1;
+                    stack[stackSize++] = neighborIndex;
+                }
             }
             if (y > 0) {
-                this.visitFillNeighbor(x, y - 1, width, data, threshold, visited, stack);
+                const neighborIndex = pixelIndex - width;
+                if (visited[neighborIndex] === 0 && data[neighborIndex * 4 + 3] <= threshold) {
+                    visited[neighborIndex] = 1;
+                    stack[stackSize++] = neighborIndex;
+                }
             }
             if (y + 1 < height) {
-                this.visitFillNeighbor(x, y + 1, width, data, threshold, visited, stack);
+                const neighborIndex = pixelIndex + width;
+                if (visited[neighborIndex] === 0 && data[neighborIndex * 4 + 3] <= threshold) {
+                    visited[neighborIndex] = 1;
+                    stack[stackSize++] = neighborIndex;
+                }
             }
         }
 
         return visited;
-    }
-
-    private static visitFillNeighbor(
-        x: number,
-        y: number,
-        width: number,
-        pixels: Uint8ClampedArray,
-        threshold: number,
-        visited: Uint8Array,
-        stack: number[],
-    ): void {
-        const pixelIndex = y * width + x;
-        if (visited[pixelIndex] === 1) {
-            return;
-        }
-
-        const alphaIndex = pixelIndex * 4 + 3;
-        if (pixels[alphaIndex] > threshold) {
-            return;
-        }
-
-        visited[pixelIndex] = 1;
-        stack.push(pixelIndex);
     }
 
     private static convertFilledPixelsToFillElements(
@@ -269,22 +269,30 @@ export class XdrawFillUtils {
         const isFilled = (x: number, y: number): boolean =>
             x >= 0 && y >= 0 && x < width && y < height && mask[y * width + x] === 1;
 
-        const edgesFrom = new Map<string, Array<[number, number]>>();
+        // Kose koordinatlari 0..width / 0..height araliginda; string anahtar yerine
+        // tek tam sayiya kodlanir (alloc/parse maliyeti olmadan Map anahtari olarak kullanilir).
+        const cornerStride = width + 1;
+        const encodeCorner = (x: number, y: number): number => y * cornerStride + x;
+
+        const edgesFrom = new Map<number, number[]>();
         const addEdge = (x1: number, y1: number, x2: number, y2: number): void => {
-            const key = `${x1},${y1}`;
+            const key = encodeCorner(x1, y1);
+            const target = encodeCorner(x2, y2);
             const list = edgesFrom.get(key);
             if (list) {
-                list.push([x2, y2]);
+                list.push(target);
             } else {
-                edgesFrom.set(key, [[x2, y2]]);
+                edgesFrom.set(key, [target]);
             }
         };
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
+                // Eğer o nokta dolu değilse, bir sonraki piksele geç.
                 if (!isFilled(x, y)) {
                     continue;
                 }
+                // Dolu pikselin dört kenarını kontrol et ve boş olan kenarları ekle.
                 if (!isFilled(x, y - 1)) addEdge(x, y, x + 1, y);
                 if (!isFilled(x, y + 1)) addEdge(x + 1, y + 1, x, y + 1);
                 if (!isFilled(x - 1, y)) addEdge(x, y + 1, x, y);
@@ -297,7 +305,8 @@ export class XdrawFillUtils {
 
         for (const [startKey, list] of edgesFrom) {
             while (list.length > 0) {
-                const [startX, startY] = startKey.split(",").map(Number);
+                const startX = startKey % cornerStride;
+                const startY = (startKey - startX) / cornerStride;
                 const ring: XDrawPoint[] = [];
                 let cx = startX;
                 let cy = startY;
@@ -305,13 +314,13 @@ export class XdrawFillUtils {
 
                 do {
                     ring.push({ x: cx, y: cy });
-                    const options = edgesFrom.get(`${cx},${cy}`);
+                    const options = edgesFrom.get(encodeCorner(cx, cy));
                     if (!options || options.length === 0) {
                         break;
                     }
-                    const [nextX, nextY] = options.shift()!;
-                    cx = nextX;
-                    cy = nextY;
+                    const next = options.shift()!;
+                    cx = next % cornerStride;
+                    cy = (next - cx) / cornerStride;
                     steps++;
                 } while (!(cx === startX && cy === startY) && steps < maxSteps);
 
