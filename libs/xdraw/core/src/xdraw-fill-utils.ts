@@ -214,16 +214,21 @@ export class XdrawFillUtils {
         originY: number,
     ): XDrawFillElement[] {
         const dilated = this.dilateMask(fillPixels, width, height, this.FILL_MASK_DILATE_PX);
-        const rawRings = this.traceMaskContours(dilated, width, height);
 
-        const rings = rawRings
-            .map((ring) => this.simplifyRing(ring, this.FILL_SIMPLIFY_EPSILON))
-            .filter((ring) => ring.length >= 3)
-            .map((ring) => ring.map((point) => ({ x: originX + point.x, y: originY + point.y })));
+        const rings: XDrawPoint[][] = [];
 
-        if (rings.length === 0) {
-            return [];
-        }
+        void this.traceMaskContours(
+            dilated,
+            width,
+            height,
+            rawRing => {
+                const simplifiedRing = this.simplifyRing(rawRing, this.FILL_SIMPLIFY_EPSILON);
+                if (simplifiedRing.length >= 3) {
+                    rings.push(simplifiedRing.map((point) => ({ x: originX + point.x, y: originY + point.y })));
+                }
+            }
+        );
+
 
         return [{
             type: "fill",
@@ -260,7 +265,7 @@ export class XdrawFillUtils {
     // Mask kenarlarini (piksel koseleri) izleyerek kapali halkalar cikarir.
     // Evenodd doldurma kurali sayesinde dis sinir/delik ayrimi yapmaya gerek yok;
     // tum halkalar duz bir liste olarak dondurulur.
-    private static traceMaskContours(mask: Uint8Array, width: number, height: number): XDrawPoint[][] {
+    private static traceMaskContours(mask: Uint8Array, width: number, height: number, onRingCallback: (ring: XDrawPoint[]) => void): XDrawPoint[][] {
         const isFilled = (x: number, y: number): boolean =>
             x >= 0 && y >= 0 && x < width && y < height && mask[y * width + x] === 1;
 
@@ -312,6 +317,7 @@ export class XdrawFillUtils {
 
                 if (ring.length >= 3) {
                     rings.push(ring);
+                    onRingCallback(ring);
                 }
             }
         }
