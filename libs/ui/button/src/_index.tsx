@@ -79,7 +79,7 @@ export class Button extends NeolitComponent<ButtonProps> {
       >
         <div className="flex items-center gap-2 min-h-[1.5em]">
           <IconComponent {...this.properties.icon.get()} />
-          {this.properties.label}
+          {fromState(this.properties.label).stateful(a => a.trim() !== "" ? <span>{a}</span> : null as any)}
         </div>
       </button>
     );
