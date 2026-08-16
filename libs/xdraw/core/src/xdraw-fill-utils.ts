@@ -1,14 +1,12 @@
-import type { XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawLayer, XDrawPoint } from "./xdraw-data";
+import type { XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint } from "./xdraw-data";
 
 export class XdrawFillUtils {
     private static readonly FILL_MASK_ALPHA_THRESHOLD = 16;
-    private static readonly FILL_BOUNDS_PADDING = 4;
     private static readonly FILL_MASK_DILATE_PX = 1;
     private static readonly FILL_SIMPLIFY_EPSILON = 0.75;
-    private static internalMaskCanvas: HTMLCanvasElement | null = null;
 
-    public static fillDye(activeLayer: XDrawLayer, x: number, y: number, color: string): boolean {
-        const fillElements = this.collectFloodFillElements(activeLayer.elements, x, y);
+    public static fillDye(activeLayer: XDrawLayer, mask: XDrawFillMask, x: number, y: number, color: string): boolean {
+        const fillElements = this.collectFloodFillElements(mask, x, y);
         if (fillElements.length === 0) {
             return false;
         }
@@ -22,135 +20,22 @@ export class XdrawFillUtils {
     }
 
     private static collectFloodFillElements(
-        elements: XDrawElement[],
+        mask: XDrawFillMask,
         worldX: number,
         worldY: number,
     ): XDrawFillElement[] {
-        const mask = this.rasterizeFillMask(elements, worldX, worldY);
-        if (!mask) {
+        const startX = Math.round((worldX - mask.originX) * mask.scale);
+        const startY = Math.round((worldY - mask.originY) * mask.scale);
+        if (startX < 0 || startX >= mask.width || startY < 0 || startY >= mask.height) {
             return [];
         }
 
-        const fillPixels = this.floodFillMask(mask.imageData, mask.startX, mask.startY);
+        const fillPixels = this.floodFillMask(mask.imageData, startX, startY);
         if (!fillPixels) {
             return [];
         }
 
-        return this.convertFilledPixelsToFillElements(
-            fillPixels,
-            mask.width,
-            mask.height,
-            mask.originX,
-            mask.originY,
-        );
-    }
-
-    private static rasterizeFillMask(
-        elements: XDrawElement[],
-        worldX: number,
-        worldY: number,
-    ): {
-        imageData: ImageData;
-        width: number;
-        height: number;
-        originX: number;
-        originY: number;
-        startX: number;
-        startY: number;
-    } | null {
-        const bounds = this.findBoundingBox(elements);
-        if (!Number.isFinite(bounds.minX) || !Number.isFinite(bounds.minY) || !Number.isFinite(bounds.maxX) || !Number.isFinite(bounds.maxY)) {
-            return null;
-        }
-
-        const padding = this.FILL_BOUNDS_PADDING;
-        const minX = Math.floor(Math.min(bounds.minX, worldX) - padding);
-        const minY = Math.floor(Math.min(bounds.minY, worldY) - padding);
-        const maxX = Math.ceil(Math.max(bounds.maxX, worldX) + padding);
-        const maxY = Math.ceil(Math.max(bounds.maxY, worldY) + padding);
-        const width = Math.max(1, maxX - minX + 1);
-        const height = Math.max(1, maxY - minY + 1);
-        if (!this.internalMaskCanvas) {
-            this.internalMaskCanvas = document.createElement("canvas");
-        }
-        const canvas = this.internalMaskCanvas;
-        // const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d", { willReadFrequently: true });
-        if (!context) {
-            return null;
-        }
-
-        context.clearRect(0, 0, width, height);
-        context.setTransform(1, 0, 0, 1, -minX, -minY);
-        context.lineCap = "round";
-        context.lineJoin = "round";
-        context.strokeStyle = "#000000";
-        context.fillStyle = "#000000";
-
-        for (const element of elements) {
-            if (element.type === "fill") {
-                const fillElement = element as XDrawFillElement;
-                if (fillElement.rings.length === 0) {
-                    continue;
-                }
-                const path = new Path2D();
-                for (const ring of fillElement.rings) {
-                    if (ring.length === 0) {
-                        continue;
-                    }
-                    path.moveTo(ring[0].x, ring[0].y);
-                    for (let i = 1; i < ring.length; i++) {
-                        path.lineTo(ring[i].x, ring[i].y);
-                    }
-                    path.closePath();
-                }
-                context.fill(path, "evenodd");
-                continue;
-            }
-
-            if (element.type !== "draw") {
-                continue;
-            }
-
-            const drawElement = element as XDrawDrawElement;
-            if (drawElement.points.length === 0) {
-                continue;
-            }
-
-            const firstPoint = drawElement.points[0];
-            if (drawElement.points.length === 1) {
-                context.beginPath();
-                context.arc(firstPoint.x, firstPoint.y, Math.max(0.5, firstPoint.size / 2), 0, Math.PI * 2);
-                context.fill();
-                continue;
-            }
-
-            context.lineWidth = Math.max(1, firstPoint.size);
-            context.beginPath();
-            context.moveTo(firstPoint.x, firstPoint.y);
-            for (let i = 1; i < drawElement.points.length; i++) {
-                context.lineTo(drawElement.points[i].x, drawElement.points[i].y);
-            }
-            context.stroke();
-        }
-
-        const startX = Math.round(worldX - minX);
-        const startY = Math.round(worldY - minY);
-        if (startX < 0 || startX >= width || startY < 0 || startY >= height) {
-            return null;
-        }
-
-        return {
-            imageData: context.getImageData(0, 0, width, height),
-            width,
-            height,
-            originX: minX,
-            originY: minY,
-            startX,
-            startY,
-        };
+        return this.convertFilledPixelsToFillElements(fillPixels, mask);
     }
 
     private static floodFillMask(imageData: ImageData, startX: number, startY: number): Uint8Array | null {
@@ -208,11 +93,9 @@ export class XdrawFillUtils {
 
     private static convertFilledPixelsToFillElements(
         fillPixels: Uint8Array,
-        width: number,
-        height: number,
-        originX: number,
-        originY: number,
+        mask: XDrawFillMask,
     ): XDrawFillElement[] {
+        const { width, height, originX, originY, scale } = mask;
         const dilated = this.dilateMask(fillPixels, width, height, this.FILL_MASK_DILATE_PX);
 
         const rings: XDrawPoint[][] = [];
@@ -224,7 +107,10 @@ export class XdrawFillUtils {
             rawRing => {
                 const simplifiedRing = this.simplifyRing(rawRing, this.FILL_SIMPLIFY_EPSILON);
                 if (simplifiedRing.length >= 3) {
-                    rings.push(simplifiedRing.map((point) => ({ x: originX + point.x, y: originY + point.y })));
+                    rings.push(simplifiedRing.map((point) => ({
+                        x: originX + point.x / scale,
+                        y: originY + point.y / scale,
+                    })));
                 }
             }
         );
@@ -431,39 +317,6 @@ export class XdrawFillUtils {
         const simplifiedB = this.simplifyOpenPath(chainB, epsilon);
         const merged = simplifiedA.slice(0, -1).concat(simplifiedB.slice(0, -1));
         return merged.length >= 3 ? merged : reduced;
-    }
-
-    private static findBoundingBox(elements: XDrawElement[]): { minX: number; minY: number; maxX: number; maxY: number } {
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        for (const element of elements) {
-            if (element.type === "draw") {
-                const drawElement = element as XDrawDrawElement;
-                for (const point of drawElement.points) {
-                    if (point.x < minX) minX = point.x;
-                    if (point.y < minY) minY = point.y;
-                    if (point.x > maxX) maxX = point.x;
-                    if (point.y > maxY) maxY = point.y;
-                }
-                continue;
-            }
-            if (element.type === "fill") {
-                const fillElement = element as XDrawFillElement;
-                for (const ring of fillElement.rings) {
-                    for (const point of ring) {
-                        if (point.x < minX) minX = point.x;
-                        if (point.y < minY) minY = point.y;
-                        if (point.x > maxX) maxX = point.x;
-                        if (point.y > maxY) maxY = point.y;
-                    }
-                }
-            }
-        }
-
-        return { minX, minY, maxX, maxY };
     }
 
     private static generateUniqueId(): string {

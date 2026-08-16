@@ -15,6 +15,17 @@ export interface XDrawCanvasCamera {
 
 export type InteractionMode = "idle" | "draw" | "erase" | "fill" | "pan";
 
+// Flood fill icin uretilen, sadece aktif katmanin cizgilerini iceren offscreen raster.
+// Maske piksel -> dunya donusumu: world = origin + pixel / scale
+export interface XDrawFillMask {
+    imageData: ImageData;
+    width: number;
+    height: number;
+    originX: number;
+    originY: number;
+    scale: number;
+}
+
 export interface RenderStats {
     fps: number;
     renderMs: number;

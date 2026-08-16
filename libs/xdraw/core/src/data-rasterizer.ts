@@ -1,11 +1,16 @@
 import { ColorUtils } from "./color-utils";
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, CanvasBackgroundPatternOptions } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 
 export class ProjectDataRasterizer {
+    // Maske, viewport'un biraz disini da kapsar; boylece kenarda olusan dolgu dikisleri azalir.
+    private static readonly MASK_MARGIN_RATIO = 0.25;
+    private static readonly MASK_MAX_PIXELS = 4_000_000;
+
     private backgroundPattern?: CanvasBackgroundPatternOptions;
     private cam: XDrawCanvasCamera = { x: 0, y: 0, scale: 1 };
     private activeCanvas?: HTMLCanvasElement;
+    private maskCanvas?: HTMLCanvasElement;
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
     private renderScheduled = false;
@@ -20,9 +25,11 @@ export class ProjectDataRasterizer {
         return this.activeCanvas;
     }
 
-    setCursorPosition(cursor: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" }) {
+    setCursorPosition(cursor: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" } | undefined) {
         this.cursorPosition = cursor;
-        this.cursorPosition.color = ColorUtils.regularizeToHexColor(this.cursorPosition.color) || this.cursorPosition.color;
+        if (this.cursorPosition) {
+            this.cursorPosition.color = ColorUtils.regularizeToHexColor(this.cursorPosition.color) || this.cursorPosition.color;
+        }
 
         this.requestRender();
     }
@@ -37,8 +44,137 @@ export class ProjectDataRasterizer {
         this.requestRender();
     }
 
-    setInteractionMode(_mode: string) {
+    setInteractionMode(_mode: InteractionMode) {
         // Etkilesim modu su an render'i etkilemiyor.
+    }
+
+    // Aktif katmanin cizgilerini, kamera olceginde offscreen bir canvas'a rasterize eder.
+    // Grid, cursor ve diger katmanlar dahil edilmez; boylece flood fill sinirlari yalniz
+    // aktif katmanin cizgilerinden olusur.
+    createActiveLayerFillMask(activeLayerId: string): XDrawFillMask | null {
+        const canvas = this.activeCanvas;
+        if (!canvas || !this.projectData) {
+            return null;
+        }
+        const layer = this.projectData.layers.find((candidate) => candidate.id === activeLayerId);
+        if (!layer) {
+            return null;
+        }
+
+        const cameraScale = this.cam.scale;
+        const marginX = Math.round(canvas.width * ProjectDataRasterizer.MASK_MARGIN_RATIO);
+        const marginY = Math.round(canvas.height * ProjectDataRasterizer.MASK_MARGIN_RATIO);
+        let width = Math.max(1, canvas.width + marginX * 2);
+        let height = Math.max(1, canvas.height + marginY * 2);
+        let maskScale = cameraScale;
+
+        const pixelCount = width * height;
+        if (pixelCount > ProjectDataRasterizer.MASK_MAX_PIXELS) {
+            // Dunya kapsamini koruyarak cozunurlugu dusur: kapsam = width / maskScale sabit kalir.
+            const ratio = Math.sqrt(ProjectDataRasterizer.MASK_MAX_PIXELS / pixelCount);
+            width = Math.max(1, Math.floor(width * ratio));
+            height = Math.max(1, Math.floor(height * ratio));
+            maskScale = cameraScale * ratio;
+        }
+
+        const originX = this.cam.x - marginX / cameraScale;
+        const originY = this.cam.y - marginY / cameraScale;
+
+        if (!this.maskCanvas) {
+            this.maskCanvas = document.createElement("canvas");
+        }
+        const maskCanvas = this.maskCanvas;
+        if (maskCanvas.width !== width) {
+            maskCanvas.width = width;
+        }
+        if (maskCanvas.height !== height) {
+            maskCanvas.height = height;
+        }
+        const context = maskCanvas.getContext("2d", { willReadFrequently: true });
+        if (!context) {
+            return null;
+        }
+
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.globalAlpha = 1;
+        context.clearRect(0, 0, width, height);
+        context.setTransform(maskScale, 0, 0, maskScale, -originX * maskScale, -originY * maskScale);
+
+        this.drawLayerMask(context, layer, maskScale, originX, originY, width / maskScale, height / maskScale);
+
+        const imageData = context.getImageData(0, 0, width, height);
+        context.setTransform(1, 0, 0, 1, 0, 0);
+
+        return { imageData, width, height, originX, originY, scale: maskScale };
+    }
+
+    private drawLayerMask(
+        context: CanvasRenderingContext2D,
+        layer: XDrawLayer,
+        maskScale: number,
+        worldLeft: number,
+        worldTop: number,
+        worldWidth: number,
+        worldHeight: number,
+    ) {
+        const worldRight = worldLeft + worldWidth;
+        const worldBottom = worldTop + worldHeight;
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        // Cok uzaklasildiginda cizgiler antialias sonrasi alpha esiginin altina dusup
+        // dolgunun sizmasina yol acabilir; en az 1 maske pikseli kalinlik zorunlu tutulur.
+        const minWorldLineWidth = 1 / maskScale;
+
+        for (const element of layer.elements) {
+            if (!this.elementIntersectsRect(element, worldLeft, worldTop, worldRight, worldBottom)) {
+                continue;
+            }
+
+            if (element.type === "fill") {
+                this.drawFillElement(context, element as XDrawFillElement, "#000000");
+                continue;
+            }
+
+            if (element.type === "draw") {
+                this.drawDrawElement(context, element as XDrawDrawElement, "#000000", minWorldLineWidth);
+            }
+        }
+    }
+
+    // Element bbox'i maske dikdortgeni ile kesisiyor mu? Nokta-icinde testi yerine bbox testi
+    // kullanilir; aksi halde iki ucu da ekran disinda kalan uzun bir cizgi elenip dolgu sizar.
+    private elementIntersectsRect(element: XDrawElement, left: number, top: number, right: number, bottom: number): boolean {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        if (element.type === "draw") {
+            const drawElement = element as XDrawDrawElement;
+            for (const point of drawElement.points) {
+                if (point.x < minX) minX = point.x;
+                if (point.y < minY) minY = point.y;
+                if (point.x > maxX) maxX = point.x;
+                if (point.y > maxY) maxY = point.y;
+            }
+        } else if (element.type === "fill") {
+            const fillElement = element as XDrawFillElement;
+            for (const ring of fillElement.rings) {
+                for (const point of ring) {
+                    if (point.x < minX) minX = point.x;
+                    if (point.y < minY) minY = point.y;
+                    if (point.x > maxX) maxX = point.x;
+                    if (point.y > maxY) maxY = point.y;
+                }
+            }
+        } else {
+            return false;
+        }
+
+        if (!Number.isFinite(minX)) {
+            return false;
+        }
+        return minX <= right && maxX >= left && minY <= bottom && maxY >= top;
     }
 
     markDirty(_x: number, _y: number, _radius: number) {
@@ -148,42 +284,54 @@ export class ProjectDataRasterizer {
                     this.drawFillElement(context, element as XDrawFillElement);
                     continue;
                 }
-                if (element.type !== "draw") {
-                    continue;
+                if (element.type === "draw") {
+                    this.drawDrawElement(context, element as XDrawDrawElement);
                 }
-                const draw = element as XDrawDrawElement;
-                if (draw.points.length === 0) {
-                    continue;
-                }
-                const color = ColorUtils.regularizeToHexColor(draw.color);
-                if (!color) {
-                    continue;
-                }
-                const first = draw.points[0];
-                if (draw.points.length === 1) {
-                    context.fillStyle = color;
-                    context.beginPath();
-                    context.arc(first.x, first.y, Math.max(0.5, first.size / 2), 0, Math.PI * 2);
-                    context.fill();
-                    continue;
-                }
-                context.strokeStyle = color;
-                context.lineWidth = first.size;
-                context.beginPath();
-                context.moveTo(first.x, first.y);
-                for (let i = 1; i < draw.points.length; i++) {
-                    context.lineTo(draw.points[i].x, draw.points[i].y);
-                }
-                context.stroke();
             }
         }
     }
 
-    private drawFillElement(context: CanvasRenderingContext2D, fill: XDrawFillElement) {
+    // colorOverride verilmezse elementin kendi rengi kullanilir (maske icin duz siyah gecilir).
+    // minLineWidth, cizginin dunya birimi cinsinden alt siniridir; maskede cizginin
+    // antialias sonrasi kaybolmamasi icin kullanilir.
+    private drawDrawElement(
+        context: CanvasRenderingContext2D,
+        draw: XDrawDrawElement,
+        colorOverride?: string,
+        minLineWidth = 0,
+    ) {
+        if (draw.points.length === 0) {
+            return;
+        }
+        const color = colorOverride ?? ColorUtils.regularizeToHexColor(draw.color);
+        if (!color) {
+            return;
+        }
+
+        const first = draw.points[0];
+        if (draw.points.length === 1) {
+            context.fillStyle = color;
+            context.beginPath();
+            context.arc(first.x, first.y, Math.max(0.5, minLineWidth / 2, first.size / 2), 0, Math.PI * 2);
+            context.fill();
+            return;
+        }
+
+        context.strokeStyle = color;
+        context.lineWidth = Math.max(minLineWidth, first.size);
+        context.beginPath();
+        context.moveTo(first.x, first.y);
+        for (let i = 1; i < draw.points.length; i++) {
+            context.lineTo(draw.points[i].x, draw.points[i].y);
+        }
+        context.stroke();
+    }
+
+    private drawFillElement(context: CanvasRenderingContext2D, fill: XDrawFillElement, colorOverride?: string) {
         if (fill.rings.length === 0) {
             return;
         }
-        const color = ColorUtils.regularizeToHexColor(fill.color);
+        const color = colorOverride ?? ColorUtils.regularizeToHexColor(fill.color);
         if (!color) {
             return;
         }

@@ -577,6 +577,11 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   private updateCursor(offsetX: number, offsetY: number) {
+    // Boya kovasinda firca onizlemesi anlamsiz; imlec cizilmez.
+    if (this.settings.drawType.get() === "fill") {
+      this.svgHolder.setCursorPosition(undefined);
+      return;
+    }
     this.svgHolder.setCursorPosition({
       x: offsetX,
       y: offsetY,

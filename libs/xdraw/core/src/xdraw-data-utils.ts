@@ -1,4 +1,4 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawLayer } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer } from "./xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 
 export class XdrawDataUtils {
@@ -86,8 +86,8 @@ export class XdrawDataUtils {
         return 'id-' + Math.random().toString(36).slice(2, 18);
     }
 
-    public static fillDye(activeLayer: XDrawLayer, x: number, y: number, color: string): boolean {
-        return XdrawFillUtils.fillDye(activeLayer, x, y, color);
+    public static fillDye(activeLayer: XDrawLayer, mask: XDrawFillMask, x: number, y: number, color: string): boolean {
+        return XdrawFillUtils.fillDye(activeLayer, mask, x, y, color);
     }
 
 

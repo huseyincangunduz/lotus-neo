@@ -187,7 +187,14 @@ export class XDrawDataHolder {
         const worldX = this._viewCamera.x + _canvasX / this._viewCamera.scale;
         const worldY = this._viewCamera.y + _canvasY / this._viewCamera.scale;
 
-        const changed = XdrawDataUtils.fillDye(this.layerManager.getActiveLayer(), worldX, worldY, _color);
+        // Maske yalniz aktif katmandan, kamera olceginde uretilir; diger katmanlar,
+        // grid ve cursor dolgu sinirlarini etkilemez.
+        const mask = this.rasterizer.createActiveLayerFillMask(this.getActiveLayerId());
+        if (!mask) {
+            return false;
+        }
+
+        const changed = XdrawDataUtils.fillDye(this.layerManager.getActiveLayer(), mask, worldX, worldY, _color);
         if (changed) {
             this.rasterizer.setProjectData(this.xdrawData);
         }
@@ -202,7 +209,7 @@ export class XDrawDataHolder {
         return true;
     }
 
-    setCursorPosition(position: CursorPosition) {
+    setCursorPosition(position: CursorPosition | undefined) {
         this._cursorPosition = position;
         this.rasterizer.setCursorPosition(position);
     }
