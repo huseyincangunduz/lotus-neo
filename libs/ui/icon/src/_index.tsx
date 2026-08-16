@@ -48,8 +48,9 @@ export const materialSymbolsOutlined = (
   return {
     className: "material-symbols-outlined",
     content,
-    lineHeight: lineHeight || "1.25rem",
-    fontSize: fontSize || "1.25rem",
+    // px: rem/em, cihazın sistem yazı tipi ölçeklendirmesinden (accessibility font scale) etkilenip platformlar arası boyut farkı yaratıyordu.
+    lineHeight: lineHeight || "20px",
+    fontSize: fontSize || "20px",
   } as IconProperties;
 };
 
@@ -65,7 +66,7 @@ export const iconifyIcon = (
   const iconifyName = iconClass.includes(":")
     ? iconClass
     : `fa-brands:${iconClass}`;
-  return { iconifyName, size: size || "1.25rem", color } as IconProperties;
+  return { iconifyName, size: size || "20px", color } as IconProperties;
 }
 
 export class Icon extends NeolitComponent {

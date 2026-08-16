@@ -1,5 +1,5 @@
-import type { XDrawDataHolder, XDrawSnapshot } from "../core/data-holder";
-import type { XDrawSettingsConfig } from "../core/xdraw-settings-config";
+import type { XDrawDataHolder, XDrawSnapshot } from "./data-holder";
+import type { XDrawSettingsConfig } from "./xdraw-settings-config";
 
 export interface CanvasDrawToolHost {
     svgHolder: XDrawDataHolder;
