@@ -5,6 +5,7 @@ import {
   getStateValue,
   isState,
   state,
+  type NeolitChild,
   type NeolitNode,
   type StateOrPlain,
 } from "@ubs-platform/neolit/core";
@@ -50,7 +51,7 @@ const ALL_POPOVER_PLACEMENTS: DialogPlacement[] = [
 export type AnimationState = "HIDE" | "BEGIN" | "HOLD" | "OUT";
 
 export interface WebDialogProps {
-  children: NeolitNode | NeolitNode[];
+  children: NeolitChild[] | State<NeolitChild | NeolitChild[]>;
   title?: StateOrPlain<string>;
   show: StateOrPlain<boolean>;
   onClose?: () => void;
@@ -310,6 +311,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   ): { top: number; left: number } {
     const verticalCenter =
       anchorRect.top + anchorRect.height / 2 - dialogRect.height / 2;
+    console.info("verticalCenter", verticalCenter, anchorRect, dialogRect);
     const horizontalCenter =
       anchorRect.left + anchorRect.width / 2 - dialogRect.width / 2;
 
@@ -511,6 +513,9 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
               "overflow-auto",
               computed([this.properties.padding], ([padding]) =>
                 padding ? "px-3 pb-3" : "",
+              ),
+              computed([this.properties.padding, this.properties.displayHeader, this.properties.displayCloseButton], ([padding, displayHeader, displayCloseButton]) =>
+                padding && !displayHeader && !displayCloseButton ? "pt-3" : "",
               ),
             ]}
           >

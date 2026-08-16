@@ -22,6 +22,7 @@ export interface ButtonProps {
   variant?: StateOrPlain<ButtonVariant>;
   icon?: StateOrPlain<IconProperties | null>;
   style?: Record<string, StateOrPlain<string>> | undefined;
+  padding?: StateOrPlain<number | boolean>; // padding true ise 0.5rem, false ise 0rem olacak şekilde ayarlanacak. number verilirse o kadar rem padding uygulanacak.
 }
 
 export class Button extends NeolitComponent<ButtonProps> {
@@ -31,11 +32,13 @@ export class Button extends NeolitComponent<ButtonProps> {
     variant: state<ButtonVariant>("filled-primary"),
     icon: state<IconProperties | null>(null),
     style: {},
+    padding: state<number | boolean>(true),
+
   };
 
   buttonClassName = computed(
-    [this.properties.variant],
-    ([variant]: ButtonVariant[]) => {
+    [this.properties.variant, this.properties.padding],
+    ([variant, padding]) => {
       const variantClass = {
         "filled-primary":
           "bg-(--color-primary) text-white hover:bg-(--color-primary-bg-hover) hover:text-(--color-primary-fg-hover)",
@@ -48,7 +51,14 @@ export class Button extends NeolitComponent<ButtonProps> {
         ghost:
           "bg-transparent text-(--color-primary-text) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1)",
         "ghost-no-hover": "bg-transparent text-(--color-primary-text)",
-      }[`${variant}`];
+      }[variant as
+        | "filled-primary"
+        | "filled-secondary"
+        | "filled-tertiary"
+        | "outline-primary"
+        | "ghost"
+        | "ghost-no-hover"
+      ];
 
       // const visualClass = {
       //   filled: "",
@@ -56,7 +66,7 @@ export class Button extends NeolitComponent<ButtonProps> {
       //   ghost: "",
       // }[visual as "filled" | "outline" | "ghost"];
 
-      return `p-2 rounded-sm ${variantClass}`;
+      return `rounded-sm ${variantClass} ${padding === true ? "p-2" : typeof padding === "number" ? `p-${padding}` : ""}`;
     },
   );
   /**

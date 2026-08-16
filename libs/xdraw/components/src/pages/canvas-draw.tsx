@@ -57,7 +57,7 @@ export class CanvasDraw extends NeolitComponent {
       id="myCanvas"
       width={this.canvasWidth}
       height={this.canvasHeight}
-      style="border:1px solid #989898; cursor: crosshair;"
+      style="cursor: crosshair;"
     ></canvas>
   );
 
@@ -736,25 +736,30 @@ export class CanvasDraw extends NeolitComponent {
 
   render(): NeolitNode {
     return (
-      <div className="flex flex-row gap-2 p-2 h-[100dvh] w-[100dvw] overflow-hidden box-border">
-        <div>
-          <CanvasDrawSidebar
-            onDownloadProject={this.downloadProject.bind(this)}
-            onOpenProjectFromFile={this.openProjectFromFile.bind(this)}
-            xdrawDataHolder={this.svgHolder}
-            canRedo={this.canRedo}
-            generateNew={this.generateNew.bind(this)}
-            canUndo={this.canUndo}
-            undo={() => this.undoRedoHelper.undo()}
-            redo={() => this.undoRedoHelper.redo()}
-            flushAutosave={this.flushAutosave.bind(this)}
-            pushHistorySnapshotOperation={this.pushHistorySnapshotOperation.bind(
-              this,
-            )}
-          ></CanvasDrawSidebar>
+      <div className="gap-2 p-2 h-[100dvh] w-[100dvw] overflow-hidden box-border position-relative">
+        <div className="absolute left-3 top-3 bottom-3 flex flex-col gap-2 justify-center items-center">
+          <div
+            className="border border-solid border-gray-500 p-1"
+            style="z-index: 1; border-radius: 15px; background-color: var(--color-surface-2);"
+          >
+            <CanvasDrawSidebar
+              onDownloadProject={this.downloadProject.bind(this)}
+              onOpenProjectFromFile={this.openProjectFromFile.bind(this)}
+              xdrawDataHolder={this.svgHolder}
+              canRedo={this.canRedo}
+              generateNew={this.generateNew.bind(this)}
+              canUndo={this.canUndo}
+              undo={() => this.undoRedoHelper.undo()}
+              redo={() => this.undoRedoHelper.redo()}
+              flushAutosave={this.flushAutosave.bind(this)}
+              pushHistorySnapshotOperation={this.pushHistorySnapshotOperation.bind(
+                this,
+              )}
+            ></CanvasDrawSidebar>
+          </div>
         </div>
         <div
-          className="flex-grow-1"
+          className="h-full w-full position-absolute top-0 left-0"
           style="touch-action: none; outline: none;"
           tabIndex={0}
           onPointerDown={this.onPointerDown.bind(this)}

@@ -289,7 +289,8 @@
   max-height: 100dvh;
   
   border: 1px solid var(--color-border);
-  border-top-width: 10px;
+  // Artık ekstra stiller uygulamalara göre ayırılacak
+  // border-top-width: 10px;
   border-radius: var(--border-radius);
   background-color: var(--color-surface-1);
   display: flex;

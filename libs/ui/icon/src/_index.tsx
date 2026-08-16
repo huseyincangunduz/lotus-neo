@@ -7,6 +7,7 @@ import {
 } from "@ubs-platform/neolit/core";
 import "material-symbols";
 import "iconify-icon";
+import "./icon.css";
 
 declare global {
   namespace JSX {

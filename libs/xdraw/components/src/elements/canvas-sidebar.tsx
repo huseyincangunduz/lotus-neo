@@ -58,7 +58,10 @@ export class CanvasDrawSidebar extends NeolitComponent {
   appController = inject(
     APP_NATIVE_CONTROLLER_TOKEN,
   ) as any as IAppNativeController;
-
+  recentColorsLimited = computed(
+    [this.settings.recentColors],
+    ([recentColors]) => recentColors.slice(0, 3),
+  );
   private colorDialogLastCommittedColor: string | null = null;
 
   private readonly colorPresets = [
@@ -114,7 +117,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
         ...this.settings.recentColors
           .get()
           .filter((color) => color !== previousColor && color !== currentColor),
-      ].slice(0, 6),
+      ].slice(0, 20),
     );
 
     this.colorDialogLastCommittedColor = currentColor;
@@ -234,20 +237,20 @@ export class CanvasDrawSidebar extends NeolitComponent {
         ></Button>
         {/* Fill dye arkada canvas oluşturup sürekli çizdiğimiz için çok yavaşlıyor... o yüzden şimdilik ekranda gözükmesin */}
         {/* {false && ( */}
-          <Button
-            variant={computed<ButtonVariant>(
-              [this.settings.mode, this.settings.drawType],
-              ([mode, drawType]) =>
-                mode === "draw" && drawType === "fill"
-                  ? "filled-primary"
-                  : "ghost",
-            )}
-            onClick={() => {
-              this.settings.mode.set("draw");
-              this.settings.drawType.set("fill");
-            }}
-            icon={materialSymbolsOutlined("format_color_fill")}
-          ></Button>
+        <Button
+          variant={computed<ButtonVariant>(
+            [this.settings.mode, this.settings.drawType],
+            ([mode, drawType]) =>
+              mode === "draw" && drawType === "fill"
+                ? "filled-primary"
+                : "ghost",
+          )}
+          onClick={() => {
+            this.settings.mode.set("draw");
+            this.settings.drawType.set("fill");
+          }}
+          icon={materialSymbolsOutlined("format_color_fill")}
+        ></Button>
         {/* )} */}
         <div className="border-t border-(--color-border)"></div>
 
@@ -303,7 +306,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
           }}
         ></button>
         <div className="flex flex-col gap-1">
-          {fromState(this.settings.recentColors)
+          {fromState(this.recentColorsLimited)
             .keyFn((color) => color)
             .renderFor((color) => (
               <button
@@ -312,7 +315,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
                 style={{ backgroundColor: color }}
                 title={color}
                 aria-label={`Rengi seç: ${color}`}
-                onClick={() => this.settings.strokeColor.set(color)}
+                onClick={() => {
+                  if (this.settings.strokeColor.get() === color) {
+                    this.openColorPickerDialog();
+                    return;
+                  }
+                  this.settings.strokeColor.set(color);
+                }}
               ></button>
             ))}
         </div>
@@ -328,18 +337,19 @@ export class CanvasDrawSidebar extends NeolitComponent {
           show={this.menuDialog}
           mode="popover"
           anchorSelector="#toolbar"
-          placement="right-start"
+          placement="right"
           width="280px"
           maxHeight="320px"
           displayHeader={false}
+          displayCloseButton={false}
         >
-          <img
+          {/* <img
             src={computed([this.settings.appTheme], ([theme]) =>
               theme === "light" ? "xdraw-logo-blk.png" : "xdraw-logo.png",
             )}
             alt="XDraw Logo"
             style="height: 60px"
-          />
+          /> */}
 
           <div className="flex flex-col gap-1">
             <h2>Dosya</h2>
@@ -347,6 +357,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             <Button
               variant="ghost"
               label="Yeni"
+              padding={1}
               onClick={() => {
                 void this.generateNew();
               }}
@@ -354,12 +365,14 @@ export class CanvasDrawSidebar extends NeolitComponent {
             <Button
               variant="ghost"
               label="Aç"
+              padding={1}
               onClick={() => {
                 void this.openProjectFromFile();
               }}
             ></Button>
             <Button
               variant="ghost"
+              padding={1}
               label={
                 this.appController.isMobileApp ||
                 this.appController.isElectronApp
@@ -376,6 +389,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
               <Button
                 variant="ghost"
                 label={"Farklı Kaydet"}
+                padding={1}
                 onClick={() => {
                   this.downloadProject(true);
                 }}
@@ -386,25 +400,26 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
             <div>
               <Button
+                padding={1}
                 onClick={() => {
                   this.settings.appTheme.update((currentTheme) =>
                     currentTheme === "light" ? "dark" : "light",
                   );
                 }}
-                label={
-                  computed([this.settings.appTheme], ([appTheme]) =>
-                    appTheme === "light"
-                      ? "Koyu Temaya geç"
-                      : "Açık Temaya geç",
-                  ) as any
-                }
+                // label={
+                //   computed([this.settings.appTheme], ([appTheme]) =>
+                //     appTheme === "light"
+                //       ? "Koyu Temaya geç"
+                //       : "Açık Temaya geç",
+                //   ) as any
+                // }
                 icon={materialSymbolsOutlined("invert_colors")}
               ></Button>
             </div>
           </div>
           <sub>
             <p className="text-xs text-(--color-text-muted)">
-              XDraw v{import.meta.env.PACKAGE_VERSION} -{" "}
+              XDraw
               {import.meta.env.PACKAGE_BUILD_DATE}
               <br></br>
               (c) 2026{" "}
@@ -419,14 +434,16 @@ export class CanvasDrawSidebar extends NeolitComponent {
               Tüm hakları saklıdır
             </p>
           </sub>
-          <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo"></img>
+          {/* <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo"></img> */}
         </WebDialog>
         <WebDialog
           show={this.showPencilSettingsDialog}
           mode="popover"
           anchorSelector="#toolbar"
-          placement="right-start"
+          placement="right"
           width="280px"
+          displayHeader={false}
+          displayCloseButton={false}
         >
           {/* Checked checkbox içinde state olduğu için state değişikliklerini güncelleme konusunda onchange'e gerek yoktur. */}
           <h2>Kalem ayarları</h2>
@@ -480,12 +497,12 @@ export class CanvasDrawSidebar extends NeolitComponent {
           show={this.showColorPickerDialog}
           mode="popover"
           anchorSelector="#toolbar"
-          placement="right-start"
+          placement="right"
           width="280px"
           maxHeight="70dvh"
-          displayHeader={false}
           onClose={() => this.closeColorPickerDialog()}
-          title={"Renkler"}
+          displayHeader={false}
+          displayCloseButton={false}
         >
           <h2>Renk Seçici</h2>
           <div className="flex flex-col gap-2">
@@ -502,6 +519,22 @@ export class CanvasDrawSidebar extends NeolitComponent {
                     onClick={() => this.applyColorPreset(color)}
                   ></button>
                 ))}
+              </div>
+              <label className="text-sm">Önceki renkler</label>
+              {/* Diyalogta daha fazla önceki renkleri gösterebiliriz... */}
+              <div className="grid grid-cols-6 gap-1">
+                {fromState(this.settings.recentColors)
+                  .keyFn((c) => c)
+                  .renderFor((color) => (
+                    <button
+                      type="button"
+                      className="w-8 h-8 rounded border border-(--color-border) cursor-pointer"
+                      style={`background-color: ${color};`}
+                      title={color}
+                      aria-label={`Önceki renk: ${color}`}
+                      onClick={() => this.applyColorPreset(color)}
+                    ></button>
+                  ))}
               </div>
             </div>
             <input
@@ -595,12 +628,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
           show={this.layerSettingsDialog}
           mode="popover"
           anchorSelector="#toolbar"
-          placement="right-start"
+          placement="right"
           width="280px"
           maxHeight="70dvh"
-          displayHeader={false}
           onClose={() => this.layerSettingsDialog.set(false)}
           title={"Katman ayarları"}
+          displayHeader={false}
+          displayCloseButton={false}
         >
           <div className="flex flex-col gap-1">
             <div className="flex flex-col gap-1">

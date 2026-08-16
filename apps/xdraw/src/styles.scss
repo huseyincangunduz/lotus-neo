@@ -1,3 +1,6 @@
+:root {
+  --border-radius: 4px;
+}
 @mixin darktema {
   --color-primary: #046f2a;
   --color-primary-text: #c0ffd7;
@@ -5,7 +8,7 @@
   --color-primary-card-bg-text: #c0ffd1;
   --color-primary-bg-hover: #008f24;
   --color-primary-fg-hover: rgb(0, 0, 0);
-  --color-primary-bg-active: #080949;
+  --color-primary-bg-active: #084939;
   --color-primary-fg-active: #ffffff;
   --color-primary-hover: #081949;
 
@@ -13,7 +16,7 @@
   --color-surface-1: #141714;
   --color-surface-2: #143622;
   --color-surface-3: #14762b;
-  --color-border: #1e14ad;
+  --color-border: #14ad33;
   --color-fg: #ffffff;
 
   &[amoled="true"] {
@@ -84,4 +87,9 @@ body {
 
 .neolit-toast {
   animation: toast-in 0.22s ease-out forwards;
+}
+
+.dialog {
+  // border: 1px solid var(--color-border) !important;
+  // border-radius: 16px !important;
 }
