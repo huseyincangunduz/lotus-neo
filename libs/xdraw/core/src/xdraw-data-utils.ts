@@ -1,6 +1,18 @@
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer } from "./xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 
+export interface XDrawElementCropData {
+    layerId: string;
+    layerOpacity: number;
+    elementId: string;
+    elementType: string;
+    points?: Array<{ x: number; y: number; size: number }>;
+    rings?: Array<Array<{ x: number; y: number }>>;
+    color?: string;
+}
+
+export type OnFoundCallback = (cropData: XDrawElementCropData) => void;
+
 export class XdrawDataUtils {
 
     /**
@@ -15,7 +27,7 @@ export class XdrawDataUtils {
 
     // Kameranin gordugu dunya dikdortgeni disindaki elementleri eleyerek render yukunu azaltir.
     // Noktalar dunya koordinatinda kalir; kamera donusumu render sirasinda uygulanir.
-    public static cropXDrawData(data: XDrawData, cam: XDrawCanvasCamera, screenWidth: number, screenHeight: number): XDrawData {
+    public static cropXDrawData(data: XDrawData, cam: XDrawCanvasCamera, screenWidth: number, screenHeight: number, onFound?: OnFoundCallback): XDrawData {
         const worldLeft = cam.x;
         const worldTop = cam.y;
         const worldRight = cam.x + screenWidth / cam.scale;
@@ -23,31 +35,94 @@ export class XdrawDataUtils {
 
         const croppedData: XDrawData = { layers: [] };
         for (const layer of data.layers) {
-            const elements = this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom);
+            if (layer.visible === false || layer.opacity === 0) {
+                continue; // Görünmez katmanları atla
+            }
+            const elements = this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity }, onFound);
             if (elements.length > 0) {
                 croppedData.layers.push({ ...layer, elements });
             }
         }
         return croppedData;
     }
+    // Dünyanın en mal şeysi.... ben malım. bu sefer hesaplamaktan çok cachelemek performansı düşürdü aw
+    // public static readonly pointCropPathMap: Map<string, boolean> = new Map();
 
-    public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number): XDrawElement[] {
+    public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number, initialFoundElement: Partial<XDrawElementCropData>, onFound?: OnFoundCallback): XDrawElement[] {
+        const cropCondition = (point: { x: number; y: number }) => {
+            // kasım kasım kasılıyor 😭😭😭😭😭 o yüzden hesaplasın tekrar tekrar bane 
+            // const cropArgs = `${point.x}|${point.y}|${left}|${top}|${right}|${bottom}`;
+            // if (this.pointCropPathMap.has(cropArgs)) {
+            //     return this.pointCropPathMap.get(cropArgs)!;
+            // }
+            // 
+            const status = point.x >= left && point.x <= right &&
+                point.y >= top && point.y <= bottom;
+            // this.pointCropPathMap.set(cropArgs, status);
+            return status;
+        };
         return elements.filter(element => {
             if (element.type === "fill") {
                 const fillElement = element as XDrawFillElement;
-                return fillElement.rings.some((ring) => ring.some((point) =>
-                    point.x >= left && point.x <= right &&
-                    point.y >= top && point.y <= bottom
-                ));
-            }
-            if (element.type !== "draw") {
+                for (const ring of fillElement.rings) {
+                    for (const point of ring) {
+                        if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
+                            if (onFound) {
+                                onFound({
+                                    ...initialFoundElement,
+                                    elementId: fillElement.id,
+                                    elementType: fillElement.type,
+                                    rings: fillElement.rings,
+                                    color: fillElement.color
+                                } as any as XDrawElementCropData);
+                            }
+                            return true;
+                        }
+                    }
+                }
                 return false;
             }
-            const drawElement = element as XDrawDrawElement;
-            return drawElement.points.some((point) =>
-                point.x >= left && point.x <= right &&
-                point.y >= top && point.y <= bottom
-            );
+            if (element.type === "draw") {
+
+                // 
+                const drawElement = element as XDrawDrawElement;
+                let startIndex = drawElement.points.findIndex(cropCondition);
+                let endIndex = drawElement.points.findLastIndex(cropCondition);
+                let determinedPoints = drawElement.points;
+
+                /**
+                 * Noktalar arasında kesişim yoksa veya başlangıç ve bitiş indeksleri geçersizse, false döndür.
+                 * Eğer başlangıç veya bitiş indeksi -1 ise, geçerli indeksleri belirle ve kesişen noktaları al.
+                 * Eğer başlangıç ve bitiş indeksleri geçerliyse, kesişen noktaları belirle.
+                 * Kesişen noktalar bulunduğunda, onFound callback fonksiyonunu çağır ve true döndür.
+                 * Aksi takdirde, false döndür.
+                 * 
+                 * Bu mantık, çizim elementlerinin kamera görünüm alanı ile kesişip kesişmediğini kontrol eder ve
+                 * kesişen noktaları belirler.
+                 */
+                if ((startIndex === -1 && endIndex === -1) || (startIndex > endIndex) || (startIndex === endIndex)) {
+                    return false;
+                } else if (startIndex === -1 || endIndex === -1) {
+                    startIndex = startIndex === -1 ? 0 : startIndex;
+                    endIndex = endIndex === -1 ? drawElement.points.length - 1 : endIndex;
+                    determinedPoints = (startIndex === 0 && endIndex === drawElement.points.length - 1) ? drawElement.points : drawElement.points.slice(startIndex, endIndex + 1);
+                } else {
+                    determinedPoints = drawElement.points.slice(startIndex, endIndex + 1);
+                }
+                if (onFound) {
+
+                    onFound({
+                        ...initialFoundElement,
+                        elementId: drawElement.id,
+                        elementType: drawElement.type,
+                        points: determinedPoints,
+                        color: drawElement.color
+                    } as any as XDrawElementCropData);
+                }
+                return true;
+            }
+            return false;
+
         });
     }
 
@@ -83,7 +158,17 @@ export class XdrawDataUtils {
     }
 
     public static generateUniqueId(): string {
-        return 'id-' + Math.random().toString(36).slice(2, 18);
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        console.warn("crypto.randomUUID() is not available. Falling back to a less secure method for generating unique IDs.");
+        // 2. HTTP yerel ağ testi veya desteklenmeyen ortamlar için Fallback
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+        // return 'id-' + Math.random().toString(36).slice(2, 18);
     }
 
     public static fillDye(activeLayer: XDrawLayer, mask: XDrawFillMask, x: number, y: number, color: string): boolean {

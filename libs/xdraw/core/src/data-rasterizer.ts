@@ -1,5 +1,5 @@
 import { ColorUtils } from "./color-utils";
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 
 export class ProjectDataRasterizer {
@@ -14,7 +14,8 @@ export class ProjectDataRasterizer {
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
     private renderScheduled = false;
-    private fillPathCache = new Map<string, { element: XDrawFillElement; path: Path2D }>();
+    // Anahtar rings array referansi: geometri degisince yeni array gelir ve cache kendiliginden duser.
+    private fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
@@ -213,10 +214,10 @@ export class ProjectDataRasterizer {
         }
         context.setTransform(1, 0, 0, 1, 0, 0);
         const { x, y, size, color, type } = this.cursorPosition;
-        const radius = (size / 2) ;
+        const radius = (size / 2);
         context.strokeStyle = color;
         context.fillStyle = color;
-        context.lineWidth = type === "outlined" ? Math.min(2, Math.max(1, this.cam.scale)) : 0;
+        context.lineWidth = type === "outlined" ? Math.max(2, Math.max(1, this.cam.scale)) : 0;
 
         context.globalAlpha = .5;
         switch (type) {
@@ -234,7 +235,7 @@ export class ProjectDataRasterizer {
         context.globalAlpha = 1;
 
     }
-    private drawBackground(context: CanvasRenderingContext2D, scale: number, camX: number, camY: number, visible: XDrawData) {
+    private drawBackground(context: CanvasRenderingContext2D, scale: number, camX: number, camY: number) {
         if (!this.backgroundPattern) {
             return;
         }
@@ -268,7 +269,10 @@ export class ProjectDataRasterizer {
         context.globalAlpha = 1;
     }
 
+    // Bu artık kullanılmıyor, çünkü crop içinde crop edilen elementin layer opacity'si de callback olarak veriliyor. Bu sayede 2 kere döngüye sokmak gerekmiyor. Ama şimdilik silmiyorum, belki ileride lazım olur.
     private drawLines(context: CanvasRenderingContext2D, scale: number, camX: number, camY: number, visible: XDrawData) {
+        // No op kalsın
+        return;
         context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
         context.lineCap = "round";
         context.lineJoin = "round";
@@ -321,8 +325,29 @@ export class ProjectDataRasterizer {
         context.lineWidth = Math.max(minLineWidth, first.size);
         context.beginPath();
         context.moveTo(first.x, first.y);
-        for (let i = 1; i < draw.points.length; i++) {
-            context.lineTo(draw.points[i].x, draw.points[i].y);
+
+        // Ekranda 1 pikselden yakin noktalari atla. Maskede (minLineWidth > 0) devre disi:
+        // atlanan nokta cizgi sinirinda delik acar ve flood fill disari sizar.
+        const minWorldStepSq = minLineWidth > 0 ? 0 : (1 / this.cam.scale) ** 2;
+        const lastIndex = draw.points.length - 1;
+        let prev = first;
+        for (let i = 1; i <= lastIndex; i++) {
+            const point = draw.points[i];
+            if (minWorldStepSq > 0 && i !== lastIndex) {
+                const dx = point.x - prev.x;
+                const dy = point.y - prev.y;
+                if (dx * dx + dy * dy < minWorldStepSq) {
+                    continue;
+                }
+            }
+            if (point.size !== prev.size) {
+                context.stroke();
+                context.lineWidth = Math.max(minLineWidth, point.size);
+                context.beginPath();
+                context.moveTo(prev.x, prev.y);
+            }
+            context.lineTo(point.x, point.y);
+            prev = point;
         }
         context.stroke();
     }
@@ -336,10 +361,10 @@ export class ProjectDataRasterizer {
             return;
         }
 
-        const cached = this.fillPathCache.get(fill.id);
+        const cached = this.fillPathCache.get(fill.rings);
         let path: Path2D;
-        if (cached && cached.element === fill) {
-            path = cached.path;
+        if (cached) {
+            path = cached;
         } else {
             path = new Path2D();
             for (const ring of fill.rings) {
@@ -352,7 +377,7 @@ export class ProjectDataRasterizer {
                 }
                 path.closePath();
             }
-            this.fillPathCache.set(fill.id, { element: fill, path });
+            this.fillPathCache.set(fill.rings, path);
         }
 
         context.fillStyle = color;
@@ -375,17 +400,42 @@ export class ProjectDataRasterizer {
 
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.clearRect(0, 0, canvas.width, canvas.height);
+        this.drawBackground(context, scale, camX, camY);
 
-        const visible = XdrawDataUtils.cropXDrawData(
+        // Draw başlangıcı
+        context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+
+        void XdrawDataUtils.cropXDrawData(
             this.projectData,
             this.cam,
             canvas.width,
             canvas.height,
+            (onFound) => {
+                const foundGlobalAlpha = onFound.layerOpacity ?? 1;
+                if (context.globalAlpha !== foundGlobalAlpha) {
+                    context.globalAlpha = foundGlobalAlpha;
+                }
+                const element = {
+                    type: onFound.elementType,
+                    id: onFound.elementId,
+                    color: onFound.color,
+                    layerId: onFound.layerId,
+                    points: onFound.points ?? [], // Placeholder for points; actual points may vary based on element type
+                    rings: onFound.rings ?? [], // Placeholder for rings; actual rings may vary based on element type
+                } as XDrawElement;
+                if (element.type === "fill") {
+                    this.drawFillElement(context, element as XDrawFillElement);
+                }
+                if (element.type === "draw") {
+                    this.drawDrawElement(context, element as XDrawDrawElement);
+                }
+            }
         );
-        this.drawBackground(context, scale, camX, camY, visible);
 
         // Kamera donusumu: ekran = (dunya - kamera) * scale
-        this.drawLines(context, scale, camX, camY, visible);
+        // this.drawLines(context, scale, camX, camY, visible);
         this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;

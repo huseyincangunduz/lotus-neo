@@ -771,6 +771,13 @@ export class CanvasDraw extends NeolitComponent {
         >
           {this.divBetweenButtonsAndBottom}
         </div>
+        <div className="radius-xl border border-solid border-gray-500 absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
+              Dünya X: { this.worldX }
+              <br />
+              Dünya Y: { this.worldY }
+              <br />
+              Zoom : { this.zoomFactor }
+        </div>
       </div>
     );
   }
