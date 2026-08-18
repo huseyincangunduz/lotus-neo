@@ -35,10 +35,13 @@ const MAX_SCALE = 40;
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDraw extends NeolitComponent {
   worldX = state(0);
+  worldXUI = computed([this.worldX], ([x]) => Math.round(x));
   worldY = state(0);
+  worldYUI = computed([this.worldY], ([y]) => Math.round(y));
   clickedCameraX = state(0);
   clickedCameraY = state(0);
   zoomFactor = state(1);
+  zoomFactorUI = computed([this.zoomFactor], ([zoom]) => Math.round(zoom * 100));
   canvasHeight = state(600);
   canvasWidth = state(800);
 
@@ -771,12 +774,12 @@ export class CanvasDraw extends NeolitComponent {
         >
           {this.divBetweenButtonsAndBottom}
         </div>
-        <div className="radius-xl border border-solid border-gray-500 absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
-              Dünya X: { this.worldX }
+        <div style={{ borderRadius: "15px" }} className="p-2 border border-solid border-gray-500 absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
+              Dünya X: { this.worldXUI }
               <br />
-              Dünya Y: { this.worldY }
+              Dünya Y: { this.worldYUI }
               <br />
-              Zoom : { this.zoomFactor }
+              Zoom : { this.zoomFactorUI }
         </div>
       </div>
     );
