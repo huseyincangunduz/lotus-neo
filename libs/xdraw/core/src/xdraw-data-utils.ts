@@ -7,6 +7,8 @@ export interface XDrawElementCropData {
     elementId: string;
     elementType: string;
     points?: Array<{ x: number; y: number; size: number }>;
+    pointStartIndex?: number;
+    pointEndIndex?: number;
     rings?: Array<Array<{ x: number; y: number }>>;
     color?: string;
     partial?: boolean;
@@ -16,7 +18,7 @@ export type OnFoundCallback = (cropData: XDrawElementCropData) => void;
 
 export class XdrawDataUtils {
 
-    
+
 
     /**
      * XDrawData nesnesini derinlemesine kopyalar.
@@ -30,28 +32,23 @@ export class XdrawDataUtils {
 
     // Kameranin gordugu dunya dikdortgeni disindaki elementleri eleyerek render yukunu azaltir.
     // Noktalar dunya koordinatinda kalir; kamera donusumu render sirasinda uygulanir.
-    public static cropXDrawData(data: XDrawData, cam: XDrawCanvasCamera, screenWidth: number, screenHeight: number, onFound?: OnFoundCallback): XDrawData {
+    public static cropXDrawData(data: XDrawData, cam: XDrawCanvasCamera, screenWidth: number, screenHeight: number, onFound?: OnFoundCallback): void {
         const worldLeft = cam.x;
         const worldTop = cam.y;
         const worldRight = cam.x + screenWidth / cam.scale;
         const worldBottom = cam.y + screenHeight / cam.scale;
 
-        const croppedData: XDrawData = { layers: [] };
         for (const layer of data.layers) {
             if (layer.visible === false || layer.opacity === 0) {
                 continue; // Görünmez katmanları atla
             }
-            const elements = this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity }, onFound);
-            if (elements.length > 0) {
-                croppedData.layers.push({ ...layer, elements });
-            }
+           this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity }, onFound);
         }
-        return croppedData;
     }
     // Dünyanın en mal şeysi.... ben malım. bu sefer hesaplamaktan çok cachelemek performansı düşürdü aw
     // public static readonly pointCropPathMap: Map<string, boolean> = new Map();
 
-    public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number, initialFoundElement: Partial<XDrawElementCropData>, onFound?: OnFoundCallback): XDrawElement[] {
+    public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number, initialFoundElement: Partial<XDrawElementCropData>, onFound?: OnFoundCallback): void {
         const cropCondition = (point: { x: number; y: number }) => {
             // kasım kasım kasılıyor 😭😭😭😭😭 o yüzden hesaplasın tekrar tekrar bane 
             // const cropArgs = `${point.x}|${point.y}|${left}|${top}|${right}|${bottom}`;
@@ -64,27 +61,33 @@ export class XdrawDataUtils {
             // this.pointCropPathMap.set(cropArgs, status);
             return status;
         };
-        return elements.filter(element => {
+        for (let i = 0; i < elements.length; i++) {
+            const element = elements[i];
             if (element.type === "fill") {
                 const fillElement = element as XDrawFillElement;
+                let isVisible = false;
                 for (const ring of fillElement.rings) {
                     for (const point of ring) {
                         if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
-                            if (onFound) {
-                                onFound({
-                                    ...initialFoundElement,
-                                    elementId: fillElement.id,
-                                    elementType: fillElement.type,
-                                    rings: fillElement.rings,
-                                    color: fillElement.color,
-                                    partial: false
-                                } as any as XDrawElementCropData);
-                            }
-                            return true;
+                            isVisible = true;
+                            break;
                         }
                     }
+                    if (isVisible) {
+                        break;
+                    }
                 }
-                return false;
+                if (isVisible && onFound) {
+                    onFound({
+                        ...initialFoundElement,
+                        elementId: fillElement.id,
+                        elementType: fillElement.type,
+                        rings: fillElement.rings,
+                        color: fillElement.color,
+                        partial: false
+                    } as any as XDrawElementCropData);
+                }
+                continue;
             }
             if (element.type === "draw") {
 
@@ -92,7 +95,7 @@ export class XdrawDataUtils {
                 const drawElement = element as XDrawDrawElement;
                 const pointCount = drawElement.points.length;
                 if (pointCount === 0) {
-                    return false;
+                    continue;
                 }
                 let startIndex = -1;
                 let endIndex = -1;
@@ -109,10 +112,10 @@ export class XdrawDataUtils {
                         break;
                     }
                 }
-                let determinedPoints = drawElement.points;
                 let partial = false;
                 if ((startIndex === -1 && endIndex === -1) || (startIndex > endIndex)) {
-                    return false;
+                    continue;
+
                 }
 
                 if (startIndex === -1 || endIndex === -1) {
@@ -120,29 +123,22 @@ export class XdrawDataUtils {
                     endIndex = endIndex === -1 ? pointCount - 1 : endIndex;
                 }
 
-                if (startIndex === 0 && endIndex === pointCount - 1) {
-                    determinedPoints = drawElement.points;
-                    partial = false;
-                } else {
-                    determinedPoints = drawElement.points.slice(startIndex, endIndex + 1);
-                    partial = true;
-                }
+                partial = !(startIndex === 0 && endIndex === pointCount - 1);
                 if (onFound) {
 
                     onFound({
                         ...initialFoundElement,
                         elementId: drawElement.id,
                         elementType: drawElement.type,
-                        points: determinedPoints,
+                        points: drawElement.points,
+                        pointStartIndex: startIndex,
+                        pointEndIndex: endIndex,
                         color: drawElement.color,
                         partial: partial,
                     } as any as XDrawElementCropData);
                 }
-                return true;
             }
-            return false;
-
-        });
+        }
     }
 
     public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): XDrawElement[] {

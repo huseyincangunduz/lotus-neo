@@ -14,6 +14,11 @@ interface DrawPathCacheEntry {
     segments: DrawPathSegment[];
 }
 
+interface DrawPointRange {
+    startIndex: number;
+    endIndex: number;
+}
+
 export class ProjectDataRasterizer {
     // Maske, viewport'un biraz disini da kapsar; boylece kenarda olusan dolgu dikisleri azalir.
     private static readonly MASK_MARGIN_RATIO = 0.25;
@@ -319,8 +324,14 @@ export class ProjectDataRasterizer {
         draw: XDrawDrawElement,
         colorOverride?: string,
         minLineWidth = 0,
+        range?: DrawPointRange,
     ) {
         if (draw.points.length === 0) {
+            return;
+        }
+        const startIndex = range?.startIndex ?? 0;
+        const endIndex = range?.endIndex ?? draw.points.length - 1;
+        if (startIndex < 0 || endIndex < startIndex || endIndex >= draw.points.length) {
             return;
         }
         const color = colorOverride ?? ColorUtils.regularizeToHexColor(draw.color);
@@ -328,7 +339,7 @@ export class ProjectDataRasterizer {
             return;
         }
 
-        const segments = this.getDrawSegments(draw, minLineWidth);
+        const segments = this.getDrawSegments(draw, minLineWidth, startIndex, endIndex);
         for (const segment of segments) {
             if (segment.fill) {
                 context.fillStyle = color;
@@ -342,14 +353,17 @@ export class ProjectDataRasterizer {
         // console.debug(`Draw element ${draw.id} rendered in ${(performanceEnd - performanceStart).toFixed(2)} ms`);
     }
 
-    private getDrawSegments(draw: XDrawDrawElement, minLineWidth: number): DrawPathSegment[] {
+    private getDrawSegments(draw: XDrawDrawElement, minLineWidth: number, startIndex: number, endIndex: number): DrawPathSegment[] {
+        if (startIndex !== 0 || endIndex !== draw.points.length - 1) {
+            return this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex).segments;
+        }
         const cached = this.drawPathCache.get(draw.points);
         // minLineWidth maske olceginee gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
         if (cached && cached.minLineWidth === minLineWidth) {
             return cached.segments;
         }
 
-        const built = this.buildDrawSegments(draw, minLineWidth);
+        const built = this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
         if (built.cacheable) {
             this.drawPathCache.set(draw.points, { minLineWidth, segments: built.segments });
         } else if (cached) {
@@ -359,13 +373,13 @@ export class ProjectDataRasterizer {
     }
 
     // Partial cizgiler ve nokta atlama uygulanmis cizgiler cachelenmez: geometri henuz kesinlesmemistir.
-    private buildDrawSegments(draw: XDrawDrawElement, minLineWidth: number): { segments: DrawPathSegment[]; cacheable: boolean } {
-        const first = draw.points[0];
+    private buildDrawSegments(draw: XDrawDrawElement, minLineWidth: number, startIndex: number, endIndex: number): { segments: DrawPathSegment[]; cacheable: boolean } {
+        const first = draw.points[startIndex];
 
-        if (draw.points.length === 1) {
+        if (startIndex === endIndex) {
             const dot = new Path2D();
             dot.arc(first.x, first.y, Math.max(0.5, minLineWidth / 2, first.size / 2), 0, Math.PI * 2);
-            return { segments: [{ path: dot, lineWidth: 0, fill: true }], cacheable: !draw.partial };
+            return { segments: [{ path: dot, lineWidth: 0, fill: true }], cacheable: !draw.partial && startIndex === 0 && endIndex === draw.points.length - 1 };
         }
 
         const segments: DrawPathSegment[] = [];
@@ -376,10 +390,10 @@ export class ProjectDataRasterizer {
         // Ekranda 1 pikselden yakin noktalari atla. Maskede (minLineWidth > 0) devre disi:
         // atlanan nokta cizgi sinirinda delik acar ve flood fill disari sizar.
         const minWorldStepSq = minLineWidth > 0 ? 0 : (1 / this.cam.scale) ** 2;
-        const lastIndex = draw.points.length - 1;
+        const lastIndex = endIndex;
         let prev = first;
         let skippedPoint = false;
-        for (let i = 1; i <= lastIndex; i++) {
+        for (let i = startIndex + 1; i <= lastIndex; i++) {
             const point = draw.points[i];
             if (draw.partial && minWorldStepSq > 0 && i !== lastIndex) {
                 const dx = point.x - prev.x;
@@ -400,7 +414,8 @@ export class ProjectDataRasterizer {
         }
         segments.push({ path, lineWidth, fill: false });
 
-        return { segments, cacheable: !draw.partial && !skippedPoint };
+        const usesFullRange = startIndex === 0 && endIndex === draw.points.length - 1;
+        return { segments, cacheable: usesFullRange && !draw.partial && !skippedPoint };
     }
 
     invalidateDrawCache(element: XDrawDrawElement) {
@@ -466,7 +481,7 @@ export class ProjectDataRasterizer {
         context.lineCap = "round";
         context.lineJoin = "round";
 
-        void XdrawDataUtils.cropXDrawData(
+        XdrawDataUtils.cropXDrawData(
             this.projectData,
             this.cam,
             canvas.width,
@@ -476,7 +491,7 @@ export class ProjectDataRasterizer {
                 if (context.globalAlpha !== foundGlobalAlpha) {
                     context.globalAlpha = foundGlobalAlpha;
                 }
-                const element = {
+                let element = {
                     type: onFound.elementType,
                     id: onFound.elementId,
                     color: onFound.color,
@@ -487,13 +502,24 @@ export class ProjectDataRasterizer {
                 } as XDrawElement;
                 switch (element.type) {
                     case "draw":
-                        this.drawDrawElement(context, element as XDrawDrawElement);
+                        this.drawDrawElement(
+                            context,
+                            element as XDrawDrawElement,
+                            undefined,
+                            0,
+                            {
+                                startIndex: onFound.pointStartIndex ?? 0,
+                                endIndex: onFound.pointEndIndex ?? Math.max(0, (onFound.points?.length ?? 1) - 1),
+                            },
+                        );
                         break;
                     case "fill":
                         this.drawFillElement(context, element as XDrawFillElement);
                         break;
                 }
 
+                element = null as any; // Clear reference to allow garbage collection
+                onFound = null as any; // Clear reference to allow garbage collection
             }
         );
 
