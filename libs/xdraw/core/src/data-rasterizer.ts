@@ -53,7 +53,7 @@ export class ProjectDataRasterizer {
             this.cursorPosition.color = ColorUtils.regularizeToHexColor(this.cursorPosition.color) || this.cursorPosition.color;
         }
 
-        // this.requestRender();
+        this.requestRender();
     }
 
     setProjectData(projectData: XDrawData) {
