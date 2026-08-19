@@ -90,27 +90,39 @@ export class XdrawDataUtils {
 
                 // 
                 const drawElement = element as XDrawDrawElement;
-                let startIndex = drawElement.points.findIndex(cropCondition);
-                let endIndex = drawElement.points.findLastIndex(cropCondition);
+                const pointCount = drawElement.points.length;
+                if (pointCount === 0) {
+                    return false;
+                }
+                let startIndex = -1;
+                let endIndex = -1;
+                const scanCount = Math.ceil(pointCount / 2);
+                for (let i = 0; i < scanCount; i++) {
+                    const lastIndex = pointCount - 1 - i;
+                    if (startIndex === -1 && cropCondition(drawElement.points[i])) {
+                        startIndex = i;
+                    }
+                    if (endIndex === -1 && cropCondition(drawElement.points[lastIndex])) {
+                        endIndex = lastIndex;
+                    }
+                    if ((startIndex !== -1 && endIndex !== -1)) {
+                        break;
+                    }
+                }
                 let determinedPoints = drawElement.points;
                 let partial = false;
-                /**
-                 * Noktalar arasında kesişim yoksa veya başlangıç ve bitiş indeksleri geçersizse, false döndür.
-                 * Eğer başlangıç veya bitiş indeksi -1 ise, geçerli indeksleri belirle ve kesişen noktaları al.
-                 * Eğer başlangıç ve bitiş indeksleri geçerliyse, kesişen noktaları belirle.
-                 * Kesişen noktalar bulunduğunda, onFound callback fonksiyonunu çağır ve true döndür.
-                 * Aksi takdirde, false döndür.
-                 * 
-                 * Bu mantık, çizim elementlerinin kamera görünüm alanı ile kesişip kesişmediğini kontrol eder ve
-                 * kesişen noktaları belirler.
-                 */
-                if ((startIndex === -1 && endIndex === -1) || (startIndex > endIndex) || (startIndex === endIndex)) {
+                if ((startIndex === -1 && endIndex === -1) || (startIndex > endIndex)) {
                     return false;
-                } else if (startIndex === -1 || endIndex === -1) {
+                }
+
+                if (startIndex === -1 || endIndex === -1) {
                     startIndex = startIndex === -1 ? 0 : startIndex;
-                    endIndex = endIndex === -1 ? drawElement.points.length - 1 : endIndex;
-                    determinedPoints = (startIndex === 0 && endIndex === drawElement.points.length - 1) ? drawElement.points : drawElement.points.slice(startIndex, endIndex + 1);
-                    partial = determinedPoints.length !== drawElement.points.length;
+                    endIndex = endIndex === -1 ? pointCount - 1 : endIndex;
+                }
+
+                if (startIndex === 0 && endIndex === pointCount - 1) {
+                    determinedPoints = drawElement.points;
+                    partial = false;
                 } else {
                     determinedPoints = drawElement.points.slice(startIndex, endIndex + 1);
                     partial = true;
