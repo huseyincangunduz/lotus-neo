@@ -91,6 +91,10 @@ export class CanvasDraw extends NeolitComponent {
   private drawTools = new CanvasDrawTools(this);
   private undoRedoHelper = new UndoRedoHelper();
   private gestureHistoryBeforeSnapshot: XDrawSnapshot | null = null;
+  // Kalem kalkinca hemen commit etmek yerine bekletiyoruz; bu sure icinde yeni bir
+  // stroke baslarsa ayni undo adimina devam eder ve agir JSON islemleri hic calismaz.
+  private gestureFinalizeTimerId: number | null = null;
+  private static readonly GESTURE_FINALIZE_DELAY_MS = 500;
   private autosaveTimerId: number | null = null;
   private autosaveDirty = false;
   private readonly handleWindowResize = () => {
@@ -100,6 +104,7 @@ export class CanvasDraw extends NeolitComponent {
     this.syncCanvasViewportSize();
   };
   private readonly handleBeforeUnload = () => {
+    this.flushPendingGestureHistory();
     this.flushAutosave();
   };
 
@@ -367,6 +372,7 @@ export class CanvasDraw extends NeolitComponent {
 
   onDestroy(): void {
     this.stopAutosaveLoop();
+    this.flushPendingGestureHistory();
     this.flushAutosave();
     window.removeEventListener("resize", this.handleWindowResize);
     window.visualViewport?.removeEventListener(
@@ -646,6 +652,7 @@ export class CanvasDraw extends NeolitComponent {
     const isMetaPressed = event.ctrlKey || event.metaKey;
     if (isMetaPressed && key === "z") {
       event.preventDefault();
+      this.flushPendingGestureHistory();
       if (event.shiftKey) {
         void this.undoRedoHelper
           .redo()
@@ -660,6 +667,7 @@ export class CanvasDraw extends NeolitComponent {
 
     if (isMetaPressed && key === "y") {
       event.preventDefault();
+      this.flushPendingGestureHistory();
       void this.undoRedoHelper
         .redo()
         .catch((error) => console.error("Redo uygulanamadi:", error));
@@ -723,6 +731,11 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   beginGestureHistoryCapture(): void {
+    // Bekleyen bir finalize varsa iptal edilir; yeni stroke ayni undo adimina dahil olur.
+    if (this.gestureFinalizeTimerId !== null) {
+      window.clearTimeout(this.gestureFinalizeTimerId);
+      this.gestureFinalizeTimerId = null;
+    }
     if (this.gestureHistoryBeforeSnapshot) {
       return;
     }
@@ -734,11 +747,33 @@ export class CanvasDraw extends NeolitComponent {
       return;
     }
 
+    if (this.gestureFinalizeTimerId !== null) {
+      window.clearTimeout(this.gestureFinalizeTimerId);
+    }
+    this.gestureFinalizeTimerId = window.setTimeout(() => {
+      this.gestureFinalizeTimerId = null;
+      this.commitGestureHistory();
+    }, CanvasDraw.GESTURE_FINALIZE_DELAY_MS);
+  }
+
+  private commitGestureHistory(): void {
     const before = this.gestureHistoryBeforeSnapshot;
+    if (!before) {
+      return;
+    }
     this.gestureHistoryBeforeSnapshot = null;
     const after = this.captureHistorySnapshot();
     this.pushHistorySnapshotOperation(before, after);
     this.flushAutosave();
+  }
+
+  // Undo/redo veya sayfa kapanisi gibi anlarda bekleyen commit'i hemen tamamlar.
+  private flushPendingGestureHistory(): void {
+    if (this.gestureFinalizeTimerId !== null) {
+      window.clearTimeout(this.gestureFinalizeTimerId);
+      this.gestureFinalizeTimerId = null;
+    }
+    this.commitGestureHistory();
   }
 
   render(): NeolitNode {
@@ -756,8 +791,14 @@ export class CanvasDraw extends NeolitComponent {
               canRedo={this.canRedo}
               generateNew={this.generateNew.bind(this)}
               canUndo={this.canUndo}
-              undo={() => this.undoRedoHelper.undo()}
-              redo={() => this.undoRedoHelper.redo()}
+              undo={() => {
+                this.flushPendingGestureHistory();
+                return this.undoRedoHelper.undo();
+              }}
+              redo={() => {
+                this.flushPendingGestureHistory();
+                return this.undoRedoHelper.redo();
+              }}
               flushAutosave={this.flushAutosave.bind(this)}
               pushHistorySnapshotOperation={this.pushHistorySnapshotOperation.bind(
                 this,
