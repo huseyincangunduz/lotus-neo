@@ -339,6 +339,7 @@ export class ProjectDataRasterizer {
             context.lineWidth = segment.lineWidth;
             context.stroke(segment.path);
         }
+        // console.debug(`Draw element ${draw.id} rendered in ${(performanceEnd - performanceStart).toFixed(2)} ms`);
     }
 
     private getDrawSegments(draw: XDrawDrawElement, minLineWidth: number): DrawPathSegment[] {
@@ -509,13 +510,13 @@ export class ProjectDataRasterizer {
         }
         this.renderScheduled = true;
         setTimeout(() => {
+                this.renderScheduled = false;
                 const perfStart = performance.now();
                 this.rasterizeProjectDataToCanvas();
                 const perfEnd = performance.now();
                 const renderTime = perfEnd - perfStart;
                 this.lastRenderTimeMs = renderTime;
-                this.renderScheduled = false;
-        }, (1000 / 30) - this.lastRenderTimeMs);
+        }, 16); // 16ms ~ 60fps
 
     }
 

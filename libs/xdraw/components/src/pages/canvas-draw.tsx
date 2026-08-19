@@ -60,7 +60,7 @@ export class CanvasDraw extends NeolitComponent {
       id="myCanvas"
       width={this.canvasWidth}
       height={this.canvasHeight}
-      style="cursor: crosshair;"
+      style="cursor: crosshair;touch-action: none;"
     ></canvas>
   );
 
@@ -494,7 +494,7 @@ export class CanvasDraw extends NeolitComponent {
     }
 
     const pointer = this.getPointerOffsetFromEvent(event);
-    this.updateCursor(pointer.x, pointer.y);
+    this.updateCursor(pointer.x, pointer.y, false);
 
     this.updatePointerPosition(event);
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -536,7 +536,7 @@ export class CanvasDraw extends NeolitComponent {
 
   onPointerMove(event: PointerEvent): void {
     const pointer = this.getPointerOffsetFromEvent(event);
-    this.updateCursor(pointer.x, pointer.y);
+    this.updateCursor(pointer.x, pointer.y, false);
 
     if (!this.activePointers.has(event.pointerId)) {
       return;
@@ -579,9 +579,13 @@ export class CanvasDraw extends NeolitComponent {
     }
   }
 
-  private updateCursor(offsetX: number, offsetY: number) {
+  private updateCursor(offsetX: number, offsetY: number, renderCursor = true): void {
     // Boya kovasinda firca onizlemesi anlamsiz; imlec cizilmez.
     if (this.settings.drawType.get() === "fill") {
+      this.svgHolder.setCursorPosition(undefined);
+      return;
+    }
+    if (!renderCursor) {
       this.svgHolder.setCursorPosition(undefined);
       return;
     }
