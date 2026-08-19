@@ -499,7 +499,7 @@ export class ProjectDataRasterizer {
 
         // Kamera donusumu: ekran = (dunya - kamera) * scale
         // this.drawLines(context, scale, camX, camY, visible);
-        // this.drawCursor(context);
+        this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
     }
