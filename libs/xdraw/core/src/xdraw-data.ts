@@ -49,6 +49,9 @@ export interface XDrawSize {
 export interface XDrawElement {
     id: string;
     type: string;
+
+    // Crop edildiği zaman tam element görünmez, sadece crop alanı görünür. Crop alanı dışında kalan kısımlar çizilmez. Bu özellik yanlış önbelleklemeyi önlemek için kullanılır. 
+    partial?: boolean;
 }
 
 

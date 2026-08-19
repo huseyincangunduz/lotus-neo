@@ -9,11 +9,14 @@ export interface XDrawElementCropData {
     points?: Array<{ x: number; y: number; size: number }>;
     rings?: Array<Array<{ x: number; y: number }>>;
     color?: string;
+    partial?: boolean;
 }
 
 export type OnFoundCallback = (cropData: XDrawElementCropData) => void;
 
 export class XdrawDataUtils {
+
+    
 
     /**
      * XDrawData nesnesini derinlemesine kopyalar.
@@ -73,7 +76,8 @@ export class XdrawDataUtils {
                                     elementId: fillElement.id,
                                     elementType: fillElement.type,
                                     rings: fillElement.rings,
-                                    color: fillElement.color
+                                    color: fillElement.color,
+                                    partial: false
                                 } as any as XDrawElementCropData);
                             }
                             return true;
@@ -89,7 +93,7 @@ export class XdrawDataUtils {
                 let startIndex = drawElement.points.findIndex(cropCondition);
                 let endIndex = drawElement.points.findLastIndex(cropCondition);
                 let determinedPoints = drawElement.points;
-
+                let partial = false;
                 /**
                  * Noktalar arasında kesişim yoksa veya başlangıç ve bitiş indeksleri geçersizse, false döndür.
                  * Eğer başlangıç veya bitiş indeksi -1 ise, geçerli indeksleri belirle ve kesişen noktaları al.
@@ -106,8 +110,10 @@ export class XdrawDataUtils {
                     startIndex = startIndex === -1 ? 0 : startIndex;
                     endIndex = endIndex === -1 ? drawElement.points.length - 1 : endIndex;
                     determinedPoints = (startIndex === 0 && endIndex === drawElement.points.length - 1) ? drawElement.points : drawElement.points.slice(startIndex, endIndex + 1);
+                    partial = determinedPoints.length !== drawElement.points.length;
                 } else {
                     determinedPoints = drawElement.points.slice(startIndex, endIndex + 1);
+                    partial = true;
                 }
                 if (onFound) {
 
@@ -116,7 +122,8 @@ export class XdrawDataUtils {
                         elementId: drawElement.id,
                         elementType: drawElement.type,
                         points: determinedPoints,
-                        color: drawElement.color
+                        color: drawElement.color,
+                        partial: partial,
                     } as any as XDrawElementCropData);
                 }
                 return true;

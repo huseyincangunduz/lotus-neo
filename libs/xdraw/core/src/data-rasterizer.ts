@@ -2,6 +2,18 @@ import { ColorUtils } from "./color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 
+// Bir cizgi elemani, kalinlik degistigi her yerde yeni bir Path2D'ye bolunur.
+interface DrawPathSegment {
+    path: Path2D;
+    lineWidth: number;
+    fill: boolean;
+}
+
+interface DrawPathCacheEntry {
+    minLineWidth: number;
+    segments: DrawPathSegment[];
+}
+
 export class ProjectDataRasterizer {
     // Maske, viewport'un biraz disini da kapsar; boylece kenarda olusan dolgu dikisleri azalir.
     private static readonly MASK_MARGIN_RATIO = 0.25;
@@ -16,6 +28,10 @@ export class ProjectDataRasterizer {
     private renderScheduled = false;
     // Anahtar rings array referansi: geometri degisince yeni array gelir ve cache kendiliginden duser.
     private fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
+    private lastRenderTimeMs = 1000 / 30;
+    // Anahtar points array referansi: crop callback her karede yeni element objesi urettigi icin
+    // element referansi anahtar olarak kullanilamaz.
+    private drawPathCache = new WeakMap<XDrawPoint[], DrawPathCacheEntry>();
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
@@ -32,7 +48,7 @@ export class ProjectDataRasterizer {
             this.cursorPosition.color = ColorUtils.regularizeToHexColor(this.cursorPosition.color) || this.cursorPosition.color;
         }
 
-        this.requestRender();
+        // this.requestRender();
     }
 
     setProjectData(projectData: XDrawData) {
@@ -312,44 +328,87 @@ export class ProjectDataRasterizer {
             return;
         }
 
-        const first = draw.points[0];
-        if (draw.points.length === 1) {
-            context.fillStyle = color;
-            context.beginPath();
-            context.arc(first.x, first.y, Math.max(0.5, minLineWidth / 2, first.size / 2), 0, Math.PI * 2);
-            context.fill();
-            return;
+        const segments = this.getDrawSegments(draw, minLineWidth);
+        for (const segment of segments) {
+            if (segment.fill) {
+                context.fillStyle = color;
+                context.fill(segment.path);
+                continue;
+            }
+            context.strokeStyle = color;
+            context.lineWidth = segment.lineWidth;
+            context.stroke(segment.path);
+        }
+    }
+
+    private getDrawSegments(draw: XDrawDrawElement, minLineWidth: number): DrawPathSegment[] {
+        const cached = this.drawPathCache.get(draw.points);
+        // minLineWidth maske olceginee gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
+        if (cached && cached.minLineWidth === minLineWidth) {
+            return cached.segments;
         }
 
-        context.strokeStyle = color;
-        context.lineWidth = Math.max(minLineWidth, first.size);
-        context.beginPath();
-        context.moveTo(first.x, first.y);
+        const built = this.buildDrawSegments(draw, minLineWidth);
+        if (built.cacheable) {
+            this.drawPathCache.set(draw.points, { minLineWidth, segments: built.segments });
+        } else if (cached) {
+            this.drawPathCache.delete(draw.points);
+        }
+        return built.segments;
+    }
+
+    // Partial cizgiler ve nokta atlama uygulanmis cizgiler cachelenmez: geometri henuz kesinlesmemistir.
+    private buildDrawSegments(draw: XDrawDrawElement, minLineWidth: number): { segments: DrawPathSegment[]; cacheable: boolean } {
+        const first = draw.points[0];
+
+        if (draw.points.length === 1) {
+            const dot = new Path2D();
+            dot.arc(first.x, first.y, Math.max(0.5, minLineWidth / 2, first.size / 2), 0, Math.PI * 2);
+            return { segments: [{ path: dot, lineWidth: 0, fill: true }], cacheable: !draw.partial };
+        }
+
+        const segments: DrawPathSegment[] = [];
+        let path = new Path2D();
+        let lineWidth = Math.max(minLineWidth, first.size);
+        path.moveTo(first.x, first.y);
 
         // Ekranda 1 pikselden yakin noktalari atla. Maskede (minLineWidth > 0) devre disi:
         // atlanan nokta cizgi sinirinda delik acar ve flood fill disari sizar.
         const minWorldStepSq = minLineWidth > 0 ? 0 : (1 / this.cam.scale) ** 2;
         const lastIndex = draw.points.length - 1;
         let prev = first;
+        let skippedPoint = false;
         for (let i = 1; i <= lastIndex; i++) {
             const point = draw.points[i];
-            if (minWorldStepSq > 0 && i !== lastIndex) {
+            if (draw.partial && minWorldStepSq > 0 && i !== lastIndex) {
                 const dx = point.x - prev.x;
                 const dy = point.y - prev.y;
                 if (dx * dx + dy * dy < minWorldStepSq) {
+                    skippedPoint = true;
                     continue;
                 }
             }
             if (point.size !== prev.size) {
-                context.stroke();
-                context.lineWidth = Math.max(minLineWidth, point.size);
-                context.beginPath();
-                context.moveTo(prev.x, prev.y);
+                segments.push({ path, lineWidth, fill: false });
+                lineWidth = Math.max(minLineWidth, point.size);
+                path = new Path2D();
+                path.moveTo(prev.x, prev.y);
             }
-            context.lineTo(point.x, point.y);
+            path.lineTo(point.x, point.y);
             prev = point;
         }
-        context.stroke();
+        segments.push({ path, lineWidth, fill: false });
+
+        return { segments, cacheable: !draw.partial && !skippedPoint };
+    }
+
+    invalidateDrawCache(element: XDrawDrawElement) {
+        this.drawPathCache.delete(element.points);
+    }
+
+    invalidateAllPathCaches() {
+        this.drawPathCache = new WeakMap<XDrawPoint[], DrawPathCacheEntry>();
+        this.fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
     }
 
     private drawFillElement(context: CanvasRenderingContext2D, fill: XDrawFillElement, colorOverride?: string) {
@@ -386,12 +445,11 @@ export class ProjectDataRasterizer {
 
     // Dunya koordinatli XDrawData'yi kameraya gore canvas'a cizer.
     private rasterizeProjectDataToCanvas() {
-        console.info("Rasterizing project data to canvas...");
         const canvas = this.activeCanvas;
         if (!canvas || !this.projectData) {
             return;
         }
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { desynchronized: true });
         if (!context) {
             return;
         }
@@ -422,21 +480,25 @@ export class ProjectDataRasterizer {
                     id: onFound.elementId,
                     color: onFound.color,
                     layerId: onFound.layerId,
+                    partial: onFound.partial,
                     points: onFound.points ?? [], // Placeholder for points; actual points may vary based on element type
                     rings: onFound.rings ?? [], // Placeholder for rings; actual rings may vary based on element type
                 } as XDrawElement;
-                if (element.type === "fill") {
-                    this.drawFillElement(context, element as XDrawFillElement);
+                switch (element.type) {
+                    case "draw":
+                        this.drawDrawElement(context, element as XDrawDrawElement);
+                        break;
+                    case "fill":
+                        this.drawFillElement(context, element as XDrawFillElement);
+                        break;
                 }
-                if (element.type === "draw") {
-                    this.drawDrawElement(context, element as XDrawDrawElement);
-                }
+
             }
         );
 
         // Kamera donusumu: ekran = (dunya - kamera) * scale
         // this.drawLines(context, scale, camX, camY, visible);
-        this.drawCursor(context);
+        // this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
     }
@@ -446,10 +508,15 @@ export class ProjectDataRasterizer {
             return;
         }
         this.renderScheduled = true;
-        requestAnimationFrame(() => {
-            this.rasterizeProjectDataToCanvas();
-            this.renderScheduled = false;
-        });
+        setTimeout(() => {
+                const perfStart = performance.now();
+                this.rasterizeProjectDataToCanvas();
+                const perfEnd = performance.now();
+                const renderTime = perfEnd - perfStart;
+                this.lastRenderTimeMs = renderTime;
+                this.renderScheduled = false;
+        }, (1000 / 30) - this.lastRenderTimeMs);
+
     }
 
 }
