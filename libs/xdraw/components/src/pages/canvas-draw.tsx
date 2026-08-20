@@ -42,7 +42,7 @@ export class CanvasDraw extends NeolitComponent {
   clickedCameraX = state(0);
   clickedCameraY = state(0);
   zoomFactor = state(1);
-  zoomFactorUI = computed([this.zoomFactor], ([zoom]) => Math.round(zoom * 100));
+  zoomFactorUI = computed([this.zoomFactor], ([zoom]) => Math.round(zoom * 100)/100);
   canvasHeight = state(600);
   canvasWidth = state(800);
 

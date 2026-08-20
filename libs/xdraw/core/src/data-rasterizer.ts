@@ -2,6 +2,9 @@ import { ColorUtils } from "./color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 
+const BROWSER_SUPPORTS_OFFSCREEN_CANVAS = typeof window !== "undefined" && typeof window.OffscreenCanvas === "function";
+// canvas2dtowebgl kütüphanesi, WebGL desteği olan tarayıcılarda 2D canvas'ı WebGL ile hızlandırmak için kullanılabilir. Ancak, bazı tarayıcılarda veya cihazlarda bu kütüphane düzgün çalışmayabilir. Bu nedenle, WebGL desteği ve kütüphanenin kullanılabilirliği kontrol edilmelidir.
+// const WEBGL_RENDERER_AVAILABLE = typeof window !== "undefined" && typeof window.WebGLRenderingContext === "function" && window["enableWebGLCanvas" as any];
 // Bir cizgi elemani, kalinlik degistigi her yerde yeni bir Path2D'ye bolunur.
 interface DrawPathSegment {
     path: Path2D;
@@ -10,7 +13,7 @@ interface DrawPathSegment {
 }
 
 interface DrawSpecialCanvas {
-    canvas: HTMLCanvasElement;
+    canvas: HTMLCanvasElement | OffscreenCanvas;
     left: number;
     top: number;
     width: number;
@@ -81,6 +84,21 @@ export class ProjectDataRasterizer {
 
     setInteractionMode(_mode: InteractionMode) {
         // Etkilesim modu su an render'i etkilemiyor.
+    }
+
+    getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
+        // if (WebGL2RenderingContext && WEBGL_RENDERER_AVAILABLE) {
+        //     return (window["enableWebGLCanvas" as any] as any as Function)?.(canvas);
+        // }
+        return canvas.getContext("2d", { desynchronized: true });
+    }
+
+    startContext2d(context: CanvasRenderingContext2D) {
+        ((context as any)["start2D" as any] as any as Function)?.(context);
+    }
+
+    endContext2d(context: CanvasRenderingContext2D) {
+        ((context as any)["end2D" as any] as any as Function)?.(context);
     }
 
     // Aktif katmanin cizgilerini, kamera olceginde offscreen bir canvas'a rasterize eder.
@@ -332,7 +350,7 @@ export class ProjectDataRasterizer {
         // console.debug(`Draw element ${draw.id} rendered in ${(performanceEnd - performanceStart).toFixed(2)} ms`);
     }
 
-    private drawElementSegments(segments: DrawPathCacheEntry, context: CanvasRenderingContext2D, color: string) {
+    private drawElementSegments(segments: DrawPathCacheEntry, context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, color: string) {
         if (segments.specialCanvas) {
             const specialCanvas = segments.specialCanvas;
             context.drawImage(specialCanvas.canvas, specialCanvas.left, specialCanvas.top, specialCanvas.width, specialCanvas.height);
@@ -359,46 +377,19 @@ export class ProjectDataRasterizer {
         // minLineWidth maske olceginee gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
         const renderScale = Math.max(0.001, this.cam.scale);
         if (cached && cached.minLineWidth === minLineWidth && (!cached.specialCanvas || cached.specialCanvas.scale === renderScale)) {
+            // console.log("Render scale, element kimliği ve cached specialCanvas scale:", renderScale, draw.id, cached.specialCanvas?.scale);
+            if (!cached.specialCanvas && renderScale >= 1 && BROWSER_SUPPORTS_OFFSCREEN_CANVAS && draw.finalized !== false && minLineWidth === 0) {
+                cached.specialCanvas = this.buildOffscreenCanvasIfAvailable(draw, renderScale, cached.segments);
+            }
             return cached;
         }
 
         const built = this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
         if (built.cacheable) {
             let specialCanvas: DrawSpecialCanvas | undefined;
-            if (draw.finalized && minLineWidth === 0) {
-                let bottom = -Infinity, right = -Infinity, left = Infinity, top = Infinity;
-                for (const point of draw.points) {
-                    const radius = point.size / 2;
-                    left = Math.min(left, point.x - radius);
-                    top = Math.min(top, point.y - radius);
-                    right = Math.max(right, point.x + radius);
-                    bottom = Math.max(bottom, point.y + radius);
-                }
-                const boundsPadding = 1 / renderScale;
-                left -= boundsPadding;
-                top -= boundsPadding;
-                right += boundsPadding;
-                bottom += boundsPadding;
-                const width = Math.max(1, right - left);
-                const height = Math.max(1, bottom - top);
-                const pixelWidth = Math.max(1, Math.ceil(width * renderScale));
-                const pixelHeight = Math.max(1, Math.ceil(height * renderScale));
-                if (pixelWidth * pixelHeight <= ProjectDataRasterizer.DRAW_CACHE_MAX_PIXELS) {
-                    const canvas = document.createElement("canvas");
-                    canvas.width = pixelWidth;
-                    canvas.height = pixelHeight;
-                    const context = canvas.getContext("2d", { willReadFrequently: true }); // Canvas'i olusturmak icin context'e ihtiyac var, ancak kullanmayacagiz.
-                    if (context) {
-                        context.globalAlpha = 1;
-                        context.globalCompositeOperation = "source-over";
-                        context.setTransform(renderScale, 0, 0, renderScale, -left * renderScale, -top * renderScale);
-                        context.lineCap = "round";
-                        context.lineJoin = "round";
-                        context.fillStyle = ColorUtils.regularizeToHexColor(draw.color) || draw.color;
-                        this.drawElementSegments(built, context, draw.color);
-                        specialCanvas = { canvas, left, top, width, height, scale: renderScale };
-                    }
-                }
+            // Çizim tamamen kesinleşmişse ve minLineWidth 0 ise, çizimi offscreen canvas'a rasterize ederek cache'leyebiliriz. Bu, özellikle yüksek çözünürlükte performansı artırabilir.
+            if ((draw.finalized !== false) && minLineWidth === 0 && BROWSER_SUPPORTS_OFFSCREEN_CANVAS && renderScale >= 1) {
+                specialCanvas = this.buildOffscreenCanvasIfAvailable(draw, renderScale, built.segments);
             }
             const cacheEntry = {
                 minLineWidth,
@@ -411,6 +402,45 @@ export class ProjectDataRasterizer {
             this.drawPathCache.delete(draw.points);
         }
         return built;
+    }
+
+    private buildOffscreenCanvasIfAvailable(draw: XDrawDrawElement, renderScale: number, segments: DrawPathSegment[]) {
+        return undefined; // OffscreenCanvas oluşturma işlemi devre dışı bırakıldı. Gerekirse buraya geri eklenebilir.
+        let specialCanvas: DrawSpecialCanvas | undefined;
+        let bottom = -Infinity, right = -Infinity, left = Infinity, top = Infinity;
+        for (const point of draw.points) {
+            const radius = point.size / 2;
+            left = Math.min(left, point.x - radius);
+            top = Math.min(top, point.y - radius);
+            right = Math.max(right, point.x + radius);
+            bottom = Math.max(bottom, point.y + radius);
+        }
+        const boundsPadding = 1 / renderScale;
+        left -= boundsPadding;
+        top -= boundsPadding;
+        right += boundsPadding;
+        bottom += boundsPadding;
+        const width = Math.max(1, right - left);
+        const height = Math.max(1, bottom - top);
+        const pixelWidth = Math.max(1, Math.ceil(width * renderScale));
+        const pixelHeight = Math.max(1, Math.ceil(height * renderScale));
+        if (pixelWidth * pixelHeight <= ProjectDataRasterizer.DRAW_CACHE_MAX_PIXELS) {
+            const canvas = new OffscreenCanvas(pixelWidth, pixelHeight);
+            canvas.width = pixelWidth;
+            canvas.height = pixelHeight;
+            const context = canvas.getContext("2d"); // Canvas'i olusturmak icin context'e ihtiyac var, ancak kullanmayacagiz.
+            if (context) {
+                context.globalAlpha = 1;
+                context.globalCompositeOperation = "source-over";
+                context.setTransform(renderScale, 0, 0, renderScale, -left * renderScale, -top * renderScale);
+                context.lineCap = "round";
+                context.lineJoin = "round";
+                context.fillStyle = ColorUtils.regularizeToHexColor(draw.color) || draw.color;
+                this.drawElementSegments({ segments: segments }, context, draw.color);
+                specialCanvas = { canvas, left, top, width, height, scale: renderScale };
+            }
+        }
+        return specialCanvas;
     }
 
     // Partial cizgiler ve nokta atlama uygulanmis cizgiler cachelenmez: geometri henuz kesinlesmemistir.
@@ -514,11 +544,11 @@ export class ProjectDataRasterizer {
         if (!canvas || !this.projectData) {
             return;
         }
-        const context = canvas.getContext("2d", { desynchronized: true });
+        const context = this.getCanvasContext(canvas);
         if (!context) {
             return;
         }
-
+        // this.startContext2d(context);
         const { x: camX, y: camY, scale } = this.cam;
 
         context.setTransform(1, 0, 0, 1, 0, 0);
@@ -569,7 +599,7 @@ export class ProjectDataRasterizer {
         this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
-
+        // this.endContext2d(context);
     }
 
     private throttledRender() {
