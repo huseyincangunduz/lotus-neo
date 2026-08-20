@@ -535,19 +535,21 @@ export class ProjectDataRasterizer {
             return;
         }
         this.renderScheduled = true;
-        // setTimeout(() => {
-        //         this.renderScheduled = false;
-        //         const perfStart = performance.now();
-        //         this.rasterizeProjectDataToCanvas();
-        //         const perfEnd = performance.now();
-        //         const renderTime = perfEnd - perfStart;
-        //         this.lastRenderTimeMs = renderTime;
-        // }, 16); // 16ms ~ 60fps
-        requestAnimationFrame(() => {
-            this.renderScheduled = false;
-            this.rasterizeProjectDataToCanvas();
-        });
 
+        setTimeout(() => {
+            requestAnimationFrame(() => {
+                this.renderScheduled = false;
+                // const perfStart = performance.now();
+                this.rasterizeProjectDataToCanvas();
+                // const perfEnd = performance.now();
+                // const renderTime = perfEnd - perfStart;
+                // this.lastRenderTimeMs = renderTime;
+
+                // this.renderScheduled = false;
+                // this.rasterizeProjectDataToCanvas();
+            });
+
+        }, 16); // 16ms ~ 60fps
     }
 
 }
