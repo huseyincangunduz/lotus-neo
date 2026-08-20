@@ -12,6 +12,8 @@ interface DrawPathSegment {
 interface DrawPathCacheEntry {
     minLineWidth: number;
     segments: DrawPathSegment[];
+    // Ölçeklere göre img bitmap. eğer aşırı yakınsa path2d ya da sıfırdan path yaratma işine girilebilir. Ancak belli uzaklıktakileri img bitmap olarak saklamak daha hızlı olabilir. Bu yüzden cache entry'ye img bitmap eklenebilir. Ancak bu, bellek kullanımını artırabilir ve bazı durumlarda gereksiz olabilir. Bu nedenle, img bitmap kullanımı opsiyonel olarak bırakılmıştır.
+    // img: ImageBitmap | null;
 }
 
 interface DrawPointRange {
@@ -503,6 +505,7 @@ export class ProjectDataRasterizer {
         this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
+        
     }
 
     private throttledRender() {
