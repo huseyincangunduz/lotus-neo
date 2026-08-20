@@ -9,9 +9,19 @@ interface DrawPathSegment {
     fill: boolean;
 }
 
+interface DrawSpecialCanvas {
+    canvas: HTMLCanvasElement;
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    scale: number;
+}
+
 interface DrawPathCacheEntry {
-    minLineWidth: number;
+    minLineWidth?: number;
     segments: DrawPathSegment[];
+    specialCanvas?: DrawSpecialCanvas; // Özel bir canvas kullanılarak oluşturulmuşsa, bu canvas referansı saklanır. Bu, belirli durumlarda performans optimizasyonu için kullanılabilir.
     // Ölçeklere göre img bitmap. eğer aşırı yakınsa path2d ya da sıfırdan path yaratma işine girilebilir. Ancak belli uzaklıktakileri img bitmap olarak saklamak daha hızlı olabilir. Bu yüzden cache entry'ye img bitmap eklenebilir. Ancak bu, bellek kullanımını artırabilir ve bazı durumlarda gereksiz olabilir. Bu nedenle, img bitmap kullanımı opsiyonel olarak bırakılmıştır.
     // img: ImageBitmap | null;
 }
@@ -25,6 +35,7 @@ export class ProjectDataRasterizer {
     // Maske, viewport'un biraz disini da kapsar; boylece kenarda olusan dolgu dikisleri azalir.
     private static readonly MASK_MARGIN_RATIO = 0.25;
     private static readonly MASK_MAX_PIXELS = 4_000_000;
+    private static readonly DRAW_CACHE_MAX_PIXELS = 8_000_000;
 
     private backgroundPattern?: CanvasBackgroundPatternOptions;
     private cam: XDrawCanvasCamera = { x: 0, y: 0, scale: 1 };
@@ -316,8 +327,19 @@ export class ProjectDataRasterizer {
             return;
         }
 
-        const segments = this.getDrawSegments(draw, minLineWidth, startIndex, endIndex);
-        for (const segment of segments) {
+        const segments = this.getDrawPrebuilts(draw, minLineWidth, startIndex, endIndex);
+        this.drawElementSegments(segments, context, color);
+        // console.debug(`Draw element ${draw.id} rendered in ${(performanceEnd - performanceStart).toFixed(2)} ms`);
+    }
+
+    private drawElementSegments(segments: DrawPathCacheEntry, context: CanvasRenderingContext2D, color: string) {
+        if (segments.specialCanvas) {
+            const specialCanvas = segments.specialCanvas;
+            context.drawImage(specialCanvas.canvas, specialCanvas.left, specialCanvas.top, specialCanvas.width, specialCanvas.height);
+            return;
+        }
+        const segmentList = segments.segments;
+        for (const segment of segmentList) {
             if (segment.fill) {
                 context.fillStyle = color;
                 context.fill(segment.path);
@@ -327,26 +349,68 @@ export class ProjectDataRasterizer {
             context.lineWidth = segment.lineWidth;
             context.stroke(segment.path);
         }
-        // console.debug(`Draw element ${draw.id} rendered in ${(performanceEnd - performanceStart).toFixed(2)} ms`);
     }
 
-    private getDrawSegments(draw: XDrawDrawElement, minLineWidth: number, startIndex: number, endIndex: number): DrawPathSegment[] {
+    private getDrawPrebuilts(draw: XDrawDrawElement, minLineWidth: number, startIndex: number, endIndex: number): DrawPathCacheEntry {
         if (startIndex !== 0 || endIndex !== draw.points.length - 1) {
-            return this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex).segments;
+            return this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
         }
         const cached = this.drawPathCache.get(draw.points);
         // minLineWidth maske olceginee gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
-        if (cached && cached.minLineWidth === minLineWidth) {
-            return cached.segments;
+        const renderScale = Math.max(0.001, this.cam.scale);
+        if (cached && cached.minLineWidth === minLineWidth && (!cached.specialCanvas || cached.specialCanvas.scale === renderScale)) {
+            return cached;
         }
 
         const built = this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
         if (built.cacheable) {
-            this.drawPathCache.set(draw.points, { minLineWidth, segments: built.segments });
+            let specialCanvas: DrawSpecialCanvas | undefined;
+            if (draw.finalized && minLineWidth === 0) {
+                let bottom = -Infinity, right = -Infinity, left = Infinity, top = Infinity;
+                for (const point of draw.points) {
+                    const radius = point.size / 2;
+                    left = Math.min(left, point.x - radius);
+                    top = Math.min(top, point.y - radius);
+                    right = Math.max(right, point.x + radius);
+                    bottom = Math.max(bottom, point.y + radius);
+                }
+                const boundsPadding = 1 / renderScale;
+                left -= boundsPadding;
+                top -= boundsPadding;
+                right += boundsPadding;
+                bottom += boundsPadding;
+                const width = Math.max(1, right - left);
+                const height = Math.max(1, bottom - top);
+                const pixelWidth = Math.max(1, Math.ceil(width * renderScale));
+                const pixelHeight = Math.max(1, Math.ceil(height * renderScale));
+                if (pixelWidth * pixelHeight <= ProjectDataRasterizer.DRAW_CACHE_MAX_PIXELS) {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = pixelWidth;
+                    canvas.height = pixelHeight;
+                    const context = canvas.getContext("2d", { willReadFrequently: true }); // Canvas'i olusturmak icin context'e ihtiyac var, ancak kullanmayacagiz.
+                    if (context) {
+                        context.globalAlpha = 1;
+                        context.globalCompositeOperation = "source-over";
+                        context.setTransform(renderScale, 0, 0, renderScale, -left * renderScale, -top * renderScale);
+                        context.lineCap = "round";
+                        context.lineJoin = "round";
+                        context.fillStyle = ColorUtils.regularizeToHexColor(draw.color) || draw.color;
+                        this.drawElementSegments(built, context, draw.color);
+                        specialCanvas = { canvas, left, top, width, height, scale: renderScale };
+                    }
+                }
+            }
+            const cacheEntry = {
+                minLineWidth,
+                segments: built.segments,
+                specialCanvas: specialCanvas, // Özel canvas referansını cache'e ekle
+            };
+            this.drawPathCache.set(draw.points, cacheEntry);
+            return cacheEntry;
         } else if (cached) {
             this.drawPathCache.delete(draw.points);
         }
-        return built.segments;
+        return built;
     }
 
     // Partial cizgiler ve nokta atlama uygulanmis cizgiler cachelenmez: geometri henuz kesinlesmemistir.
@@ -505,7 +569,7 @@ export class ProjectDataRasterizer {
         this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
-        
+
     }
 
     private throttledRender() {
