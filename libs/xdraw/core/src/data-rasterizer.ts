@@ -31,12 +31,12 @@ export class ProjectDataRasterizer {
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
     private renderScheduled = false;
-    // Anahtar rings array referansi: geometri degisince yeni array gelir ve cache kendiliginden duser.
     private fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
-    private lastRenderTimeMs = 1000 / 30;
+    private drawPathCache = new WeakMap<XDrawPoint[], DrawPathCacheEntry>();
+    // Anahtar rings array referansi: geometri degisince yeni array gelir ve cache kendiliginden duser.
+    // private lastRenderTimeMs = 1000 / 30;
     // Anahtar points array referansi: crop callback her karede yeni element objesi urettigi icin
     // element referansi anahtar olarak kullanilamaz.
-    private drawPathCache = new WeakMap<XDrawPoint[], DrawPathCacheEntry>();
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
@@ -290,31 +290,6 @@ export class ProjectDataRasterizer {
         context.globalAlpha = 1;
     }
 
-    // Bu artık kullanılmıyor, çünkü crop içinde crop edilen elementin layer opacity'si de callback olarak veriliyor. Bu sayede 2 kere döngüye sokmak gerekmiyor. Ama şimdilik silmiyorum, belki ileride lazım olur.
-    private drawLines(context: CanvasRenderingContext2D, scale: number, camX: number, camY: number, visible: XDrawData) {
-        // No op kalsın
-        return;
-        context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
-        context.lineCap = "round";
-        context.lineJoin = "round";
-
-        for (const layer of visible.layers) {
-            if (layer.visible === false) {
-                continue;
-            }
-            context.globalAlpha = layer.opacity ?? 1;
-
-            for (const element of layer.elements) {
-                if (element.type === "fill") {
-                    this.drawFillElement(context, element as XDrawFillElement);
-                    continue;
-                }
-                if (element.type === "draw") {
-                    this.drawDrawElement(context, element as XDrawDrawElement);
-                }
-            }
-        }
-    }
 
     // colorOverride verilmezse elementin kendi rengi kullanilir (maske icin duz siyah gecilir).
     // minLineWidth, cizginin dunya birimi cinsinden alt siniridir; maskede cizginin
@@ -379,7 +354,7 @@ export class ProjectDataRasterizer {
         if (startIndex === endIndex) {
             const dot = new Path2D();
             dot.arc(first.x, first.y, Math.max(0.5, minLineWidth / 2, first.size / 2), 0, Math.PI * 2);
-            return { segments: [{ path: dot, lineWidth: 0, fill: true }], cacheable: !draw.partial && startIndex === 0 && endIndex === draw.points.length - 1 };
+            return { segments: [{ path: dot, lineWidth: 0, fill: true }], cacheable: draw.finalized === true && !draw.partial && startIndex === 0 && endIndex === draw.points.length - 1 };
         }
 
         const segments: DrawPathSegment[] = [];
@@ -395,13 +370,21 @@ export class ProjectDataRasterizer {
         let skippedPoint = false;
         for (let i = startIndex + 1; i <= lastIndex; i++) {
             const point = draw.points[i];
-            if (draw.partial && minWorldStepSq > 0 && i !== lastIndex) {
+            if (!point.breakBefore && draw.partial && minWorldStepSq > 0 && i !== lastIndex) {
                 const dx = point.x - prev.x;
                 const dy = point.y - prev.y;
                 if (dx * dx + dy * dy < minWorldStepSq) {
                     skippedPoint = true;
                     continue;
                 }
+            }
+            if (point.breakBefore) {
+                segments.push({ path, lineWidth, fill: false });
+                lineWidth = Math.max(minLineWidth, point.size);
+                path = new Path2D();
+                path.moveTo(point.x, point.y);
+                prev = point;
+                continue;
             }
             if (point.size !== prev.size) {
                 segments.push({ path, lineWidth, fill: false });
@@ -415,7 +398,7 @@ export class ProjectDataRasterizer {
         segments.push({ path, lineWidth, fill: false });
 
         const usesFullRange = startIndex === 0 && endIndex === draw.points.length - 1;
-        return { segments, cacheable: usesFullRange && !draw.partial && !skippedPoint };
+        return { segments, cacheable: usesFullRange && draw.finalized === true && !draw.partial && !skippedPoint };
     }
 
     invalidateDrawCache(element: XDrawDrawElement) {
@@ -491,16 +474,8 @@ export class ProjectDataRasterizer {
                 if (context.globalAlpha !== foundGlobalAlpha) {
                     context.globalAlpha = foundGlobalAlpha;
                 }
-                let element = {
-                    type: onFound.elementType,
-                    id: onFound.elementId,
-                    color: onFound.color,
-                    layerId: onFound.layerId,
-                    partial: onFound.partial,
-                    points: onFound.points ?? [], // Placeholder for points; actual points may vary based on element type
-                    rings: onFound.rings ?? [], // Placeholder for rings; actual rings may vary based on element type
-                } as XDrawElement;
-                switch (element.type) {
+                let element = onFound.element
+                switch (element?.type) {
                     case "draw":
                         this.drawDrawElement(
                             context,
@@ -536,20 +511,12 @@ export class ProjectDataRasterizer {
         }
         this.renderScheduled = true;
 
-        setTimeout(() => {
-            requestAnimationFrame(() => {
-                this.renderScheduled = false;
-                // const perfStart = performance.now();
-                this.rasterizeProjectDataToCanvas();
-                // const perfEnd = performance.now();
-                // const renderTime = perfEnd - perfStart;
-                // this.lastRenderTimeMs = renderTime;
+        requestAnimationFrame(() => {
+            this.renderScheduled = false;
+            this.rasterizeProjectDataToCanvas();
 
-                // this.renderScheduled = false;
-                // this.rasterizeProjectDataToCanvas();
-            });
+        });
 
-        }, 16); // 16ms ~ 60fps
     }
 
 }

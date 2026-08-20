@@ -37,7 +37,10 @@ export interface XDrawElementPosition {
     x: number;
     y: number;
     size: number;
+    breakBefore?: boolean;
 }
+
+export const XDRAW_MAX_POINTS_PER_ELEMENT = 256;
 
 export interface XDrawSize {
     width: number;
@@ -59,6 +62,7 @@ export interface XDrawDrawElement extends XDrawElement {
     type: "draw";
     color: string;
     points: Array<XDrawElementPosition>;
+    finalized?: boolean;
 }
 
 export interface XDrawPoint {

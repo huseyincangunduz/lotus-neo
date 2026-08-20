@@ -9,6 +9,7 @@ import type {
     XDrawDrawElement,
     XDrawLayer,
 } from "./xdraw-data";
+import { XDRAW_MAX_POINTS_PER_ELEMENT } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 import { ColorUtils } from "./color-utils";
 
@@ -153,6 +154,7 @@ export class XDrawDataHolder {
             type: "draw",
             color: this.activeStrokeColor,
             points: [],
+            finalized: false,
         };
         this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
     }
@@ -167,12 +169,27 @@ export class XDrawDataHolder {
         if (!this.activeDrawElement) {
             return;
         }
+        if (this.activeDrawElement.points.length >= XDRAW_MAX_POINTS_PER_ELEMENT) {
+            const previousPoint = this.activeDrawElement.points[this.activeDrawElement.points.length - 1];
+            this.activeDrawElement.finalized = true;
+            this.activeDrawElement = {
+                id: XdrawDataUtils.generateUniqueId(),
+                type: "draw",
+                color: this.activeStrokeColor,
+                points: [previousPoint],
+                finalized: false,
+            };
+            this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
+        }
         const size = this.activeStrokeWidth / this._viewCamera.scale;
         this.activeDrawElement.points.push({ x: worldX, y: worldY, size });
         this.rasterizer.setProjectData(this.xdrawData);
     }
 
     stopStroke(): void {
+        if (this.activeDrawElement) {
+            this.activeDrawElement.finalized = true;
+        }
         this.activeDrawElement = null;
         this.rasterizer.setProjectData(this.xdrawData);
     }

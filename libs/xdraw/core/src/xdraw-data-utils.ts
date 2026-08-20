@@ -4,6 +4,7 @@ import { XdrawFillUtils } from "./xdraw-fill-utils";
 export interface XDrawElementCropData {
     layerId: string;
     layerOpacity: number;
+    element?: XDrawElement;
     elementId: string;
     elementType: string;
     points?: Array<{ x: number; y: number; size: number }>;
@@ -29,20 +30,90 @@ export class XdrawDataUtils {
         return JSON.parse(JSON.stringify(data));
     }
 
+    public static serializeXDrawData(data: XDrawData, optimize = false): string {
+        return JSON.stringify(optimize ? this.optimizeXDrawData(data) : data);
+    }
+
+    public static optimizeXDrawData(data: XDrawData): XDrawData {
+        return {
+            layers: data.layers.map((layer) => ({
+                ...layer,
+                elements: this.mergeAdjacentDrawElements(layer.elements),
+            })),
+        };
+    }
+
+    private static mergeAdjacentDrawElements(elements: XDrawElement[]): XDrawElement[] {
+        const optimized: XDrawElement[] = [];
+        for (const element of elements) {
+            const previous = optimized[optimized.length - 1];
+            if (
+                previous?.type === "draw" &&
+                element.type === "draw" &&
+                (previous as XDrawDrawElement).color === (element as XDrawDrawElement).color
+            ) {
+                const previousDraw = previous as XDrawDrawElement;
+                const currentDraw = element as XDrawDrawElement;
+                previousDraw.points = previousDraw.points.concat(
+                    currentDraw.points.map((point, index) => index === 0 ? { ...point, breakBefore: true } : point),
+                );
+                previousDraw.finalized = previousDraw.finalized !== false && currentDraw.finalized !== false;
+                continue;
+            }
+            optimized.push({ ...element });
+        }
+        return optimized;
+    }
+
+    // Crop dataları cachelemek güzel ama asıl yoğunluk kanvasa çizdirme sırasında oluyor. performans düşmedi ama yine aynı şekilde çok element olmasından dolayı yine fps düşüşü var...
+    // static cropDataMap = new Map<string, XDrawElementCropData[]>();
 
     // Kameranin gordugu dunya dikdortgeni disindaki elementleri eleyerek render yukunu azaltir.
     // Noktalar dunya koordinatinda kalir; kamera donusumu render sirasinda uygulanir.
     public static cropXDrawData(data: XDrawData, cam: XDrawCanvasCamera, screenWidth: number, screenHeight: number, onFound?: OnFoundCallback): void {
+        
+        
         const worldLeft = cam.x;
         const worldTop = cam.y;
         const worldRight = cam.x + screenWidth / cam.scale;
         const worldBottom = cam.y + screenHeight / cam.scale;
+        // const boundKey = [worldLeft, worldTop, worldRight, worldBottom].join("-");
+        // if (this.cropDataMap.has(boundKey)) {
+        //     const cachedData = this.cropDataMap.get(boundKey)!;
+        //     for (const cropData of cachedData) {
+        //         onFound?.(cropData);
+        //     }
+        //     return;
+        // }
+
+        // const cropKeys = this.cropDataMap.keys();
+        // for (const key of cropKeys) {
+        //     const [left, top, right, bottom] = key.split("-").map(Number);
+        //     if (left > worldLeft && top > worldTop && right < worldRight && bottom < worldBottom) {
+        //         // const cachedData = this.cropDataMap.get(key)!;
+        //         const currentCropElementsFoundData = this.cropDataMap.get(key)!;
+        //         this.cropDataMap.set(boundKey, currentCropElementsFoundData);
+        //         for (const cropData of currentCropElementsFoundData) {
+        //             onFound?.(cropData);
+        //         }
+        //         return;
+        //     }
+        // }
 
         for (const layer of data.layers) {
             if (layer.visible === false || layer.opacity === 0) {
                 continue; // Görünmez katmanları atla
             }
-           this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity }, onFound);
+            this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity }, 
+                onFound,
+                // (a) => {
+                // if (!this.cropDataMap.has(boundKey)) {
+                //     this.cropDataMap.set(boundKey, []);
+                // }
+                // this.cropDataMap.get(boundKey)!.push(a);
+                // onFound?.(a);
+                // }
+        );
         }
     }
     // Dünyanın en mal şeysi.... ben malım. bu sefer hesaplamaktan çok cachelemek performansı düşürdü aw
@@ -50,15 +121,8 @@ export class XdrawDataUtils {
 
     public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number, initialFoundElement: Partial<XDrawElementCropData>, onFound?: OnFoundCallback): void {
         const cropCondition = (point: { x: number; y: number }) => {
-            // kasım kasım kasılıyor 😭😭😭😭😭 o yüzden hesaplasın tekrar tekrar bane 
-            // const cropArgs = `${point.x}|${point.y}|${left}|${top}|${right}|${bottom}`;
-            // if (this.pointCropPathMap.has(cropArgs)) {
-            //     return this.pointCropPathMap.get(cropArgs)!;
-            // }
-            // 
             const status = point.x >= left && point.x <= right &&
                 point.y >= top && point.y <= bottom;
-            // this.pointCropPathMap.set(cropArgs, status);
             return status;
         };
         for (let i = 0; i < elements.length; i++) {
@@ -82,6 +146,7 @@ export class XdrawDataUtils {
                         ...initialFoundElement,
                         elementId: fillElement.id,
                         elementType: fillElement.type,
+                        element: fillElement,
                         rings: fillElement.rings,
                         color: fillElement.color,
                         partial: false
@@ -128,6 +193,7 @@ export class XdrawDataUtils {
 
                     onFound({
                         ...initialFoundElement,
+                        element: drawElement,
                         elementId: drawElement.id,
                         elementType: drawElement.type,
                         points: drawElement.points,
@@ -145,11 +211,21 @@ export class XdrawDataUtils {
         return elements.map(element => {
             if (element.type === "draw") {
                 const drawElement = element as XDrawDrawElement; // Tip güvenliği için uygun bir tip tanımlayın
-                const filteredPoints = drawElement.points.filter(point => {
+                const filteredPoints: XDrawDrawElement["points"] = [];
+                let removedSincePreviousPoint = false;
+                for (const point of drawElement.points) {
                     const dx = point.x - x;
                     const dy = point.y - y;
-                    return (dx * dx + dy * dy) > (radius * radius);
-                });
+                    if ((dx * dx + dy * dy) <= (radius * radius)) {
+                        removedSincePreviousPoint = true;
+                        continue;
+                    }
+
+                    filteredPoints.push(
+                        removedSincePreviousPoint ? { ...point, breakBefore: true } : point,
+                    );
+                    removedSincePreviousPoint = false;
+                }
                 return { ...drawElement, points: filteredPoints };
             }
             return element;

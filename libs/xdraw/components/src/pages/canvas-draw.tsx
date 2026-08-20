@@ -15,6 +15,7 @@ import {
   XDRAW_SETTING_KEYS,
   XDrawDataHolder,
   XDrawSettingsConfig,
+  XdrawDataUtils,
   type XDrawSnapshot,
 } from "@libs/xdraw/core";
 import {
@@ -108,11 +109,15 @@ export class CanvasDraw extends NeolitComponent {
     this.flushAutosave();
   };
 
-  private buildExportPayload() {
+  private buildExportPayload(optimize = false) {
+    const snapshot = this.captureHistorySnapshot();
+    if (optimize) {
+      snapshot.data = XdrawDataUtils.optimizeXDrawData(snapshot.data);
+    }
     return {
       version: 1,
       exportedAt: new Date().toISOString(),
-      snapshot: this.captureHistorySnapshot(),
+      snapshot,
       viewport: this.viewPort.get(),
     };
   }
@@ -230,7 +235,7 @@ export class CanvasDraw extends NeolitComponent {
   //   }
 
   private downloadProject(saveAs: boolean): void {
-    const payload = this.buildExportPayload();
+    const payload = this.buildExportPayload(false);
     const serialized = JSON.stringify(payload, null, 2);
     this.appController.downloadDataRequest(
       new Blob([serialized], { type: "application/json;charset=utf-8" }),
