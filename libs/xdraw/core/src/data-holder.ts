@@ -44,6 +44,8 @@ export class XDrawDataHolder {
     private activeStrokeWidth = 1;
     private activeStrokeColor = "#000000";
     layersState: State<XDrawLayer[]> = state<XDrawLayer[]>([]);
+    stopStrokeTimeout: number | undefined = undefined;
+    breakBeforeNextPoint: boolean = false;
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -147,8 +149,19 @@ export class XDrawDataHolder {
 
     // Yeni bir stroke baslatir. width ekran pikseli cinsinden firca genisligidir.
     beginStroke(width: number, color: string = "#000000", alpha: number = 1): void {
+        const colorRegularized = ColorUtils.setColorWithAlpha(color, alpha);
+        if (this.activeDrawElement) {
+            if (this.activeStrokeColor === colorRegularized) {
+                this.breakBeforeNextPoint = true;
+                this.activeStrokeWidth = width;
+                return; // Henuz bitmemis bir stroke varsa, yeni stroke baslatilmaz.
+            }
+            else {
+                this.stopStrokeImmediately();
+            }
+        }
         this.activeStrokeWidth = width;
-        this.activeStrokeColor = ColorUtils.setColorWithAlpha(color, alpha);
+        this.activeStrokeColor = colorRegularized;
         this.activeDrawElement = {
             id: XdrawDataUtils.generateUniqueId(),
             type: "draw",
@@ -166,6 +179,10 @@ export class XDrawDataHolder {
     // Ekran koordinatindan gelen (fakat host tarafindan dunya koordinatina cevrilmis)
     // noktayi aktif stroke'a ekler. Firca genisligi dunya birimine cevrilir.
     insertPoint(worldX: number, worldY: number): void {
+        if (this.stopStrokeTimeout) {
+            clearTimeout(this.stopStrokeTimeout);
+            this.stopStrokeTimeout = undefined;
+        }
         if (!this.activeDrawElement) {
             return;
         }
@@ -182,11 +199,22 @@ export class XDrawDataHolder {
             this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
         }
         const size = this.activeStrokeWidth / this._viewCamera.scale;
-        this.activeDrawElement.points.push({ x: worldX, y: worldY, size });
+        this.activeDrawElement.points.push({ x: worldX, y: worldY, size, breakBefore: this.breakBeforeNextPoint });
+        this.breakBeforeNextPoint = false;
         this.rasterizer.setProjectData(this.xdrawData);
     }
 
     stopStroke(): void {
+        if (!this.activeDrawElement || !this.activeDrawElement.points.length) {
+            return;
+        }
+        // this.activeDrawElement.points[this.activeDrawElement.points.length - 1].breakBefore = true;
+        this.stopStrokeTimeout = setTimeout(() => {
+            this.stopStrokeImmediately();
+        }, 500);
+    }
+
+    private stopStrokeImmediately() {
         if (this.activeDrawElement) {
             this.activeDrawElement.finalized = true;
         }

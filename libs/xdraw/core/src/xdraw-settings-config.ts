@@ -13,7 +13,6 @@ export const XDRAW_SETTING_KEYS = {
   stylusModeEnabled: "xdraw.settings.stylusModeEnabled",
   pressureWidthEnabled: "xdraw.settings.pressureWidthEnabled",
   pressureSmoothing: "xdraw.settings.pressureSmoothing",
-  strokeSplitThreshold: "xdraw.settings.strokeSplitThreshold",
   minSegmentLength: "xdraw.settings.minSegmentLength",
   zoomDirection: "xdraw.settings.zoomDirection",
   scaleToolSizesWithZoom: "xdraw.settings.scaleToolSizesWithZoom",
@@ -39,7 +38,6 @@ interface XDrawSettingsState {
   stylusModeEnabled: StateOrPlain<boolean>;
   pressureWidthEnabled: StateOrPlain<boolean>;
   pressureSmoothing: StateOrPlain<number>;
-  strokeSplitThreshold: StateOrPlain<number>;
   minSegmentLength: StateOrPlain<number>;
   zoomDirection: StateOrPlain<ZoomDirection>;
   scaleToolSizesWithZoom: StateOrPlain<boolean>;
@@ -84,7 +82,6 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
   stylusModeEnabled = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.stylusModeEnabled) ?? true);
   pressureWidthEnabled = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.pressureWidthEnabled) ?? true);
   pressureSmoothing = state<number>(readNumber(XDRAW_SETTING_KEYS.pressureSmoothing, 0, 1) ?? 0.5);
-  strokeSplitThreshold = state<number>(readNumber(XDRAW_SETTING_KEYS.strokeSplitThreshold, 0, 100) ?? 5);
   minSegmentLength = state<number>(readNumber(XDRAW_SETTING_KEYS.minSegmentLength, 0, 100) ?? 1);
   zoomDirection = state<ZoomDirection>(readNumber(XDRAW_SETTING_KEYS.zoomDirection, -1, 1) === -1 ? -1 : 1);
   scaleToolSizesWithZoom = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.scaleToolSizesWithZoom) ?? true);
@@ -106,7 +103,6 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
     this.stylusModeEnabled.subscribe((value) => persist(XDRAW_SETTING_KEYS.stylusModeEnabled, value));
     this.pressureWidthEnabled.subscribe((value) => persist(XDRAW_SETTING_KEYS.pressureWidthEnabled, value));
     this.pressureSmoothing.subscribe((value) => persist(XDRAW_SETTING_KEYS.pressureSmoothing, value));
-    this.strokeSplitThreshold.subscribe((value) => persist(XDRAW_SETTING_KEYS.strokeSplitThreshold, value));
     this.minSegmentLength.subscribe((value) => persist(XDRAW_SETTING_KEYS.minSegmentLength, value));
     this.zoomDirection.subscribe((value) => persist(XDRAW_SETTING_KEYS.zoomDirection, value));
     this.scaleToolSizesWithZoom.subscribe((value) => persist(XDRAW_SETTING_KEYS.scaleToolSizesWithZoom, value));

@@ -2,7 +2,8 @@ import { ColorUtils } from "./color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 
-const BROWSER_SUPPORTS_OFFSCREEN_CANVAS = typeof window !== "undefined" && typeof window.OffscreenCanvas === "function";
+// şimdilik disable kalsın... aktif olacağı zaman başındaki false'ı kaldırın
+const BROWSER_SUPPORTS_OFFSCREEN_CANVAS = false && typeof window !== "undefined" && typeof window.OffscreenCanvas === "function";
 // canvas2dtowebgl kütüphanesi, WebGL desteği olan tarayıcılarda 2D canvas'ı WebGL ile hızlandırmak için kullanılabilir. Ancak, bazı tarayıcılarda veya cihazlarda bu kütüphane düzgün çalışmayabilir. Bu nedenle, WebGL desteği ve kütüphanenin kullanılabilirliği kontrol edilmelidir.
 // const WEBGL_RENDERER_AVAILABLE = typeof window !== "undefined" && typeof window.WebGLRenderingContext === "function" && window["enableWebGLCanvas" as any];
 // Bir cizgi elemani, kalinlik degistigi her yerde yeni bir Path2D'ye bolunur.
@@ -22,6 +23,7 @@ interface DrawSpecialCanvas {
 }
 
 interface DrawPathCacheEntry {
+    // minLineWidth, cachelenmis cizgi segmentlerinin dunya birimi cinsinden alt siniridir. Bu deger, maske olcegine gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
     minLineWidth?: number;
     segments: DrawPathSegment[];
     specialCanvas?: DrawSpecialCanvas; // Özel bir canvas kullanılarak oluşturulmuşsa, bu canvas referansı saklanır. Bu, belirli durumlarda performans optimizasyonu için kullanılabilir.
@@ -370,16 +372,15 @@ export class ProjectDataRasterizer {
     }
 
     private getDrawPrebuilts(draw: XDrawDrawElement, minLineWidth: number, startIndex: number, endIndex: number): DrawPathCacheEntry {
-        if (startIndex !== 0 || endIndex !== draw.points.length - 1) {
-            return this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
-        }
+        // if (startIndex !== 0 || endIndex !== draw.points.length - 1) {
+        //     return this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
+        // }
         const cached = this.drawPathCache.get(draw.points);
         // minLineWidth maske olceginee gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
         const renderScale = Math.max(0.001, this.cam.scale);
-        if (cached && cached.minLineWidth === minLineWidth && (!cached.specialCanvas || cached.specialCanvas.scale === renderScale)) {
-            // console.log("Render scale, element kimliği ve cached specialCanvas scale:", renderScale, draw.id, cached.specialCanvas?.scale);
-            if (!cached.specialCanvas && renderScale >= 1 && BROWSER_SUPPORTS_OFFSCREEN_CANVAS && draw.finalized !== false && minLineWidth === 0) {
-                cached.specialCanvas = this.buildOffscreenCanvasIfAvailable(draw, renderScale, cached.segments);
+        if (cached) {
+            if (BROWSER_SUPPORTS_OFFSCREEN_CANVAS && (!cached.specialCanvas || (cached.specialCanvas.scale < renderScale))) {
+                Object.assign(cached, { specialCanvas: this.buildOffscreenCanvasIfAvailable(draw, renderScale, cached.segments, cached.specialCanvas?.canvas) });
             }
             return cached;
         }
@@ -388,9 +389,10 @@ export class ProjectDataRasterizer {
         if (built.cacheable) {
             let specialCanvas: DrawSpecialCanvas | undefined;
             // Çizim tamamen kesinleşmişse ve minLineWidth 0 ise, çizimi offscreen canvas'a rasterize ederek cache'leyebiliriz. Bu, özellikle yüksek çözünürlükte performansı artırabilir.
-            if ((draw.finalized !== false) && minLineWidth === 0 && BROWSER_SUPPORTS_OFFSCREEN_CANVAS && renderScale >= 1) {
+            if (minLineWidth === 0) {
                 specialCanvas = this.buildOffscreenCanvasIfAvailable(draw, renderScale, built.segments);
             }
+
             const cacheEntry = {
                 minLineWidth,
                 segments: built.segments,
@@ -404,8 +406,12 @@ export class ProjectDataRasterizer {
         return built;
     }
 
-    private buildOffscreenCanvasIfAvailable(draw: XDrawDrawElement, renderScale: number, segments: DrawPathSegment[]) {
-        return undefined; // OffscreenCanvas oluşturma işlemi devre dışı bırakıldı. Gerekirse buraya geri eklenebilir.
+    private buildOffscreenCanvasIfAvailable(draw: XDrawDrawElement, renderScale: number, segments: DrawPathSegment[], browserCanvasExisting?: HTMLCanvasElement | OffscreenCanvas): DrawSpecialCanvas | undefined {
+        // return undefined; // OffscreenCanvas oluşturma işlemi devre dışı bırakıldı. Gerekirse buraya geri eklenebilir.
+        if (!BROWSER_SUPPORTS_OFFSCREEN_CANVAS || !draw.finalized || (renderScale < 3)) {
+            return undefined; // Yeterince yakın değilse veya çizim tamamlanmamışsa, özel canvas oluşturma işlemi yapılmaz.
+        }
+        console.info(`Attempting to build offscreen canvas for draw element ${draw.id} at render scale ${renderScale}`);
         let specialCanvas: DrawSpecialCanvas | undefined;
         let bottom = -Infinity, right = -Infinity, left = Infinity, top = Infinity;
         for (const point of draw.points) {
@@ -425,10 +431,10 @@ export class ProjectDataRasterizer {
         const pixelWidth = Math.max(1, Math.ceil(width * renderScale));
         const pixelHeight = Math.max(1, Math.ceil(height * renderScale));
         if (pixelWidth * pixelHeight <= ProjectDataRasterizer.DRAW_CACHE_MAX_PIXELS) {
-            const canvas = new OffscreenCanvas(pixelWidth, pixelHeight);
+            const canvas = browserCanvasExisting ?? new OffscreenCanvas(pixelWidth, pixelHeight);
             canvas.width = pixelWidth;
             canvas.height = pixelHeight;
-            const context = canvas.getContext("2d"); // Canvas'i olusturmak icin context'e ihtiyac var, ancak kullanmayacagiz.
+            const context = canvas.getContext("2d") as CanvasRenderingContext2D; // Canvas'i olusturmak icin context'e ihtiyac var, ancak kullanmayacagiz.
             if (context) {
                 context.globalAlpha = 1;
                 context.globalCompositeOperation = "source-over";

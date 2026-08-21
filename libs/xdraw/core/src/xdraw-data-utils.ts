@@ -178,7 +178,7 @@ export class XdrawDataUtils {
                     }
                 }
                 let partial = false;
-                if ((startIndex === -1 && endIndex === -1) || (startIndex > endIndex)) {
+                if ((startIndex === -1 && endIndex === -1)) {
                     continue;
 
                 }

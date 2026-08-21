@@ -87,8 +87,6 @@ export class CanvasDraw extends NeolitComponent {
   smoothedPressure: number | null = null;
   lastDrawPoint: { x: number; y: number } | null = null;
   lastErasePoint: { x: number; y: number } | null = null;
-  currentSegmentStartPoint: { x: number; y: number } | null = null;
-  currentSegmentStrokeWidth: number | null = null;
   private drawTools = new CanvasDrawTools(this);
   private undoRedoHelper = new UndoRedoHelper();
   private gestureHistoryBeforeSnapshot: XDrawSnapshot | null = null;
@@ -505,7 +503,7 @@ export class CanvasDraw extends NeolitComponent {
     }
 
     const pointer = this.getPointerOffsetFromEvent(event);
-    this.updateCursor(pointer.x, pointer.y, false);
+    this.updateCursor(pointer.x, pointer.y);
 
     this.updatePointerPosition(event);
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -547,7 +545,7 @@ export class CanvasDraw extends NeolitComponent {
 
   onPointerMove(event: PointerEvent): void {
     const pointer = this.getPointerOffsetFromEvent(event);
-    this.updateCursor(pointer.x, pointer.y, false);
+    this.updateCursor(pointer.x, pointer.y, this.mode.get() === "pointer");
 
     if (!this.activePointers.has(event.pointerId)) {
       return;

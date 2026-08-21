@@ -10,8 +10,6 @@ export interface CanvasDrawToolHost {
     smoothedPressure: number | null;
     lastDrawPoint: { x: number; y: number } | null;
     lastErasePoint: { x: number; y: number } | null;
-    currentSegmentStartPoint: { x: number; y: number } | null;
-    currentSegmentStrokeWidth: number | null;
     getCanvasPointInViewBox(offsetX: number, offsetY: number): { x: number; y: number };
     captureHistorySnapshot(): XDrawSnapshot;
     pushHistorySnapshotOperation(before: XDrawSnapshot, after: XDrawSnapshot): void;
@@ -98,8 +96,6 @@ export class CanvasDrawTools {
             const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
             this.host.svgHolder.insertPoint(point.x, point.y);
             this.host.lastDrawPoint = point;
-            this.host.currentSegmentStartPoint = point;
-            this.host.currentSegmentStrokeWidth = strokeWidth;
         }
     }
 
@@ -122,21 +118,11 @@ export class CanvasDrawTools {
         const strokeWidth = this.getStrokeWidthFromPressure(event);
         const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
 
-        if (this.shouldSplitCurrentStrokeSegment(point, strokeWidth)) {
-            this.host.svgHolder.stopStroke();
-            this.host.svgHolder.beginStroke(
-                strokeWidth,
-                this.host.settings.strokeColor.get(),
-                this.host.settings.strokeAlpha.get(),
-            );
-            if (this.host.lastDrawPoint) {
-                this.host.svgHolder.insertPoint(
-                    this.host.lastDrawPoint.x,
-                    this.host.lastDrawPoint.y,
-                );
-            }
-            this.host.currentSegmentStartPoint = point;
-            this.host.currentSegmentStrokeWidth = strokeWidth;
+        // Kalinlik nokta bazinda tasiniyor; rasterizer size degisiminde zaten yeni alt-path aciyor.
+        this.host.svgHolder.setActiveStrokeWidth(strokeWidth);
+
+        if (this.isBelowMinSegmentLength(point)) {
+            return;
         }
 
         this.host.svgHolder.insertPoint(point.x, point.y);
@@ -158,8 +144,6 @@ export class CanvasDrawTools {
         this.host.smoothedPressure = null;
         this.host.lastDrawPoint = null;
         this.host.lastErasePoint = null;
-        this.host.currentSegmentStartPoint = null;
-        this.host.currentSegmentStrokeWidth = null;
         this.host.svgHolder.setInteractionMode("idle");
     }
 
@@ -183,7 +167,10 @@ export class CanvasDrawTools {
 
         const minWidth = Math.max(1, baseWidth * 0.25);
         const maxWidth = baseWidth * 2;
-        return minWidth + (maxWidth - minWidth) * this.host.smoothedPressure;
+        const width = minWidth + (maxWidth - minWidth) * this.host.smoothedPressure;
+        // Yarim piksele yuvarlanir: rasterizer her size degisiminde yeni alt-path actigi icin
+        // yuvarlanmamis degerler nokta basina bir Path2D segmenti uretirdi.
+        return Math.round(width * 2) / 2;
     }
 
     private eraseRadiusInWorld(): number {
@@ -206,22 +193,17 @@ export class CanvasDrawTools {
         }
     }
 
-    private shouldSplitCurrentStrokeSegment(
-        nextPoint: { x: number; y: number },
-        nextStrokeWidth: number,
-    ): boolean {
-        if (!this.host.currentSegmentStartPoint || this.host.currentSegmentStrokeWidth === null) {
+    // minSegmentLength ekran pikseli cinsindendir; karsilastirma dunya mesafesi degil ekran mesafesi uzerinden yapilir.
+    private isBelowMinSegmentLength(nextPoint: { x: number; y: number }): boolean {
+        const lastPoint = this.host.lastDrawPoint;
+        if (!lastPoint) {
             return false;
         }
 
-        const widthDelta = Math.abs(nextStrokeWidth - this.host.currentSegmentStrokeWidth);
-        if (widthDelta < this.host.settings.strokeSplitThreshold.get()) {
-            return false;
-        }
-
-        return Math.hypot(
-            nextPoint.x - this.host.currentSegmentStartPoint.x,
-            nextPoint.y - this.host.currentSegmentStartPoint.y,
-        ) >= this.host.settings.minSegmentLength.get();
+        const scale = this.host.zoomFactor.get() || 1;
+        const dx = (nextPoint.x - lastPoint.x) * scale;
+        const dy = (nextPoint.y - lastPoint.y) * scale;
+        const minStep = this.host.settings.minSegmentLength.get();
+        return dx * dx + dy * dy < minStep * minStep;
     }
 }
