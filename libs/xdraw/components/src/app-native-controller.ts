@@ -24,4 +24,21 @@ export interface IAppNativeController {
     downloadDataRequest(data: Blob, saveMimetype: string, fileNameOrPath?: string): void | Promise<void>;
     openFileRequest(mimeType: string): File | Promise<File | null>;
 
+    /**
+     * Verilen veriyi paylaşma menüsü (share sheet) üzerinden paylaşır.
+     * Desteklenmeyen platformlarda tanımsız (undefined) bırakılabilir.
+     */
+    shareDataRequest?(data: Blob, mimeType: string, fileName: string): void | Promise<void>;
+
+    /**
+     * Uygulama Explorer üzerinden "birlikte aç" (open with) ile soğuk başlatıldıysa
+     * bekleyen dosyayı döner ve tüketir. Yoksa null döner.
+     */
+    checkPendingExternalFile?(): Promise<File | null>;
+
+    /**
+     * Uygulama zaten açıkken Explorer üzerinden "birlikte aç" ile yeni bir dosya
+     * açılmaya çalışılırsa tetiklenir.
+     */
+    onExternalFileOpened?(callback: (file: File) => void): void;
 }

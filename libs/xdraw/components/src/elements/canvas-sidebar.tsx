@@ -29,6 +29,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
     xdrawDataHolder: state(new XDrawDataHolder()),
     onDownloadProject: (saveAs?: boolean) => {},
     onOpenProjectFromFile: () => {},
+    onSaveAndShareProject: () => {},
     flushAutosave: () => {},
     redo: () => {},
     undo: () => {},
@@ -130,6 +131,11 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
   private openProjectFromFile(): void {
     this.properties.onOpenProjectFromFile();
+  }
+
+  private saveAndShareProject(): void {
+    this.properties.onSaveAndShareProject();
+    this.menuDialog.set(false);
   }
 
   private getColorChannels(): { r: number; g: number; b: number } {
@@ -396,6 +402,17 @@ export class CanvasDrawSidebar extends NeolitComponent {
               ></Button>
             )}
 
+            {this.appController.isMobileApp && (
+              <Button
+                variant="ghost"
+                label={"Kaydet ve Paylaş"}
+                padding={1}
+                onClick={() => {
+                  this.saveAndShareProject();
+                }}
+              ></Button>
+            )}
+
             {/* <Button variant="ghost" label="Kütüphane" ></Button> */}
 
             <div>
@@ -641,7 +658,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
               {fromState(this.layersState)
                 .keyFn((a) => a.id)
                 .renderForLegacy((layer) => (
-                  <>
+                  <div className="flex flex-row gap-1 items-center">
                     <Button
                       style={{ width: "100%" }}
                       onClick={() => {
@@ -663,14 +680,33 @@ export class CanvasDrawSidebar extends NeolitComponent {
                       variant={
                         layer.currentSessionActive ? "filled-primary" : "ghost"
                       }
-                      label={layer.id === "base" ? undefined : layer.id}
+                      label={
+                        layer.id === "base"
+                          ? "Ana katman"
+                          : "Katman " + layer.id
+                      }
                       icon={
                         layer.id === "base"
                           ? materialSymbolsOutlined("star")
-                          : undefined
+                          : materialSymbolsOutlined("layers")
                       }
                     ></Button>
-                  </>
+                    <Button
+                      variant="ghost"
+                      icon={materialSymbolsOutlined("delete")}
+                      onClick={() => {
+                        if (layer.id === "base") {
+                          alert("Base katmanı silinemez.");
+                          return;
+                        }
+                        this.runMutationWithHistory(() => {
+                          this.properties.xdrawDataHolder
+                            .get()
+                            .deleteLayer(layer.id);
+                        });
+                      }}
+                    ></Button>
+                  </div>
                 ))}
             </div>
             <Button

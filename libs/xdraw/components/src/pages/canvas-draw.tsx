@@ -242,11 +242,33 @@ export class CanvasDraw extends NeolitComponent {
     );
   }
 
+  private async saveAndShareProject(): Promise<void> {
+    const payload = this.buildExportPayload(false);
+    const serialized = JSON.stringify(payload, null, 2);
+    const blob = new Blob([serialized], {
+      type: "application/json;charset=utf-8",
+    });
+    await this.appController.downloadDataRequest(
+      blob,
+      "application/json",
+      "xdraw_project.xdraw.json",
+    );
+    await this.appController.shareDataRequest?.(
+      blob,
+      "application/json",
+      "xdraw_project.xdraw.json",
+    );
+  }
+
   private async openProjectFromFile(): Promise<void> {
     const file = await this.appController.openFileRequest("application/json");
     if (!file) {
       return;
     }
+    await this.loadProjectFromFile(file);
+  }
+
+  private async loadProjectFromFile(file: File): Promise<void> {
     try {
       const content = await file.text();
       await this.importProjectContent(content);
@@ -356,6 +378,10 @@ export class CanvasDraw extends NeolitComponent {
     );
     window.addEventListener("beforeunload", this.handleBeforeUnload);
 
+    this.appController.onExternalFileOpened?.((file) => {
+      void this.loadProjectFromFile(file);
+    });
+
     setTimeout(() => {
       this.syncCanvasViewportSize();
       this.svgHolder.setActiveCanvas(this.canvas as HTMLCanvasElement);
@@ -370,6 +396,12 @@ export class CanvasDraw extends NeolitComponent {
         this.scheduleAutosave();
         this.flushAutosave();
       }
+
+      void this.appController.checkPendingExternalFile?.().then((file) => {
+        if (file) {
+          void this.loadProjectFromFile(file);
+        }
+      });
     }, 150);
   }
 
@@ -790,6 +822,7 @@ export class CanvasDraw extends NeolitComponent {
             <CanvasDrawSidebar
               onDownloadProject={this.downloadProject.bind(this)}
               onOpenProjectFromFile={this.openProjectFromFile.bind(this)}
+              onSaveAndShareProject={this.saveAndShareProject.bind(this)}
               xdrawDataHolder={this.svgHolder}
               canRedo={this.canRedo}
               generateNew={this.generateNew.bind(this)}

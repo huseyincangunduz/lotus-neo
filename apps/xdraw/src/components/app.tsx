@@ -48,6 +48,20 @@ const WebAppController: IAppNativeController = {
       input.click();
     });
   },
+  async shareDataRequest(data: Blob, mimeType: string, fileName: string) {
+    const file = new File([data], fileName, { type: mimeType });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file] });
+      return;
+    }
+    // Web Share API dosyayla desteklenmiyorsa indirmeye düş
+    const url = URL.createObjectURL(data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 provideValue(APP_NATIVE_CONTROLLER_TOKEN, WebAppController);

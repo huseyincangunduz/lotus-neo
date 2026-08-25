@@ -23,6 +23,7 @@ export interface ButtonProps {
   icon?: StateOrPlain<IconProperties | null>;
   style?: Record<string, StateOrPlain<string>> | undefined;
   padding?: StateOrPlain<number | boolean>; // padding true ise 0.5rem, false ise 0rem olacak şekilde ayarlanacak. number verilirse o kadar rem padding uygulanacak.
+  flexRowReverse?: StateOrPlain<boolean>; // true ise icon ve label ters sırada olacak şekilde flex-row-reverse uygulanacak.
 }
 
 export class Button extends NeolitComponent<ButtonProps> {
@@ -33,7 +34,7 @@ export class Button extends NeolitComponent<ButtonProps> {
     icon: state<IconProperties | null>(null),
     style: {},
     padding: state<number | boolean>(true),
-
+    flexRowReverse: state<boolean>(false),
   };
 
   buttonClassName = computed(
@@ -87,7 +88,7 @@ export class Button extends NeolitComponent<ButtonProps> {
         onClick={this.properties.onClick}
         style={this.properties.style}
       >
-        <div className="flex items-center gap-2 min-h-[1.5em]">
+        <div className={["flex items-center justify-center gap-1", computed([this.properties.flexRowReverse], ([flexRowReverse]) => flexRowReverse ? "flex-row-reverse" : "flex-row")]} >
           <IconComponent {...this.properties.icon.get()} />
           {fromState(this.properties.label).stateful(a => a.trim() !== "" ? <span>{a}</span> : null as any)}
         </div>
