@@ -2,8 +2,8 @@ import { ColorUtils } from "./color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 import { DynamicQueue } from "@ubs-platform/dynamic-queue";
-const QUEUE_MODE = 
-false;
+// const QUEUE_MODE =
+//     false;
 // şimdilik disable kalsın... aktif olacağı zaman başındaki false'ı kaldırın
 const BROWSER_SUPPORTS_OFFSCREEN_CANVAS = false && typeof window !== "undefined" && typeof window.OffscreenCanvas === "function";
 // canvas2dtowebgl kütüphanesi, WebGL desteği olan tarayıcılarda 2D canvas'ı WebGL ile hızlandırmak için kullanılabilir. Ancak, bazı tarayıcılarda veya cihazlarda bu kütüphane düzgün çalışmayabilir. Bu nedenle, WebGL desteği ve kütüphanenin kullanılabilirliği kontrol edilmelidir.
@@ -39,11 +39,29 @@ interface DrawPointRange {
     endIndex: number;
 }
 
+// Tamamlanmis (finalized) icerigin onceden rasterize edilip saklandigi tampon.
+// Boyutu viewport+margin ile sinirlidir (dunya boyutuyla degil); bu yuzden dosya
+// buyuse de bellek sinirli kalir. Kamera bu alanin disina cikarsa veya zoom
+// esigi asilirsa yeniden olusturulur.
+interface ContentBufferInfo {
+    originX: number;
+    originY: number;
+    scale: number;
+    width: number;
+    height: number;
+}
+
 export class ProjectDataRasterizer {
     // Maske, viewport'un biraz disini da kapsar; boylece kenarda olusan dolgu dikisleri azalir.
     private static readonly MASK_MARGIN_RATIO = 0.25;
     private static readonly MASK_MAX_PIXELS = 4_000_000;
     private static readonly DRAW_CACHE_MAX_PIXELS = 8_000_000;
+    // Content buffer icin margin, mask'tan daha genis: pan sirasinda yeniden olusturma sikligini azaltir.
+    private static readonly CONTENT_MARGIN_RATIO = 0.5;
+    private static readonly CONTENT_MAX_PIXELS = 4_000_000;
+    // Kamera olcegi, buffer'in olceginden bu oranin disina ciktiginda buffer gecersiz sayilir.
+    private static readonly CONTENT_SCALE_MIN_RATIO = 0.85;
+    private static readonly CONTENT_SCALE_MAX_RATIO = 1.18;
 
     private backgroundPattern?: CanvasBackgroundPatternOptions;
     private cam: XDrawCanvasCamera = { x: 0, y: 0, scale: 1 };
@@ -54,11 +72,34 @@ export class ProjectDataRasterizer {
     private renderScheduled = false;
     private fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
     private drawPathCache = new WeakMap<XDrawPoint[], DrawPathCacheEntry>();
-    private testQueue = QUEUE_MODE ? new DynamicQueue() : { push: (fn: () => void) => fn() };
+    // private testQueue = QUEUE_MODE ? new DynamicQueue() : { push: (fn: () => void) => fn() };
     // Anahtar rings array referansi: geometri degisince yeni array gelir ve cache kendiliginden duser.
     // private lastRenderTimeMs = 1000 / 30;
     // Anahtar points array referansi: crop callback her karede yeni element objesi urettigi icin
     // element referansi anahtar olarak kullanilamaz.
+
+    // Tamamlanmis icerigin onceden rasterize edildigi offscreen canvas + gecerlilik bilgisi.
+    private contentCanvas?: HTMLCanvasElement;
+    private contentBuffer?: ContentBufferInfo;
+    private contentBufferValid = false;
+    // Su an cizilmekte olan (henuz finalize olmamis) stroke; buffer'a girmez, her karede ustte cizilir.
+    private activeDrawElement: XDrawDrawElement | null = null;
+    private activeDrawElementLayerOpacity = 1;
+
+    // Bir stroke bitip finalize oldugunda veya katman/veri yapisi degistiginde cagrilir;
+    // bir sonraki render'da content buffer'i bastan olusturur. Aktif cizim sirasinda
+    // (insertPoint) cagrilmamalidir - aksi halde her nokta icin tum katman yeniden taranir.
+    invalidateContentBuffer() {
+        this.contentBufferValid = false;
+    }
+
+    // Aktif (henuz finalize olmamis) stroke referansini gunceller; bu element content
+    // buffer'a girmez, dogrudan ustte cizilir. null verilirse artik cizilecek aktif eleman yok demektir.
+    setActiveDrawElement(element: XDrawDrawElement | null, layerOpacity: number = 1) {
+        this.activeDrawElement = element;
+        this.activeDrawElementLayerOpacity = layerOpacity;
+    }
+
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
@@ -550,6 +591,135 @@ export class ProjectDataRasterizer {
         context.fill(path, "evenodd");
     }
 
+    // Buffer, gecerli kamera goruntusunu (guvenlik payiyla) kapsiyor mu ve olcegi yeterince yakin mi?
+    private isContentBufferCurrent(): boolean {
+        if (!this.contentBufferValid || !this.contentBuffer || !this.activeCanvas) {
+            return false;
+        }
+        const buffer = this.contentBuffer;
+        const canvas = this.activeCanvas;
+
+        const scaleRatio = this.cam.scale / buffer.scale;
+        if (scaleRatio < ProjectDataRasterizer.CONTENT_SCALE_MIN_RATIO || scaleRatio > ProjectDataRasterizer.CONTENT_SCALE_MAX_RATIO) {
+            return false;
+        }
+
+        const viewLeft = this.cam.x;
+        const viewTop = this.cam.y;
+        const viewRight = this.cam.x + canvas.width / this.cam.scale;
+        const viewBottom = this.cam.y + canvas.height / this.cam.scale;
+
+        const bufferLeft = buffer.originX;
+        const bufferTop = buffer.originY;
+        const bufferRight = buffer.originX + buffer.width / buffer.scale;
+        const bufferBottom = buffer.originY + buffer.height / buffer.scale;
+
+        // Margin tamamen tukenmeden biraz once yenile; aksi halde tam sinirda surekli yeniden olusturma olur.
+        const safetyPadX = (bufferRight - bufferLeft) * 0.05;
+        const safetyPadY = (bufferBottom - bufferTop) * 0.05;
+
+        return (
+            viewLeft >= bufferLeft + safetyPadX &&
+            viewTop >= bufferTop + safetyPadY &&
+            viewRight <= bufferRight - safetyPadX &&
+            viewBottom <= bufferBottom - safetyPadY
+        );
+    }
+
+    // Sadece finalize olmus (aktif cizilmekte olmayan) elementleri viewport+margin
+    // boyutunda sabit bir offscreen canvas'a rasterize eder. Aktif stroke her zaman
+    // bu buffer'in disinda, ustte ayrica cizilir (bkz. rasterizeProjectDataToCanvas).
+    private rebuildContentBuffer() {
+        const canvas = this.activeCanvas;
+        if (!canvas || !this.projectData) {
+            return;
+        }
+
+        const cameraScale = this.cam.scale;
+        const marginX = Math.round(canvas.width * ProjectDataRasterizer.CONTENT_MARGIN_RATIO);
+        const marginY = Math.round(canvas.height * ProjectDataRasterizer.CONTENT_MARGIN_RATIO);
+        let width = Math.max(1, canvas.width + marginX * 2);
+        let height = Math.max(1, canvas.height + marginY * 2);
+        let bufferScale = cameraScale;
+
+        const pixelCount = width * height;
+        if (pixelCount > ProjectDataRasterizer.CONTENT_MAX_PIXELS) {
+            const ratio = Math.sqrt(ProjectDataRasterizer.CONTENT_MAX_PIXELS / pixelCount);
+            width = Math.max(1, Math.floor(width * ratio));
+            height = Math.max(1, Math.floor(height * ratio));
+            bufferScale = cameraScale * ratio;
+        }
+
+        const originX = this.cam.x - marginX / cameraScale;
+        const originY = this.cam.y - marginY / cameraScale;
+
+        if (!this.contentCanvas) {
+            this.contentCanvas = document.createElement("canvas");
+        }
+        const contentCanvas = this.contentCanvas;
+        if (contentCanvas.width !== width) {
+            contentCanvas.width = width;
+        }
+        if (contentCanvas.height !== height) {
+            contentCanvas.height = height;
+        }
+        const context = contentCanvas.getContext("2d");
+        if (!context) {
+            return;
+        }
+
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.clearRect(0, 0, width, height);
+        context.setTransform(bufferScale, 0, 0, bufferScale, -originX * bufferScale, -originY * bufferScale);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+
+        XdrawDataUtils.cropXDrawData(
+            this.projectData,
+            { x: originX, y: originY, scale: bufferScale },
+            width,
+            height,
+            (onFound) => {
+                const element = onFound.element;
+                if (!element) {
+                    return;
+                }
+                // Henuz finalize olmamis aktif stroke buffer'a girmez; her karede ayrica ustte cizilir.
+                if (element.type === "draw" && (element as XDrawDrawElement).finalized === false) {
+                    return;
+                }
+
+                const foundGlobalAlpha = onFound.layerOpacity ?? 1;
+                if (context.globalAlpha !== foundGlobalAlpha) {
+                    context.globalAlpha = foundGlobalAlpha;
+                }
+                switch (element.type) {
+                    case "draw":
+                        this.drawDrawElement(
+                            context,
+                            element as XDrawDrawElement,
+                            undefined,
+                            0,
+                            {
+                                startIndex: onFound.pointStartIndex ?? 0,
+                                endIndex: onFound.pointEndIndex ?? Math.max(0, (onFound.points?.length ?? 1) - 1),
+                            },
+                        );
+                        break;
+                    case "fill":
+                        this.drawFillElement(context, element as XDrawFillElement);
+                        break;
+                }
+            },
+        );
+
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.globalAlpha = 1;
+
+        this.contentBuffer = { originX, originY, scale: bufferScale, width, height };
+        this.contentBufferValid = true;
+    }
+
     // Dunya koordinatli XDrawData'yi kameraya gore canvas'a cizer.
     private rasterizeProjectDataToCanvas() {
         const canvas = this.activeCanvas;
@@ -563,63 +733,44 @@ export class ProjectDataRasterizer {
         this.startContext2d(context);
         const { x: camX, y: camY, scale } = this.cam;
 
-        this.testQueue.push(() => {
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        this.drawBackground(context, scale, camX, camY);
+
+        // Tamamlanmis icerik: buffer gecerli degilse (pan margin disina cikti, zoom esigi
+        // asildi ya da icerik degisti) once yeniden olusturulur; sonra tek drawImage ile
+        // basilir. Boylece pan/zoom sirasinda katmanlardaki tum elementler tekrar taranmaz.
+        if (!this.isContentBufferCurrent()) {
+            this.rebuildContentBuffer();
+        }
+        if (this.contentCanvas && this.contentBuffer) {
+            const buffer = this.contentBuffer;
+            const scaleRatio = scale / buffer.scale;
             context.setTransform(1, 0, 0, 1, 0, 0);
-            context.clearRect(0, 0, canvas.width, canvas.height);
-        });
+            context.drawImage(
+                this.contentCanvas,
+                (buffer.originX - camX) * scale,
+                (buffer.originY - camY) * scale,
+                buffer.width * scaleRatio,
+                buffer.height * scaleRatio,
+            );
+        }
 
-        this.testQueue.push(() => {
-            this.drawBackground(context, scale, camX, camY);
+        // Aktif (henuz finalize olmamis) stroke, buffer'da olmadigi icin her karede
+        // ayrica dunya donusumuyle ustte cizilir.
+        const activeElement = this.activeDrawElement;
+        if (!activeElement) {
+            return;
+        }
+        context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.globalAlpha = this.activeDrawElementLayerOpacity;
+        this.drawDrawElement(context, activeElement);
+        context.globalAlpha = 1;
 
-            // Draw başlangıcı
-            context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
-            context.lineCap = "round";
-            context.lineJoin = "round";
-        })
-
-
-
-        XdrawDataUtils.cropXDrawData(
-            this.projectData,
-            this.cam,
-            canvas.width,
-            canvas.height,
-            (onFound) => {
-                this.testQueue.push(() => {
-                    const foundGlobalAlpha = onFound.layerOpacity ?? 1;
-                    if (context.globalAlpha !== foundGlobalAlpha) {
-                        context.globalAlpha = foundGlobalAlpha;
-                    }
-                    let element = onFound.element
-                    switch (element?.type) {
-                        case "draw":
-                            this.drawDrawElement(
-                                context,
-                                element as XDrawDrawElement,
-                                undefined,
-                                0,
-                                {
-                                    startIndex: onFound.pointStartIndex ?? 0,
-                                    endIndex: onFound.pointEndIndex ?? Math.max(0, (onFound.points?.length ?? 1) - 1),
-                                },
-                            );
-                            break;
-                        case "fill":
-                            this.drawFillElement(context, element as XDrawFillElement);
-                            break;
-                    }
-
-                    element = null as any; // Clear reference to allow garbage collection
-                    onFound = null as any; // Clear reference to allow garbage collection
-                })
-            }
-        );
-
-        // Kamera donusumu: ekran = (dunya - kamera) * scale
-        // this.drawLines(context, scale, camX, camY, visible);
-        this.testQueue.push(() => {
-            this.drawCursor(context);
-        })
+        this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
         this.endContext2d(context);

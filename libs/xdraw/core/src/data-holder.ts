@@ -144,6 +144,8 @@ export class XDrawDataHolder {
         this.layerManager = new LayerManager(this.xdrawData, activeLayerId);
         this.activeDrawElement = null;
         this.syncLayersState();
+        this.rasterizer.setActiveDrawElement(null);
+        this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
     }
 
@@ -170,6 +172,7 @@ export class XDrawDataHolder {
             finalized: false,
         };
         this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
+        this.rasterizer.setActiveDrawElement(this.activeDrawElement, this.layerManager.getActiveLayer().opacity ?? 1);
     }
 
     setActiveStrokeWidth(width: number): void {
@@ -197,6 +200,9 @@ export class XDrawDataHolder {
                 finalized: false,
             };
             this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
+            // Onceki parca finalize oldu; buffer'a girmesi icin yeniden olusturulmasi gerekir.
+            this.rasterizer.invalidateContentBuffer();
+            this.rasterizer.setActiveDrawElement(this.activeDrawElement, this.layerManager.getActiveLayer().opacity ?? 1);
         }
         const size = this.activeStrokeWidth / this._viewCamera.scale;
         this.activeDrawElement.points.push({ x: worldX, y: worldY, size, breakBefore: this.breakBeforeNextPoint });
@@ -219,6 +225,8 @@ export class XDrawDataHolder {
             this.activeDrawElement.finalized = true;
         }
         this.activeDrawElement = null;
+        this.rasterizer.setActiveDrawElement(null);
+        this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
     }
 
@@ -241,6 +249,7 @@ export class XDrawDataHolder {
 
         const changed = XdrawDataUtils.fillDye(this.layerManager.getActiveLayer(), mask, worldX, worldY, _color);
         if (changed) {
+            this.rasterizer.invalidateContentBuffer();
             this.rasterizer.setProjectData(this.xdrawData);
         }
         return changed;
@@ -250,6 +259,7 @@ export class XDrawDataHolder {
     erasePathSegmentsAtPoint(x: number, y: number, radius: number): boolean {
         const activeLayer = this.layerManager.getActiveLayer();
         activeLayer.elements = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
+        this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
         return true;
     }
@@ -265,6 +275,8 @@ export class XDrawDataHolder {
 
     private syncLayersState(): void {
         this.layersState.set(this.layerManager.listLayers());
+        // Katman yapisi (olusturma/silme/gorunurluk/opaklik) degisti; buffer artik gecersiz.
+        this.rasterizer.invalidateContentBuffer();
         this.rasterizer.requestRender();
     }
 }
