@@ -1,11 +1,14 @@
 import { ColorUtils } from "./color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
-
+import { DynamicQueue } from "@ubs-platform/dynamic-queue";
+const QUEUE_MODE = 
+false;
 // şimdilik disable kalsın... aktif olacağı zaman başındaki false'ı kaldırın
 const BROWSER_SUPPORTS_OFFSCREEN_CANVAS = false && typeof window !== "undefined" && typeof window.OffscreenCanvas === "function";
 // canvas2dtowebgl kütüphanesi, WebGL desteği olan tarayıcılarda 2D canvas'ı WebGL ile hızlandırmak için kullanılabilir. Ancak, bazı tarayıcılarda veya cihazlarda bu kütüphane düzgün çalışmayabilir. Bu nedenle, WebGL desteği ve kütüphanenin kullanılabilirliği kontrol edilmelidir.
-// const WEBGL_RENDERER_AVAILABLE = typeof window !== "undefined" && typeof window.WebGLRenderingContext === "function" && window["enableWebGLCanvas" as any];
+// Not: Kütüphane istediğim gibi çalışmıyor. Ancak hoşuma gitti mantığı şimdilik kalsın. hiç kullanılmazsa kaldırırım
+const WEBGL_RENDERER_AVAILABLE = false && typeof window !== "undefined" && typeof window.WebGLRenderingContext === "function" && window["enableWebGLCanvas" as any];
 // Bir cizgi elemani, kalinlik degistigi her yerde yeni bir Path2D'ye bolunur.
 interface DrawPathSegment {
     path: Path2D;
@@ -51,6 +54,7 @@ export class ProjectDataRasterizer {
     private renderScheduled = false;
     private fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
     private drawPathCache = new WeakMap<XDrawPoint[], DrawPathCacheEntry>();
+    private testQueue = QUEUE_MODE ? new DynamicQueue() : { push: (fn: () => void) => fn() };
     // Anahtar rings array referansi: geometri degisince yeni array gelir ve cache kendiliginden duser.
     // private lastRenderTimeMs = 1000 / 30;
     // Anahtar points array referansi: crop callback her karede yeni element objesi urettigi icin
@@ -89,18 +93,20 @@ export class ProjectDataRasterizer {
     }
 
     getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
-        // if (WebGL2RenderingContext && WEBGL_RENDERER_AVAILABLE) {
-        //     return (window["enableWebGLCanvas" as any] as any as Function)?.(canvas);
-        // }
+        if (WebGL2RenderingContext && WEBGL_RENDERER_AVAILABLE) {
+            return (window["enableWebGLCanvas" as any] as any as Function)?.(canvas);
+        }
         return canvas.getContext("2d", { desynchronized: true });
     }
 
     startContext2d(context: CanvasRenderingContext2D) {
+        // alert("startContext2d is called" + ((context as any)["start2D" as any] as any as Function ? " and start2D is available" : " but start2D is not available"));
         ((context as any)["start2D" as any] as any as Function)?.(context);
     }
 
     endContext2d(context: CanvasRenderingContext2D) {
-        ((context as any)["end2D" as any] as any as Function)?.(context);
+        // alert("finish2D is called" + ((context as any)["finish2D" as any] as any as Function ? " and end2D is available" : " but end2D is not available"));
+        ((context as any)["finish2D" as any] as any as Function)?.(context);
     }
 
     // Aktif katmanin cizgilerini, kamera olceginde offscreen bir canvas'a rasterize eder.
@@ -145,7 +151,7 @@ export class ProjectDataRasterizer {
         if (maskCanvas.height !== height) {
             maskCanvas.height = height;
         }
-        const context = maskCanvas.getContext("2d", { willReadFrequently: true });
+        const context = maskCanvas.getContext("2d");
         if (!context) {
             return null;
         }
@@ -554,17 +560,24 @@ export class ProjectDataRasterizer {
         if (!context) {
             return;
         }
-        // this.startContext2d(context);
+        this.startContext2d(context);
         const { x: camX, y: camY, scale } = this.cam;
 
-        context.setTransform(1, 0, 0, 1, 0, 0);
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        this.drawBackground(context, scale, camX, camY);
+        this.testQueue.push(() => {
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            context.clearRect(0, 0, canvas.width, canvas.height);
+        });
 
-        // Draw başlangıcı
-        context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
-        context.lineCap = "round";
-        context.lineJoin = "round";
+        this.testQueue.push(() => {
+            this.drawBackground(context, scale, camX, camY);
+
+            // Draw başlangıcı
+            context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+            context.lineCap = "round";
+            context.lineJoin = "round";
+        })
+
+
 
         XdrawDataUtils.cropXDrawData(
             this.projectData,
@@ -572,40 +585,44 @@ export class ProjectDataRasterizer {
             canvas.width,
             canvas.height,
             (onFound) => {
-                const foundGlobalAlpha = onFound.layerOpacity ?? 1;
-                if (context.globalAlpha !== foundGlobalAlpha) {
-                    context.globalAlpha = foundGlobalAlpha;
-                }
-                let element = onFound.element
-                switch (element?.type) {
-                    case "draw":
-                        this.drawDrawElement(
-                            context,
-                            element as XDrawDrawElement,
-                            undefined,
-                            0,
-                            {
-                                startIndex: onFound.pointStartIndex ?? 0,
-                                endIndex: onFound.pointEndIndex ?? Math.max(0, (onFound.points?.length ?? 1) - 1),
-                            },
-                        );
-                        break;
-                    case "fill":
-                        this.drawFillElement(context, element as XDrawFillElement);
-                        break;
-                }
+                this.testQueue.push(() => {
+                    const foundGlobalAlpha = onFound.layerOpacity ?? 1;
+                    if (context.globalAlpha !== foundGlobalAlpha) {
+                        context.globalAlpha = foundGlobalAlpha;
+                    }
+                    let element = onFound.element
+                    switch (element?.type) {
+                        case "draw":
+                            this.drawDrawElement(
+                                context,
+                                element as XDrawDrawElement,
+                                undefined,
+                                0,
+                                {
+                                    startIndex: onFound.pointStartIndex ?? 0,
+                                    endIndex: onFound.pointEndIndex ?? Math.max(0, (onFound.points?.length ?? 1) - 1),
+                                },
+                            );
+                            break;
+                        case "fill":
+                            this.drawFillElement(context, element as XDrawFillElement);
+                            break;
+                    }
 
-                element = null as any; // Clear reference to allow garbage collection
-                onFound = null as any; // Clear reference to allow garbage collection
+                    element = null as any; // Clear reference to allow garbage collection
+                    onFound = null as any; // Clear reference to allow garbage collection
+                })
             }
         );
 
         // Kamera donusumu: ekran = (dunya - kamera) * scale
         // this.drawLines(context, scale, camX, camY, visible);
-        this.drawCursor(context);
+        this.testQueue.push(() => {
+            this.drawCursor(context);
+        })
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
-        // this.endContext2d(context);
+        this.endContext2d(context);
     }
 
     private throttledRender() {
@@ -617,7 +634,6 @@ export class ProjectDataRasterizer {
         requestAnimationFrame(() => {
             this.renderScheduled = false;
             this.rasterizeProjectDataToCanvas();
-
         });
 
     }
