@@ -12,7 +12,7 @@ import { Checkbox } from "@libs/ui/checkbox";
 import { Trackbar } from "@libs/ui/trackbar";
 import { fromState } from "@ubs-platform/neolit/structural";
 import { inject } from "@ubs-platform/neolit/injectables";
-import {Tr} from "@libs/ui/i18n"
+import { tr, Tr } from "@libs/ui/i18n";
 import {
   XDrawDataHolder,
   XDrawSettingsConfig,
@@ -361,7 +361,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
           <div className="flex flex-col gap-1">
             <Button
               variant="ghost"
-              label="Yeni"
+              label={tr("general.new")}
               padding={1}
               onClick={() => {
                 void this.generateNew();
@@ -369,7 +369,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             ></Button>
             <Button
               variant="ghost"
-              label="Aç"
+              label={tr("general.open")}
               padding={1}
               onClick={() => {
                 void this.openProjectFromFile();
@@ -381,8 +381,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
               label={
                 this.appController.isMobileApp ||
                 this.appController.isElectronApp
-                  ? "Kaydet"
-                  : "İndir"
+                  ? tr("general.save")
+                  : tr("general.download")
               }
               onClick={() => {
                 this.downloadProject();
@@ -393,7 +393,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
               this.appController.isElectronApp) && (
               <Button
                 variant="ghost"
-                label={"Farklı Kaydet"}
+                label={tr("general.save-as")}
                 padding={1}
                 onClick={() => {
                   this.downloadProject(true);
@@ -404,7 +404,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             {this.appController.isMobileApp && (
               <Button
                 variant="ghost"
-                label={"Kaydet ve Paylaş"}
+                label={tr("general.save-and-share")}
                 padding={1}
                 onClick={() => {
                   this.saveAndShareProject();
@@ -435,19 +435,33 @@ export class CanvasDrawSidebar extends NeolitComponent {
           </div>
           <sub>
             <p className="text-xs text-(--color-text-muted)">
-              XDraw
-              {import.meta.env.PACKAGE_BUILD_DATE}
+              {this.appController.appName ?? "XDraw"} v
+              {import.meta.env.PACKAGE_VERSION}
               <br></br>
-              (c) 2026{" "}
+              <Tr params={{ version: import.meta.env.PACKAGE_VERSION }}>
+                xdraw.about.version
+              </Tr>
+              <br></br>
+              <Tr
+                params={{
+                  author: "Tetakent(H.C.G)",
+                  year: import.meta.env.PACKAGE_BUILD_DATE || 2026,
+                }}
+              >
+                xdraw.about.copyright
+              </Tr>
+              <br></br>
               <a
                 href="https://tetakent.com"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Tetakent (H.C.G)
+                <img
+                  src="tkneolitxdraw.png"
+                  alt="Tetakent Logo"
+                  style="display: inline-block; margin-left: 4px; height: 32px; "
+                ></img>
               </a>
-              <br></br>
-              Tüm hakları saklıdır
             </p>
           </sub>
           {/* <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo"></img> */}
@@ -462,43 +476,43 @@ export class CanvasDrawSidebar extends NeolitComponent {
           displayCloseButton={false}
         >
           {/* Checked checkbox içinde state olduğu için state değişikliklerini güncelleme konusunda onchange'e gerek yoktur. */}
-          <h2>Kalem ayarları</h2>
+          <h2>{tr("xdraw.draw.pen-settings")}</h2>
           <Trackbar
-            label="Fırça Boyutu"
+            label={tr("xdraw.draw.brush-size")}
             min={1}
             max={100}
             step={1}
             value={this.settings.baseStrokeWidth}
           ></Trackbar>
           <Trackbar
-            label="Silgi Boyutu"
+            label={tr("xdraw.draw.eraser-size")}
             min={4}
             max={200}
             step={1}
             value={this.settings.eraserSize}
           ></Trackbar>
           <Checkbox
-            label={"Fare modunda tablet kalemi ile çizim yapabilir"}
+            label={tr("xdraw.draw.allow-only-pen-on-tablet")}
             checked={this.settings.stylusModeEnabled}
           ></Checkbox>
           <Checkbox
-            label={"Basınç ile kalınlık değişimi"}
+            label={tr("xdraw.draw.size-change-by-pressure")}
             checked={this.settings.pressureWidthEnabled}
           ></Checkbox>
           <Checkbox
-            label={"Zoom ile fırça ve silgi boyutunu ölçeklendir"}
+            label={tr("xdraw.draw.scale-tool-sizes-with-zoom")}
             checked={this.settings.scaleToolSizesWithZoom}
           ></Checkbox>
           <Trackbar
-            label="Kalem Basınç Yumuşatma"
+            label={tr("xdraw.draw.pen-pressure-smoothing")}
             min={0}
             max={1}
             step={0.01}
             value={this.settings.pressureSmoothing}
           ></Trackbar>
-          <h2>Gezinme ayarları</h2>
+          <h2>{tr("xdraw.draw.navigation-settings")}</h2>
           <Checkbox
-            label={"Zoom yönünü ters çevir"}
+            label={tr("xdraw.draw.invert-zoom-direction")}
             checked={computed(
               [this.settings.zoomDirection],
               ([zoomDirection]) => zoomDirection === -1,
@@ -520,10 +534,14 @@ export class CanvasDrawSidebar extends NeolitComponent {
           displayHeader={false}
           displayCloseButton={false}
         >
-          <h2>Renk Seçici</h2>
+          <h2>
+            <Tr>xdraw.color.selector</Tr>
+          </h2>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-sm"><Tr>xdraw.colors.predefined</Tr></label>
+              <label className="text-sm">
+                <Tr>xdraw.colors.predefined</Tr>
+              </label>
               <div className="grid grid-cols-6 gap-1">
                 {this.colorPresets.map((color) => (
                   <button
@@ -531,12 +549,16 @@ export class CanvasDrawSidebar extends NeolitComponent {
                     className="w-8 h-8 rounded border border-(--color-border) cursor-pointer"
                     style={`background-color: ${color};`}
                     title={color}
-                    aria-label={`Hazir renk: ${color}`}
+                    aria-label={tr("xdraw.color.predefined", {
+                      color: color,
+                    }).get()}
                     onClick={() => this.applyColorPreset(color)}
                   ></button>
                 ))}
               </div>
-              <label className="text-sm">Önceki renkler</label>
+              <label className="text-sm">
+                <Tr>xdraw.colors.previous</Tr>
+              </label>
               {/* Diyalogta daha fazla önceki renkleri gösterebiliriz... */}
               <div className="grid grid-cols-6 gap-1">
                 {fromState(this.settings.recentColors)
@@ -547,7 +569,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
                       className="w-8 h-8 rounded border border-(--color-border) cursor-pointer"
                       style={`background-color: ${color};`}
                       title={color}
-                      aria-label={`Önceki renk: ${color}`}
+                      aria-label={
+                        <Tr params={{ color: color }}>xdraw.colors.previous</Tr>
+                      }
                       onClick={() => this.applyColorPreset(color)}
                     ></button>
                   ))}
@@ -561,7 +585,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
                 this.settings.strokeColor.set(target.value);
               }}
               onChange={() => this.commitColorDialogSelection()}
-              title="Stroke color"
+              title={tr("xdraw.color.stroke").get()}
               width="100%"
             />
 
@@ -630,7 +654,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
                   <button
                     type="button"
                     className="h-8 rounded border border-(--color-border) text-xs"
-                    title={`Alpha ${alpha}`}
+                    title={tr("xdraw.color.alpha", {
+                      alpha: String(alpha),
+                    }).get()}
                     onClick={() => this.applyAlphaPreset(alpha)}
                   >
                     {alpha}
@@ -648,7 +674,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
           width="280px"
           maxHeight="70dvh"
           onClose={() => this.layerSettingsDialog.set(false)}
-          title={"Katman ayarları"}
           displayHeader={false}
           displayCloseButton={false}
         >
@@ -681,8 +706,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
                       }
                       label={
                         layer.id === "base"
-                          ? "Ana katman"
-                          : "Katman " + layer.id
+                          ? tr("xdraw.layer.base")
+                          : tr("xdraw.layer.nth", { n: String(layer.id) })
                       }
                       icon={
                         layer.id === "base"
@@ -696,7 +721,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
                         icon={materialSymbolsOutlined("delete")}
                         onClick={() => {
                           if (layer.id === "base") {
-                            alert("Base katmanı silinemez.");
+                            alert(tr("xdraw.layer.delete-base").get());
                             return;
                           }
                           this.runMutationWithHistory(() => {
@@ -715,16 +740,18 @@ export class CanvasDrawSidebar extends NeolitComponent {
               onClick={this.runMutationWithHistory.bind(this, () => {
                 this.xdrawHolder?.createLayer();
               })}
-              label="Yeni Katman"
+              label={tr("xdraw.layer.new")}
               icon={materialSymbolsOutlined("add")}
               variant={"outline-primary"}
             ></Button>
           </div>
 
-          <h2>Katman Ayarları</h2>
+          <h2>
+            <Tr>xdraw.layer.settings</Tr>
+          </h2>
 
           <Trackbar
-            label="Katman Opaklığı"
+            label={tr("xdraw.layer.opacity")}
             min={0}
             max={1}
             step={0.01}

@@ -8,11 +8,39 @@ import {
   type IAppNativeController,
 } from "@libs/xdraw/components";
 import { provideClass, provideValue } from "@ubs-platform/neolit/injectables";
-import { EnvironmentController, TranslationRepository, type TranslationPartAsync } from "@ubs-platform/translator-core";
-import { of } from "rxjs";
+import {
+  AsyncActionLazyloadHandler,
+  EnvironmentController,
+  TranslationRepository,
+  type TranslationPartAsync,
+} from "@ubs-platform/translator-core";
+import { Observable, of } from "rxjs";
 // import { CanvasDraw } from "./pages/canvas-draw";
 
+const availableLanguages = ["tr-tr", "en-us"];
+const currentBrowserLanguage = navigator.language.toLowerCase();
+const selectedLanguage = availableLanguages.includes(currentBrowserLanguage)
+  ? currentBrowserLanguage
+  : "en-us";
+
+// A..oğlu translator. yapacağım translation repository'yi skm
+EnvironmentController.getEnvironmentController(
+  selectedLanguage,
+  true,
+).setLanguage(selectedLanguage);
+const translationRepository = new TranslationRepository();
+translationRepository
+  .getLazyloadHelper()
+  .insert(
+    new AsyncActionLazyloadHandler((language) =>
+      fetch(`lang/${language}.json`).then((res) => res.json()),
+    ),
+  );
+
+provideValue(TranslationRepository, translationRepository);
+
 const WebAppController: IAppNativeController = {
+  appName: "XDraw Web",
   isMobileApp: false,
   isBrowserWebApp: true,
   isElectronApp: false,
@@ -66,20 +94,6 @@ const WebAppController: IAppNativeController = {
   },
 };
 
-// A..oğlu translator. yapacağım translation repository'yi skm
-EnvironmentController.getEnvironmentController('tr-tr', true).setLanguage('tr-tr');
-const translationRepository = new TranslationRepository();
-translationRepository.getLazyloadHelper().insert({
-  fetchObjects: async (language) => {
-    const response = await fetch(`/lang/${language}.json`);
-    if (!response.ok) {
-      throw new Error(`Failed to load translation file for language: ${language}`);
-    }
-    return (await response.json()) as any;
-  },
-});
-
-provideValue(TranslationRepository, translationRepository);
 provideValue(APP_NATIVE_CONTROLLER_TOKEN, WebAppController);
 export class AppComponent extends NeolitComponent {
   routeMap = new RouteMap([

@@ -5,7 +5,12 @@ import {
 } from "@ubs-platform/neolit/core";
 import { fromState } from "@ubs-platform/neolit/structural";
 import { Button } from "@libs/ui/button";
-import { materialSymbolsOutlined, type IconProperties, IconComponent, Icon } from "@libs/ui/icon";
+import {
+  materialSymbolsOutlined,
+  type IconProperties,
+  IconComponent,
+  Icon,
+} from "@libs/ui/icon";
 
 // ─── Tipler ──────────────────────────────────────────────────────────────────
 
@@ -87,23 +92,23 @@ function resolveToastStyle(type: AlertToastType): {
       return {
         iconProperties: materialSymbolsOutlined("check_circle"),
         containerClass: "border-green-500 bg-green-100 text-green-800",
-      }
+      };
     case "error":
       return {
         iconProperties: materialSymbolsOutlined("error"),
         containerClass: "border-red-500 bg-red-100 text-red-800",
-      }
+      };
     case "warning":
       return {
         iconProperties: materialSymbolsOutlined("warning"),
         containerClass: "border-yellow-500 bg-yellow-100 text-yellow-800",
-      }
+      };
     case "info":
     default:
       return {
         iconProperties: materialSymbolsOutlined("info"),
         containerClass: "border-blue-500 bg-blue-100 text-blue-800",
-      }
+      };
   }
 }
 
@@ -127,8 +132,9 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
         role="alert"
       >
         <Icon {...resolvedToastIconStyles.iconProperties} />
-
-        <span style={{ flex: "1" }}>{toast.message}</span>
+        <div className="overflow-hidden flex-grow-1 break-all flex-1 flex items-center gap-2">
+          {toast.message}
+        </div>
 
         {/* Manuel kapat */}
         <Button
@@ -136,9 +142,7 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
           icon={materialSymbolsOutlined("close")}
           onClick={() => toastService.dismiss(toast.id)}
           aria-label="Kapat"
-        >
-          
-        </Button>
+        ></Button>
       </div>
     );
   }

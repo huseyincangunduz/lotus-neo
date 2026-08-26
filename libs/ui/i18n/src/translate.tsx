@@ -1,6 +1,7 @@
 import {
   computed,
   NeolitComponent,
+  State,
   state,
   type NeolitNode,
   type StateOrPlain,
@@ -39,3 +40,15 @@ export class Translate extends NeolitComponent<TranslateProperties> {
 
 // Translate kısaltılmış hali. Kullanımı: <Tr>home.hello</Tr>
 export const Tr = Translate;
+
+export function tr(key: string, params?: Record<string, string>): State<string> {
+  const translationRepository = inject(TranslationRepository);
+  const state = new State<string>("");
+  translationRepository.getStringListenChanges({
+    key,
+    parameters: params,
+  }).subscribe((a) => {
+    state.set(a);
+  });
+  return state;
+}

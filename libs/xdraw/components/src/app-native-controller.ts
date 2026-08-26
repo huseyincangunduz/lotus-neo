@@ -5,6 +5,7 @@ export interface IAppNativeController {
     isMobileApp: boolean;
     isBrowserWebApp: boolean;
     isElectronApp: boolean;
+    appName?: string;
 
     /**
      * 
