@@ -893,6 +893,7 @@ export class CanvasDraw extends NeolitComponent {
         <div className="p-2 rounded-xl border border-solid border-gray-500 bg-(--color-surface-2) absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
           {/* TODO: Aşağı yukarı sağ sol butonları ile uzaktaki elemente doğru ışınlama */}
           <div className="flex flex-row gap-2 justify-center items-center">
+            
             <Button
               icon={materialSymbolsOutlined("keyboard_double_arrow_left")}
               onClick={this.teleportNearestElement.bind(this, 180)}

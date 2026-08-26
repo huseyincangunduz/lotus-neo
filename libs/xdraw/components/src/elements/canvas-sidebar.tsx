@@ -358,8 +358,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
           /> */}
 
           <div className="flex flex-col gap-1">
-            <h2>Dosya</h2>
-
             <Button
               variant="ghost"
               label="Yeni"

@@ -88,7 +88,7 @@ export class Button extends NeolitComponent<ButtonProps> {
         onClick={this.properties.onClick}
         style={this.properties.style}
       >
-        <div className={["flex items-center justify-center gap-1", computed([this.properties.flexRowReverse], ([flexRowReverse]) => flexRowReverse ? "flex-row-reverse" : "flex-row")]} >
+        <div className={["flex items-center gap-1", computed([this.properties.flexRowReverse], ([flexRowReverse]) => flexRowReverse ? "flex-row-reverse" : "flex-row")]} >
           <IconComponent {...this.properties.icon.get()} />
           {fromState(this.properties.label).stateful(a => a.trim() !== "" ? <span>{a}</span> : null as any)}
         </div>
