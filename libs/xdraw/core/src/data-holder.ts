@@ -1,4 +1,4 @@
-import { state, type State } from "@ubs-platform/neolit/core";
+import { state, type State, type StateOrPlain } from "@ubs-platform/neolit/core";
 import { LayerManager } from "./layer-manager";
 import { ProjectDataRasterizer } from "./data-rasterizer";
 import type {
@@ -41,6 +41,7 @@ export interface XDrawHistorySnapshot {
 
 export class XDrawDataHolder {
 
+
     xdrawData: XDrawData = { layers: [] };
     private _activeCanvas: HTMLCanvasElement | null = null;
     private layerManager: LayerManager;
@@ -70,6 +71,10 @@ export class XDrawDataHolder {
             renderMs: 0,
             bitmapFallbackCount: 0,
         });
+    }
+
+    getActiveLayerOpacity(): StateOrPlain<number> | undefined {
+        return this.layerManager.getActiveLayer()?.opacity || 0;
     }
 
     // Arka plan deseni henuz cizilmiyor; API uyumlulugu icin korunuyor.
@@ -299,7 +304,7 @@ export class XDrawDataHolder {
         return this._cursorPosition;
     }
 
-    findNearestPointHasElement( degrees: number) {
+    findNearestPointHasElement(degrees: number) {
         return XdrawDataUtils.findNearestPointInElement(this.xdrawData, this._viewCamera.x, this._viewCamera.y, this._viewCamera.scale, degrees);
 
         // throw new Error("Method not implemented.");

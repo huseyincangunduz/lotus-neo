@@ -12,6 +12,7 @@ import { Checkbox } from "@libs/ui/checkbox";
 import { Trackbar } from "@libs/ui/trackbar";
 import { fromState } from "@ubs-platform/neolit/structural";
 import { inject } from "@ubs-platform/neolit/injectables";
+import {Tr} from "@libs/ui/i18n"
 import {
   XDrawDataHolder,
   XDrawSettingsConfig,
@@ -522,7 +523,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
           <h2>Renk Seçici</h2>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-sm">Hazir Renkler</label>
+              <label className="text-sm"><Tr>xdraw.colors.predefined</Tr></label>
               <div className="grid grid-cols-6 gap-1">
                 {this.colorPresets.map((color) => (
                   <button
@@ -689,21 +690,23 @@ export class CanvasDrawSidebar extends NeolitComponent {
                           : materialSymbolsOutlined("layers")
                       }
                     ></Button>
-                    <Button
-                      variant="ghost"
-                      icon={materialSymbolsOutlined("delete")}
-                      onClick={() => {
-                        if (layer.id === "base") {
-                          alert("Base katmanı silinemez.");
-                          return;
-                        }
-                        this.runMutationWithHistory(() => {
-                          this.properties.xdrawDataHolder
-                            .get()
-                            .deleteLayer(layer.id);
-                        });
-                      }}
-                    ></Button>
+                    {layer.id !== "base" && (
+                      <Button
+                        variant="ghost"
+                        icon={materialSymbolsOutlined("delete")}
+                        onClick={() => {
+                          if (layer.id === "base") {
+                            alert("Base katmanı silinemez.");
+                            return;
+                          }
+                          this.runMutationWithHistory(() => {
+                            this.properties.xdrawDataHolder
+                              .get()
+                              .deleteLayer(layer.id);
+                          });
+                        }}
+                      ></Button>
+                    )}
                   </div>
                 ))}
             </div>
@@ -720,60 +723,33 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
           <h2>Katman Ayarları</h2>
 
-          <Button
-            onClick={() => {
+          <Trackbar
+            label="Katman Opaklığı"
+            min={0}
+            max={1}
+            step={0.01}
+            value={this.properties.xdrawDataHolder
+              .get()
+              .getActiveLayerOpacity()}
+            onChange={(value: number) => {
               const activeLayerId = this.properties.xdrawDataHolder
                 .get()
                 .getActiveLayerId();
-              if (activeLayerId !== "base") {
-                this.runMutationWithHistory(() => {
-                  this.properties.xdrawDataHolder
-                    .get()
-                    .deleteLayer(activeLayerId);
-                });
-              } else {
-                alert("Base katmanı silinemez.");
-              }
+              this.properties.xdrawDataHolder
+                .get()
+                .setLayerOpacity(activeLayerId, value);
             }}
-            label="Katmanı Sil"
-          ></Button>
-          {
-            fromState(
-              computed([this.layersState], () => {
-                return true;
-              }),
-            ).stateful((a) => {
-              return (
-                <>
-                  <Trackbar
-                    label="Katman Opaklığı"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={a?.opacity ?? 1}
-                    onChange={(value: number) => {
-                      const activeLayerId = this.properties.xdrawDataHolder
-                        .get()
-                        .getActiveLayerId();
-                      this.properties.xdrawDataHolder
-                        .get()
-                        .setLayerOpacity(activeLayerId, value);
-                    }}
-                    onChangeEnd={(value: number) => {
-                      const activeLayerId = this.properties.xdrawDataHolder
-                        .get()
-                        .getActiveLayerId();
-                      this.runMutationWithHistory(() => {
-                        this.properties.xdrawDataHolder
-                          .get()
-                          .setLayerOpacity(activeLayerId, value);
-                      });
-                    }}
-                  ></Trackbar>
-                </>
-              );
-            }) as any
-          }
+            onChangeEnd={(value: number) => {
+              const activeLayerId = this.properties.xdrawDataHolder
+                .get()
+                .getActiveLayerId();
+              this.runMutationWithHistory(() => {
+                this.properties.xdrawDataHolder
+                  .get()
+                  .setLayerOpacity(activeLayerId, value);
+              });
+            }}
+          ></Trackbar>
         </WebDialog>
       </div>
     );

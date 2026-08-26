@@ -311,7 +311,6 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   ): { top: number; left: number } {
     const verticalCenter =
       anchorRect.top + anchorRect.height / 2 - dialogRect.height / 2;
-    console.info("verticalCenter", verticalCenter, anchorRect, dialogRect);
     const horizontalCenter =
       anchorRect.left + anchorRect.width / 2 - dialogRect.width / 2;
 

@@ -1,0 +1,58 @@
+[
+  {
+    "prefix": "general",
+    "stringMap": {
+      "save": "Kaydet",
+      "cancel": "İptal",
+      "delete": "Sil",
+      "edit": "Düzenle",
+      "close": "Kapat",
+      "ok": "Tamam",
+      "yes": "Evet",
+      "no": "Hayır",
+      "confirm": "Onayla",
+      "back": "Geri",
+      "next": "İleri",
+      "previous": "Önceki",
+      "submit": "Gönder",
+      "reset": "Sıfırla",
+      "search": "Ara",
+      "loading": "Yükleniyor...",
+      "error": "Hata",
+      "success": "Başarılı",
+      "warning": "Uyarı",
+      "info": "Bilgi",
+      "language": "Dil",
+      "settings": "Ayarlar",
+      "help": "Yardım",
+      "about": "Hakkında",
+      "home": "Ana Sayfa"
+    }
+  },
+  {
+    "prefix": "xdraw",
+    "stringMap": {
+      "draw": "Çizim",
+      "erase": "Silgi",
+      "select": "Seçim",
+      "move": "Taşı",
+      "rotate": "Döndür",
+      "scale": "Ölçekle",
+      "color": "Renk",
+      "colors": "Renkler",
+      "colors.predefined": "Ön Tanımlı Renkler",
+      "lineWidth": "Çizgi Kalınlığı",
+      "fill": "Doldur",
+      "stroke": "Kontur",
+      "layer": "Katman",
+      "layers": "Katmanlar",
+      "layer.add": "Katman Ekle",
+      "layer.delete": "Katmanı Sil",
+      "layer.settings": "Katman Ayarları",
+      "group": "Grup",
+      "ungroup": "Grubu Çöz",
+      "bringToFront": "Öne Getir",
+      "sendToBack": "Arkaya Gönder"
+    }
+  }
+]
