@@ -25,6 +25,8 @@ import {
   APP_NATIVE_CONTROLLER_TOKEN,
   type IAppNativeController,
 } from "../app-native-controller";
+import { Button } from "@libs/ui/button";
+import { materialSymbolsOutlined } from "@libs/ui/icon";
 
 interface AutosavePayload {
   snapshot: XDrawSnapshot;
@@ -45,7 +47,10 @@ export class CanvasDraw extends NeolitComponent {
   clickedCameraX = state(0);
   clickedCameraY = state(0);
   zoomFactor = state(1);
-  zoomFactorUI = computed([this.zoomFactor], ([zoom]) => Math.round(zoom * 100)/100);
+  zoomFactorUI = computed(
+    [this.zoomFactor],
+    ([zoom]) => Math.round(zoom * 100) / 100,
+  );
   canvasHeight = state(600);
   canvasWidth = state(800);
 
@@ -623,7 +628,26 @@ export class CanvasDraw extends NeolitComponent {
     }
   }
 
-  private updateCursor(offsetX: number, offsetY: number, renderCursor = true): void {
+  teleportNearestElement(rotation: number): void {
+    const pointHasLive = this.svgHolder.findNearestPointHasElement(
+      rotation,
+    );
+
+    if (!pointHasLive) {
+      return;
+    }
+
+    
+    const scale = this.zoomFactor.get();
+    this.worldX.set(pointHasLive.x - this.canvasWidth.get() / scale / 2);
+    this.worldY.set(pointHasLive.y - this.canvasHeight.get() / scale / 2);
+  }
+
+  private updateCursor(
+    offsetX: number,
+    offsetY: number,
+    renderCursor = true,
+  ): void {
     // Boya kovasinda firca onizlemesi anlamsiz; imlec cizilmez.
     if (this.settings.drawType.get() === "fill") {
       this.svgHolder.setCursorPosition(undefined);
@@ -820,8 +844,7 @@ export class CanvasDraw extends NeolitComponent {
       <div className="gap-2 h-[100dvh] w-[100dvw] overflow-hidden box-border position-relative">
         <div className="absolute left-3 top-3 bottom-3 flex flex-col gap-2 justify-center items-center">
           <div
-            className="border border-solid border-gray-500 p-1"
-            style="z-index: 1; border-radius: 15px; background-color: var(--color-surface-2);"
+            className="border border-solid border-gray-500 p-1 bg-(--color-surface-2) rounded-xl z-index-1"
           >
             <CanvasDrawSidebar
               onDownloadProject={this.downloadProject.bind(this)}
@@ -859,12 +882,37 @@ export class CanvasDraw extends NeolitComponent {
         >
           {this.divBetweenButtonsAndBottom}
         </div>
-        <div style={{ borderRadius: "15px" }} className="p-2 border border-solid border-gray-500 absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
-              Dünya X: { this.worldXUI }
-              <br />
-              Dünya Y: { this.worldYUI }
-              <br />
-              Zoom : { this.zoomFactorUI }
+        <div className="p-2 rounded-xl bg-(--color-surface-2) border border-solid border-gray-500 absolute right-3 top-3 flex flex-col gap-2 justify-center items-center">
+          Dünya X: {this.worldXUI}
+          <br />
+          Dünya Y: {this.worldYUI}
+          <br />
+          Zoom : {this.zoomFactorUI}
+        </div>
+
+        <div className="p-2 rounded-xl border border-solid border-gray-500 bg-(--color-surface-2) absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
+          {/* TODO: Aşağı yukarı sağ sol butonları ile uzaktaki elemente doğru ışınlama */}
+          <div className="flex flex-row gap-2 justify-center items-center">
+            <Button
+              icon={materialSymbolsOutlined("keyboard_double_arrow_left")}
+              onClick={this.teleportNearestElement.bind(this, 180)}
+            ></Button>
+            <div className="flex flex-col gap-2 justify-center items-center">
+              <Button
+                icon={materialSymbolsOutlined("keyboard_double_arrow_up")}
+                onClick={this.teleportNearestElement.bind(this, -90)}
+              ></Button>
+              <Button icon={materialSymbolsOutlined("circle")} onClick={this.resetZoom.bind(this)}></Button>
+              <Button
+                icon={materialSymbolsOutlined("keyboard_double_arrow_down")}
+                onClick={this.teleportNearestElement.bind(this, 90)}
+              ></Button>
+            </div>
+            <Button
+              icon={materialSymbolsOutlined("keyboard_double_arrow_right")}
+              onClick={this.teleportNearestElement.bind(this, 0)}
+            ></Button>
+          </div>
         </div>
       </div>
     );

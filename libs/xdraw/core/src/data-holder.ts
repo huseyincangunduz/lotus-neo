@@ -40,6 +40,7 @@ export interface XDrawHistorySnapshot {
 }
 
 export class XDrawDataHolder {
+
     xdrawData: XDrawData = { layers: [] };
     private _activeCanvas: HTMLCanvasElement | null = null;
     private layerManager: LayerManager;
@@ -296,6 +297,12 @@ export class XDrawDataHolder {
 
     getCursorPosition(): CursorPosition | undefined {
         return this._cursorPosition;
+    }
+
+    findNearestPointHasElement( degrees: number) {
+        return XdrawDataUtils.findNearestPointInElement(this.xdrawData, this._viewCamera.x, this._viewCamera.y, this._viewCamera.scale, degrees);
+
+        // throw new Error("Method not implemented.");
     }
 
     private syncLayersState(): void {

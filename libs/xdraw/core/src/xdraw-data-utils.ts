@@ -19,6 +19,7 @@ export type OnFoundCallback = (cropData: XDrawElementCropData) => void;
 
 export class XdrawDataUtils {
 
+    private static readonly MIN_TELEPORT_DISTANCE = 250;
 
 
     /**
@@ -71,8 +72,8 @@ export class XdrawDataUtils {
     // Kameranin gordugu dunya dikdortgeni disindaki elementleri eleyerek render yukunu azaltir.
     // Noktalar dunya koordinatinda kalir; kamera donusumu render sirasinda uygulanir.
     public static cropXDrawData(data: XDrawData, cam: XDrawCanvasCamera, screenWidth: number, screenHeight: number, onFound?: OnFoundCallback): void {
-        
-        
+
+
         const worldLeft = cam.x;
         const worldTop = cam.y;
         const worldRight = cam.x + screenWidth / cam.scale;
@@ -104,7 +105,7 @@ export class XdrawDataUtils {
             if (layer.visible === false || layer.opacity === 0) {
                 continue; // Görünmez katmanları atla
             }
-            this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity }, 
+            this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity },
                 onFound,
                 // (a) => {
                 // if (!this.cropDataMap.has(boundKey)) {
@@ -113,7 +114,7 @@ export class XdrawDataUtils {
                 // this.cropDataMap.get(boundKey)!.push(a);
                 // onFound?.(a);
                 // }
-        );
+            );
         }
     }
     // Dünyanın en mal şeysi.... ben malım. bu sefer hesaplamaktan çok cachelemek performansı düşürdü aw
@@ -303,4 +304,55 @@ export class XdrawDataUtils {
 
         return { minX, minY, maxX, maxY };
     }
+
+
+    static findNearestPointInElement(data: XDrawData, x: number, y: number, _scale: number, rotationDegrees: number): { x: number, y: number, element: XDrawElement, distance: number } | null {
+        const radians = rotationDegrees * (Math.PI / 180);
+        const directionX = Math.cos(radians);
+        const directionY = Math.sin(radians);
+        let nearest: { x: number, y: number, element: XDrawElement, distance: number } | null = null;
+
+        const considerPoint = (point: { x: number; y: number }, element: XDrawElement): void => {
+            const deltaX = point.x - x;
+            const deltaY = point.y - y;
+            const forwardDistance = deltaX * directionX + deltaY * directionY;
+            const sidewaysDistance = Math.abs(deltaX * directionY - deltaY * directionX);
+            const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+            // 45 derecelik yon konisi: ayni yondeki, fakat cok caprazdaki noktalar elenir.
+            if (forwardDistance <= 0 ||
+                sidewaysDistance > forwardDistance ||
+                distanceSquared < XdrawDataUtils.MIN_TELEPORT_DISTANCE ** 2) {
+                return;
+            }
+
+            const distance = Math.sqrt(distanceSquared);
+            if (!nearest || distance < nearest.distance) {
+                nearest = { x: point.x, y: point.y, element, distance };
+            }
+        };
+
+        for (const layer of data.layers) {
+            if (layer.visible === false || layer.opacity === 0) {
+                continue;
+            }
+            for (const element of layer.elements) {
+                if (element.type === "draw") {
+                    for (const point of (element as XDrawDrawElement).points) {
+                        considerPoint(point, element);
+                    }
+                } else if (element.type === "fill") {
+                    for (const ring of (element as XDrawFillElement).rings) {
+                        for (const point of ring) {
+                            considerPoint(point, element);
+                        }
+                    }
+                }
+            }
+        }
+
+        return nearest;
+
+    }
+
 }
