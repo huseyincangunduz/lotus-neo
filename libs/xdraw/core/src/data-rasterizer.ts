@@ -760,16 +760,17 @@ export class ProjectDataRasterizer {
         // Aktif (henuz finalize olmamis) stroke, buffer'da olmadigi icin her karede
         // ayrica dunya donusumuyle ustte cizilir.
         const activeElement = this.activeDrawElement;
-        if (!activeElement) {
-            return;
+        if (activeElement) {
+            context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+            context.lineCap = "round";
+            context.lineJoin = "round";
+            context.globalAlpha = this.activeDrawElementLayerOpacity;
+            this.drawDrawElement(context, activeElement);
+            context.globalAlpha = 1;
         }
-        context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
-        context.lineCap = "round";
-        context.lineJoin = "round";
-        context.globalAlpha = this.activeDrawElementLayerOpacity;
-        this.drawDrawElement(context, activeElement);
-        context.globalAlpha = 1;
 
+        // Cursor (ozellikle silgi outline'i) aktif stroke olmadan da (hover/erase sirasinda) gorunmeli;
+        // eskiden bu "return" yuzunden yalniz cizim modunda stroke devam ederken cizilebiliyordu.
         this.drawCursor(context);
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
