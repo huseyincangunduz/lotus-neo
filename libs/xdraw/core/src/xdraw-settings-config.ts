@@ -79,7 +79,7 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
   recentColors = state<string[]>(JSON.parse(read(XDRAW_SETTING_KEYS.recentColors) || "[]"));
   baseStrokeWidth = state<number>(readNumber(XDRAW_SETTING_KEYS.baseStrokeWidth, 1, 100) ?? 5);
   eraserSize = state<number>(readNumber(XDRAW_SETTING_KEYS.eraserSize, 1, 100) ?? 10);
-  stylusModeEnabled = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.stylusModeEnabled) ?? true);
+  stylusModeEnabled = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.stylusModeEnabled) ?? false);
   pressureWidthEnabled = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.pressureWidthEnabled) ?? true);
   pressureSmoothing = state<number>(readNumber(XDRAW_SETTING_KEYS.pressureSmoothing, 0, 1) ?? 0.5);
   minSegmentLength = state<number>(readNumber(XDRAW_SETTING_KEYS.minSegmentLength, 0, 100) ?? 1);
