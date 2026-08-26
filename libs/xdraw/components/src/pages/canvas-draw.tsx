@@ -16,7 +16,10 @@ import {
   XDrawDataHolder,
   XDrawSettingsConfig,
   XdrawDataUtils,
+  xdrawBuffersEqual,
+  xdrawSkeletonsEqual,
   type XDrawSnapshot,
+  type XDrawHistorySnapshot,
 } from "@libs/xdraw/core";
 import {
   APP_NATIVE_CONTROLLER_TOKEN,
@@ -89,7 +92,7 @@ export class CanvasDraw extends NeolitComponent {
   lastErasePoint: { x: number; y: number } | null = null;
   private drawTools = new CanvasDrawTools(this);
   private undoRedoHelper = new UndoRedoHelper();
-  private gestureHistoryBeforeSnapshot: XDrawSnapshot | null = null;
+  private gestureHistoryBeforeSnapshot: XDrawHistorySnapshot | null = null;
   // Kalem kalkinca hemen commit etmek yerine bekletiyoruz; bu sure icinde yeni bir
   // stroke baslarsa ayni undo adimina devam eder ve agir JSON islemleri hic calismaz.
   private gestureFinalizeTimerId: number | null = null;
@@ -108,7 +111,7 @@ export class CanvasDraw extends NeolitComponent {
   };
 
   private buildExportPayload(optimize = false) {
-    const snapshot = this.captureHistorySnapshot();
+    const snapshot = this.svgHolder.captureDrawingSnapshot();
     if (optimize) {
       snapshot.data = XdrawDataUtils.optimizeXDrawData(snapshot.data);
     }
@@ -126,7 +129,7 @@ export class CanvasDraw extends NeolitComponent {
 
   private writeAutosave(): void {
     const payload: AutosavePayload = {
-      snapshot: this.captureHistorySnapshot(),
+      snapshot: this.svgHolder.captureDrawingSnapshot(),
       viewport: this.viewPort.get(),
       savedAt: new Date().toISOString(),
     };
@@ -730,17 +733,18 @@ export class CanvasDraw extends NeolitComponent {
     });
   }
 
-  captureHistorySnapshot(): XDrawSnapshot {
-    return this.svgHolder.captureDrawingSnapshot();
+  captureHistorySnapshot(): XDrawHistorySnapshot {
+    return this.svgHolder.captureUndoSnapshot();
   }
 
   pushHistorySnapshotOperation(
-    before: XDrawSnapshot,
-    after: XDrawSnapshot,
+    before: XDrawHistorySnapshot,
+    after: XDrawHistorySnapshot,
   ): void {
     if (
       before.activeLayerId === after.activeLayerId &&
-      JSON.stringify(before.data) === JSON.stringify(after.data)
+      xdrawBuffersEqual(before.buffer, after.buffer) &&
+      xdrawSkeletonsEqual(before.skeleton, after.skeleton)
     ) {
       return;
     }
@@ -749,10 +753,10 @@ export class CanvasDraw extends NeolitComponent {
       .pushOperationQueue(
         {
           apply: async () => {
-            await this.svgHolder.restoreDrawingSnapshot(after);
+            await this.svgHolder.restoreUndoSnapshot(after);
           },
           revert: async () => {
-            await this.svgHolder.restoreDrawingSnapshot(before);
+            await this.svgHolder.restoreUndoSnapshot(before);
           },
         },
         true,

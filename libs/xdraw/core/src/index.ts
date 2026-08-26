@@ -8,3 +8,4 @@ export * from "./xdraw-settings-config"
 export * from "./color-utils";
 export * from "./canvas-draw-tools";
 export * from "./canvas-gesture-listeners";
+export * from "./xdraw-binary-codec";

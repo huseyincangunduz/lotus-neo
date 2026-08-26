@@ -15,7 +15,7 @@ import { inject } from "@ubs-platform/neolit/injectables";
 import {
   XDrawDataHolder,
   XDrawSettingsConfig,
-  type XDrawSnapshot,
+  type XDrawHistorySnapshot,
   ColorUtils,
 } from "@libs/xdraw/core";
 import {
@@ -43,8 +43,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
       subscribeIncomingWhenSetState: true,
     }),
     pushHistorySnapshotOperation: (
-      old: XDrawSnapshot,
-      newData: XDrawSnapshot,
+      old: XDrawHistorySnapshot,
+      newData: XDrawHistorySnapshot,
     ) => {},
   };
   showColorPickerDialog = state(false);
@@ -797,16 +797,16 @@ export class CanvasDrawSidebar extends NeolitComponent {
     this.properties.flushAutosave();
   }
 
-  captureHistorySnapshot(): XDrawSnapshot {
+  captureHistorySnapshot(): XDrawHistorySnapshot {
     if (!this.xdrawHolder) {
       throw new Error("SVG holder is not initialized.");
     }
-    return this.xdrawHolder.captureDrawingSnapshot();
+    return this.xdrawHolder.captureUndoSnapshot();
   }
 
   pushHistorySnapshotOperation(
-    before: XDrawSnapshot,
-    after: XDrawSnapshot,
+    before: XDrawHistorySnapshot,
+    after: XDrawHistorySnapshot,
   ): void {
     this.properties.pushHistorySnapshotOperation(before, after);
   }

@@ -1,4 +1,4 @@
-import type { XDrawDataHolder, XDrawSnapshot } from "./data-holder";
+import type { XDrawDataHolder, XDrawHistorySnapshot } from "./data-holder";
 import type { XDrawSettingsConfig } from "./xdraw-settings-config";
 
 export interface CanvasDrawToolHost {
@@ -11,8 +11,8 @@ export interface CanvasDrawToolHost {
     lastDrawPoint: { x: number; y: number } | null;
     lastErasePoint: { x: number; y: number } | null;
     getCanvasPointInViewBox(offsetX: number, offsetY: number): { x: number; y: number };
-    captureHistorySnapshot(): XDrawSnapshot;
-    pushHistorySnapshotOperation(before: XDrawSnapshot, after: XDrawSnapshot): void;
+    captureHistorySnapshot(): XDrawHistorySnapshot;
+    pushHistorySnapshotOperation(before: XDrawHistorySnapshot, after: XDrawHistorySnapshot): void;
     beginGestureHistoryCapture(): void;
     finishGestureHistoryCapture(): void;
 }

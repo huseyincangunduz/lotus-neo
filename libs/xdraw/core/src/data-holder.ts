@@ -12,6 +12,7 @@ import type {
 import { XDRAW_MAX_POINTS_PER_ELEMENT } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 import { ColorUtils } from "./color-utils";
+import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "./xdraw-binary-codec";
 
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "./xdraw-data";
 
@@ -26,6 +27,15 @@ export interface CursorPosition {
 // Anlik goruntu artik SVG metni yerine XDrawData'yi tasir.
 export interface XDrawSnapshot {
     data: XDrawData;
+    activeLayerId: string;
+}
+
+// Undo/redo yiginindaki her adim icin points/rings JSON metni yerine dogrudan
+// Float32Array olarak tutulur (bkz. xdraw-binary-codec.ts); stringify/parse'daki
+// sayi<->metin donusumu hic yapilmaz, sadece typed array kopyalanir.
+export interface XDrawHistorySnapshot {
+    skeleton: XDrawSkeleton;
+    buffer: Float32Array;
     activeLayerId: string;
 }
 
@@ -137,9 +147,24 @@ export class XDrawDataHolder {
     }
 
     async restoreDrawingSnapshot(snapshot: XDrawSnapshot): Promise<void> {
-        this.xdrawData = XdrawDataUtils.deepCopyXDrawData(snapshot.data);
-        const activeLayerId = this.xdrawData.layers.some((layer) => layer.id === snapshot.activeLayerId)
-            ? snapshot.activeLayerId
+        this.applyRestoredData(XdrawDataUtils.deepCopyXDrawData(snapshot.data), snapshot.activeLayerId);
+    }
+
+    // Undo/redo yiginindaki hafif varyant: points/rings dogrudan Float32Array'e yazilir.
+    captureUndoSnapshot(): XDrawHistorySnapshot {
+        const { skeleton, buffer } = encodeXDrawDataToBuffer(this.xdrawData);
+        return { skeleton, buffer, activeLayerId: this.getActiveLayerId() };
+    }
+
+    // Buffer'dan obje agaci burada kurulur, yani sadece gercekten undo/redo yapilirken calisir.
+    async restoreUndoSnapshot(snapshot: XDrawHistorySnapshot): Promise<void> {
+        this.applyRestoredData(decodeXDrawDataFromBuffer(snapshot.skeleton, snapshot.buffer), snapshot.activeLayerId);
+    }
+
+    private applyRestoredData(data: XDrawData, requestedActiveLayerId: string): void {
+        this.xdrawData = data;
+        const activeLayerId = this.xdrawData.layers.some((layer) => layer.id === requestedActiveLayerId)
+            ? requestedActiveLayerId
             : (this.xdrawData.layers[0]?.id ?? "base");
         this.layerManager = new LayerManager(this.xdrawData, activeLayerId);
         this.activeDrawElement = null;
