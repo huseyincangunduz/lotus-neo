@@ -346,7 +346,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
           anchorSelector="#toolbar"
           placement="right"
           width="280px"
-          maxHeight="320px"
           displayHeader={false}
           displayCloseButton={false}
         >
