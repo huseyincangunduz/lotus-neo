@@ -1,22 +1,71 @@
-.grid {
+.xdraw-grid {
+  background-repeat: repeat;
+  background-clip: content-box;
+  background-origin: 0px 0px;
+}
+
+.xdraw-grid-off {
+  background-image: none;
+}
+
+.xdraw-grid-lines {
   background-image:
     repeating-linear-gradient(
       0deg,
       rgba(139, 139, 139, 0.3) 0px,
       rgba(139, 139, 139, 0.3) var(--lineWidth),
-      transparent 1px,
+      transparent var(--lineWidth),
       transparent var(--gridSize) 
     ),
     repeating-linear-gradient(
       90deg,
       rgba(139, 139, 139, 0.3) 0px,
       rgba(139, 139, 139, 0.3) var(--lineWidth),
-      transparent 1px,
+      transparent var(--lineWidth),
       transparent var(--gridSize)
     );
   background-position: var(--gridOffset);
   background-size: var(--gridSize);
-  background-repeat: repeat;
-  background-clip: content-box;
-  background-origin: 0px 0px;
+}
+
+.xdraw-grid-ruler {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 139, 139, 0.55) 0px,
+      rgba(139, 139, 139, 0.55) var(--lineWidth),
+      transparent var(--lineWidth),
+      transparent var(--gridMajorSize)
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 139, 139, 0.55) 0px,
+      rgba(139, 139, 139, 0.55) var(--lineWidth),
+      transparent var(--lineWidth),
+      transparent var(--gridMajorSize)
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 139, 139, 0.24) 0px,
+      rgba(139, 139, 139, 0.24) var(--lineWidth),
+      transparent var(--lineWidth),
+      transparent var(--gridSize)
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 139, 139, 0.24) 0px,
+      rgba(139, 139, 139, 0.24) var(--lineWidth),
+      transparent var(--lineWidth),
+      transparent var(--gridSize)
+    );
+  background-position:
+    var(--gridMajorOffset),
+    var(--gridMajorOffset),
+    var(--gridOffset),
+    var(--gridOffset);
+  background-size:
+    var(--gridMajorSize),
+    var(--gridMajorSize),
+    var(--gridSize),
+    var(--gridSize);
 }

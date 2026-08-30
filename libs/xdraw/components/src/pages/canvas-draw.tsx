@@ -68,6 +68,10 @@ export class CanvasDraw extends NeolitComponent {
     const gridSizeRaw = 20 * zoom;
     return gridSizeRaw + "px " + gridSizeRaw + "px";
   });
+  gridMajorSize = computed([this.zoomFactor], ([zoom]) => {
+    const gridSizeRaw = 100 * zoom;
+    return gridSizeRaw + "px " + gridSizeRaw + "px";
+  });
   gridOffset = computed(
     [this.worldX, this.worldY, this.zoomFactor],
     ([x, y, zoom]) => {
@@ -75,9 +79,21 @@ export class CanvasDraw extends NeolitComponent {
       return `${-(x * zoom) % gridSizeRaw}px ${-(y * zoom) % gridSizeRaw}px`;
     },
   );
+  gridMajorOffset = computed(
+    [this.worldX, this.worldY, this.zoomFactor],
+    ([x, y, zoom]) => {
+      const gridSizeRaw = 100 * zoom;
+      return `${-(x * zoom) % gridSizeRaw}px ${-(y * zoom) % gridSizeRaw}px`;
+    },
+  );
   gridLineWidth = computed([this.zoomFactor], ([zoom]) => {
     return zoom + "px";
   });
+  gridClassName = computed(
+    [this.settings.backgroundPatternMode],
+    ([mode]) =>
+      `xdraw-grid ${mode === 0 ? "xdraw-grid-off" : mode === 1 ? "xdraw-grid-lines" : "xdraw-grid-ruler"}`,
+  );
 
   canvas = (
     // Not: Neolitte TSX kullanırken attribute değerlerine State verebiliyoruz. otomatik olarak değişiklikleri güncelliyor. Umarım bunu copilot okurken bunu dikkat eder
@@ -89,10 +105,12 @@ export class CanvasDraw extends NeolitComponent {
         cursor: "crosshair",
         touchAction: "none",
         "--gridSize": this.gridSize,
+        "--gridMajorSize": this.gridMajorSize,
         "--gridOffset": this.gridOffset,
+        "--gridMajorOffset": this.gridMajorOffset,
         "--lineWidth": this.gridLineWidth,
       }}
-      className="grid"
+      className={this.gridClassName}
     ></canvas>
   );
 
@@ -387,13 +405,6 @@ export class CanvasDraw extends NeolitComponent {
     this.settings.appTheme.subscribe((theme) => {
       document.body.setAttribute("theme", theme);
     });
-    this.settings.backgroundPatternMode.subscribe((mode) => {
-      this.svgHolder.setBackgroundPattern(mode);
-    });
-    this.svgHolder.setBackgroundPattern(
-      this.settings.backgroundPatternMode.get(),
-    );
-
     document.body.setAttribute("theme", this.settings.appTheme.get());
     this.viewPort.subscribe((wp) => {
       this.svgHolder.setViewCamera(wp);
