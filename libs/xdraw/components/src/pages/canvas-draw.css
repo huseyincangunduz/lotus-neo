@@ -1,0 +1,22 @@
+.grid {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 139, 139, 0.3) 0px,
+      rgba(139, 139, 139, 0.3) var(--lineWidth),
+      transparent 1px,
+      transparent var(--gridSize) 
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 139, 139, 0.3) 0px,
+      rgba(139, 139, 139, 0.3) var(--lineWidth),
+      transparent 1px,
+      transparent var(--gridSize)
+    );
+  background-position: var(--gridOffset);
+  background-size: var(--gridSize);
+  background-repeat: repeat;
+  background-clip: content-box;
+  background-origin: 0px 0px;
+}

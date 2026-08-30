@@ -737,7 +737,7 @@ export class ProjectDataRasterizer {
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-        this.drawBackground(context, scale, camX, camY);
+        // this.drawBackground(context, scale, camX, camY);
 
         // Tamamlanmis icerik: buffer gecerli degilse (pan margin disina cikti, zoom esigi
         // asildi ya da icerik degisti) once yeniden olusturulur; sonra tek drawImage ile
