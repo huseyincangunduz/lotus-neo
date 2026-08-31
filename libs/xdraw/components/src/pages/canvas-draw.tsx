@@ -805,6 +805,11 @@ export class CanvasDraw extends NeolitComponent {
     return this.svgHolder.captureUndoSnapshot();
   }
 
+
+  // insertLayerWithId(layerId: string): void {
+    
+  // }
+
   pushHistorySnapshotOperation(
     before: XDrawHistorySnapshot,
     after: XDrawHistorySnapshot,

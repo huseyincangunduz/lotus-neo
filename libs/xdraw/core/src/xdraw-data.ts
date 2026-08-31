@@ -87,7 +87,7 @@ export interface XDrawLayer {
     elements: XDrawElement[];
     opacity?: number;
     visible?: boolean;
-    currentSessionActive?: boolean;
+    // currentSessionActive?: boolean;
 }
 
 // Kök veri yapısı

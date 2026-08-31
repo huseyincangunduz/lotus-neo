@@ -685,24 +685,18 @@ export class CanvasDrawSidebar extends NeolitComponent {
                     <Button
                       style={{ width: "100%" }}
                       onClick={() => {
-                        if (
-                          this.properties.xdrawDataHolder
-                            .get()
-                            .getActiveLayerId() === layer.id
-                        ) {
-                          this.layerSettingsDialog.set(true);
-                          return;
-                        }
-
-                        this.runMutationWithHistory(() =>
-                          this.properties.xdrawDataHolder
-                            .get()
-                            .setActiveLayer(layer.id),
-                        );
+                        this.properties.xdrawDataHolder
+                          .get()
+                          .setActiveLayer(layer.id);
                       }}
-                      variant={
-                        layer.currentSessionActive ? "filled-primary" : "ghost"
-                      }
+                      variant={computed<ButtonVariant>(
+                        [this.xdrawHolder!.activeLayerId],
+                        ([activeLayerId]) => {
+                          return activeLayerId === layer.id
+                            ? "filled-primary"
+                            : "ghost";
+                        },
+                      )}
                       label={
                         layer.id === "base"
                           ? tr("xdraw.layer.base")
