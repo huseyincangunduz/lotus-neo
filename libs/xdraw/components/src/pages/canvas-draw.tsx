@@ -90,9 +90,22 @@ export class CanvasDraw extends NeolitComponent {
     return zoom + "px";
   });
   gridClassName = computed(
-    [this.settings.backgroundPatternMode],
-    ([mode]) =>
-      `xdraw-grid ${mode === 0 ? "xdraw-grid-off" : mode === 1 ? "xdraw-grid-lines" : "xdraw-grid-ruler"}`,
+    [this.settings.backgroundPatternMode, this.zoomFactor],
+    ([mode, zoom]) => {
+      if (mode === 0) {
+        return "xdraw-grid xdraw-grid-off";
+      }
+      // 20px'lik grid çizgileri 4px'in altına indiğinde (zoom < 0.2) moiré/titreme olmaması için
+      // ızgarayı solid gri tona dönüştürürüz.
+      if (zoom < 0.2) {
+        if (mode === 2 && zoom >= 0.07) {
+          // Cetvel/kademeli modda iken 100'lük ana çizgiler hâlâ görünür olsun
+          return "xdraw-grid xdraw-grid-ruler-far";
+        }
+        return "xdraw-grid xdraw-grid-solid";
+      }
+      return `xdraw-grid ${mode === 1 ? "xdraw-grid-lines" : "xdraw-grid-ruler"}`;
+    },
   );
 
   canvas = (
