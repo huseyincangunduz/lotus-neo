@@ -35,8 +35,8 @@ class ReplayValue<T> implements ObservableLike<T> {
 }
 
 export interface Operation {
-  revert(): Promise<void>;
-  apply(): Promise<void>;
+  revert(): Promise<void> | void;
+  apply(): Promise<void> | void;
 }
 
 export class UndoRedoHelper {

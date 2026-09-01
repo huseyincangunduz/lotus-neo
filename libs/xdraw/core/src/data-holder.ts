@@ -7,13 +7,14 @@ import type {
     XDrawCanvasCamera,
     XDrawData,
     XDrawDrawElement,
+    XDrawElement,
     XDrawLayer,
 } from "./xdraw-data";
 import { XDRAW_MAX_POINTS_PER_ELEMENT } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 import { ColorUtils } from "./color-utils";
 import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "./xdraw-binary-codec";
-
+import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "./xdraw-data";
 
 export interface CursorPosition {
@@ -59,6 +60,8 @@ export class XDrawDataHolder {
     activeLayerId: State<string> = state("base");
     stopStrokeTimeout: number | undefined = undefined;
     breakBeforeNextPoint: boolean = false;
+    undoRedoHelper: UndoRedoHelper = new UndoRedoHelper();
+    insertedElements: XDrawElement[] = [];
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -86,9 +89,16 @@ export class XDrawDataHolder {
 
     createLayer(layerId?: string, options?: { opacity?: number; visible?: boolean; insertBeforeLayerId?: string; }): XDrawLayer {
         const createdLayer = this.layerManager.createLayer(layerId, options);
+        this.undoRedoHelper.pushOperationQueue({
+            apply: () => {
+                this.layerManager.addLayer(createdLayer);
+            },
+            revert: () => {
+                this.layerManager.deleteLayer(createdLayer.id);
+            }
+        }, true, false);
         this.syncLayersState();
         this.setActiveLayer(createdLayer.id);
-        // this.activeLayerId.set(this.getActiveLayerId());
         return createdLayer;
     }
 
@@ -103,6 +113,19 @@ export class XDrawDataHolder {
     }
 
     deleteLayer(layerId: string): boolean {
+        const layer = this.layerManager.getLayer(layerId);
+        if (!layer) {
+            return false;
+        }
+
+        this.undoRedoHelper.pushOperationQueue({
+            apply: () => {
+                this.layerManager.deleteLayer(layerId);
+            },
+            revert: () => {
+                this.layerManager.addLayer(layer);
+            }
+        }, true, false);
         const deleted = this.layerManager.deleteLayer(layerId);
         if (deleted) {
             this.syncLayersState();
@@ -113,8 +136,18 @@ export class XDrawDataHolder {
     }
 
     setLayerOpacity(layerId: string, opacity: number): void {
-        this.layerManager.setLayerOpacity(layerId, opacity);
-        this.syncLayersState();
+        const oldOpacity = this.layerManager.getLayer(layerId)?.opacity ?? 1;
+        this.undoRedoHelper.pushOperationQueue({
+            apply: () => {
+                this.layerManager.setLayerOpacity(layerId, opacity);
+                this.syncLayersState();
+            },
+            revert: () => {
+                this.layerManager.setLayerOpacity(layerId, oldOpacity);
+                this.syncLayersState();
+            }
+        }, true, true);
+        // this.layerManager.setLayerOpacity(layerId, opacity);
     }
 
     setLayerVisible(layerId: string, visible: boolean): void {
@@ -208,6 +241,7 @@ export class XDrawDataHolder {
             points: [],
             finalized: false,
         };
+        this.insertedElements.push(this.activeDrawElement);
         this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
         this.rasterizer.setActiveDrawElement(this.activeDrawElement, this.layerManager.getActiveLayer().opacity ?? 1);
     }
@@ -236,6 +270,7 @@ export class XDrawDataHolder {
                 points: [previousPoint],
                 finalized: false,
             };
+            this.insertedElements.push(this.activeDrawElement);
             this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
             // Onceki parca finalize oldu; buffer'a girmesi icin yeniden olusturulmasi gerekir.
             this.rasterizer.invalidateContentBuffer();
@@ -265,6 +300,23 @@ export class XDrawDataHolder {
         this.rasterizer.setActiveDrawElement(null);
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
+
+        const insertedElements = this.insertedElements.slice();
+        const activeLayer = this.layerManager.getActiveLayer();
+        this.undoRedoHelper.pushOperationQueue({
+            apply: () => {
+                activeLayer.elements.push(...this.insertedElements);
+                this.rasterizer.invalidateContentBuffer();
+                this.rasterizer.setProjectData(this.xdrawData);
+                // this.insertedElements = [];
+            },
+            revert: () => {
+                activeLayer.elements = activeLayer.elements.filter(el => !insertedElements.includes(el));
+                this.rasterizer.invalidateContentBuffer();
+                this.rasterizer.setProjectData(this.xdrawData);
+                // this.insertedElements = insertedElements;
+            },
+        }, true, false);
     }
 
     // Boya kovasi henuz XDrawData icin uygulanmadi.
@@ -295,10 +347,13 @@ export class XDrawDataHolder {
     // x, y ve radius dunya koordinatindadir.
     erasePathSegmentsAtPoint(x: number, y: number, radius: number): boolean {
         const activeLayer = this.layerManager.getActiveLayer();
-        activeLayer.elements = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
-        this.rasterizer.invalidateContentBuffer();
-        this.rasterizer.setProjectData(this.xdrawData);
-        return true;
+        const removalResult = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
+        activeLayer.elements = removalResult.elements;
+        if (removalResult.hasChanges) {
+            this.rasterizer.invalidateContentBuffer();
+            this.rasterizer.setProjectData(this.xdrawData);
+        }
+        return removalResult.hasChanges;
     }
 
     setCursorPosition(position: CursorPosition | undefined) {

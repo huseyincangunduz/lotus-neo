@@ -208,8 +208,9 @@ export class XdrawDataUtils {
         }
     }
 
-    public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): XDrawElement[] {
-        return elements.map(element => {
+    public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): {elements: XDrawElement[], hasChanges: boolean} {
+        let hasChanges = false;
+        const elementsAfterRemoval = elements.map(element => {
             if (element.type === "draw") {
                 const drawElement = element as XDrawDrawElement; // Tip güvenliği için uygun bir tip tanımlayın
                 const filteredPoints: XDrawDrawElement["points"] = [];
@@ -226,6 +227,9 @@ export class XdrawDataUtils {
                         removedSincePreviousPoint ? { ...point, breakBefore: true } : point,
                     );
                     removedSincePreviousPoint = false;
+                }
+                if (filteredPoints.length !== drawElement.points.length) {
+                    hasChanges = true;
                 }
                 return { ...drawElement, points: filteredPoints };
             }
@@ -247,6 +251,7 @@ export class XdrawDataUtils {
             }
             return true;
         });
+        return { elements: elementsAfterRemoval, hasChanges };
     }
 
     public static generateUniqueId(): string {

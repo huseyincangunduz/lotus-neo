@@ -20,6 +20,14 @@ export class LayerManager {
         this.ensureLayer(defaultLayerId);
     }
 
+    addLayer(layer : XDrawLayer): void {
+        if (this.layers.has(layer.id)) {
+            layer.id = layer.id + "_" + Date.now();
+        }
+        this.xdrawData.layers.push(layer);
+        this.layers.set(layer.id, layer);
+    }
+
     createLayer(layerId?: string, options: XDrawLayerOptions = {}): XDrawLayer {
         if (layerId === undefined) {
             let count = 1;
