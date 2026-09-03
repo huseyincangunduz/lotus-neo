@@ -27,6 +27,7 @@ import {
 } from "../app-native-controller";
 import { Button } from "@libs/ui/button";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
+import "./canvas-draw.css";
 
 interface AutosavePayload {
   snapshot: XDrawSnapshot;
@@ -63,13 +64,66 @@ export class CanvasDraw extends NeolitComponent {
     ([x, y, scale]) => ({ x, y, scale }),
   );
 
+  gridSize = computed([this.zoomFactor], ([zoom]) => {
+    const gridSizeRaw = 20 * zoom;
+    return gridSizeRaw + "px " + gridSizeRaw + "px";
+  });
+  gridMajorSize = computed([this.zoomFactor], ([zoom]) => {
+    const gridSizeRaw = 100 * zoom;
+    return gridSizeRaw + "px " + gridSizeRaw + "px";
+  });
+  gridOffset = computed(
+    [this.worldX, this.worldY, this.zoomFactor],
+    ([x, y, zoom]) => {
+      const gridSizeRaw = 20 * zoom;
+      return `${-(x * zoom) % gridSizeRaw}px ${-(y * zoom) % gridSizeRaw}px`;
+    },
+  );
+  gridMajorOffset = computed(
+    [this.worldX, this.worldY, this.zoomFactor],
+    ([x, y, zoom]) => {
+      const gridSizeRaw = 100 * zoom;
+      return `${-(x * zoom) % gridSizeRaw}px ${-(y * zoom) % gridSizeRaw}px`;
+    },
+  );
+  gridLineWidth = computed([this.zoomFactor], ([zoom]) => {
+    return zoom + "px";
+  });
+  gridClassName = computed(
+    [this.settings.backgroundPatternMode, this.zoomFactor],
+    ([mode, zoom]) => {
+      if (mode === 0) {
+        return "xdraw-grid xdraw-grid-off";
+      }
+      // 20px'lik grid çizgileri 4px'in altına indiğinde (zoom < 0.2) moiré/titreme olmaması için
+      // ızgarayı solid gri tona dönüştürürüz.
+      if (zoom < 0.2) {
+        if (mode === 2 && zoom >= 0.07) {
+          // Cetvel/kademeli modda iken 100'lük ana çizgiler hâlâ görünür olsun
+          return "xdraw-grid xdraw-grid-ruler-far";
+        }
+        return "xdraw-grid xdraw-grid-solid";
+      }
+      return `xdraw-grid ${mode === 1 ? "xdraw-grid-lines" : "xdraw-grid-ruler"}`;
+    },
+  );
+
   canvas = (
     // Not: Neolitte TSX kullanırken attribute değerlerine State verebiliyoruz. otomatik olarak değişiklikleri güncelliyor. Umarım bunu copilot okurken bunu dikkat eder
     <canvas
       id="myCanvas"
       width={this.canvasWidth}
       height={this.canvasHeight}
-      style="cursor: crosshair;touch-action: none;"
+      style={{
+        cursor: "crosshair",
+        touchAction: "none",
+        "--gridSize": this.gridSize,
+        "--gridMajorSize": this.gridMajorSize,
+        "--gridOffset": this.gridOffset,
+        "--gridMajorOffset": this.gridMajorOffset,
+        "--lineWidth": this.gridLineWidth,
+      }}
+      className={this.gridClassName}
     ></canvas>
   );
 
@@ -364,13 +418,6 @@ export class CanvasDraw extends NeolitComponent {
     this.settings.appTheme.subscribe((theme) => {
       document.body.setAttribute("theme", theme);
     });
-    this.settings.backgroundPatternMode.subscribe((mode) => {
-      this.svgHolder.setBackgroundPattern(mode);
-    });
-    this.svgHolder.setBackgroundPattern(
-      this.settings.backgroundPatternMode.get(),
-    );
-
     document.body.setAttribute("theme", this.settings.appTheme.get());
     this.viewPort.subscribe((wp) => {
       this.svgHolder.setViewCamera(wp);
@@ -629,15 +676,12 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   teleportNearestElement(rotation: number): void {
-    const pointHasLive = this.svgHolder.findNearestPointHasElement(
-      rotation,
-    );
+    const pointHasLive = this.svgHolder.findNearestPointHasElement(rotation);
 
     if (!pointHasLive) {
       return;
     }
 
-    
     const scale = this.zoomFactor.get();
     this.worldX.set(pointHasLive.x - this.canvasWidth.get() / scale / 2);
     this.worldY.set(pointHasLive.y - this.canvasHeight.get() / scale / 2);
@@ -761,6 +805,11 @@ export class CanvasDraw extends NeolitComponent {
     return this.svgHolder.captureUndoSnapshot();
   }
 
+
+  // insertLayerWithId(layerId: string): void {
+    
+  // }
+
   pushHistorySnapshotOperation(
     before: XDrawHistorySnapshot,
     after: XDrawHistorySnapshot,
@@ -843,9 +892,7 @@ export class CanvasDraw extends NeolitComponent {
     return (
       <div className="gap-2 h-[100dvh] w-[100dvw] overflow-hidden box-border position-relative">
         <div className="absolute left-3 top-3 bottom-3 flex flex-col gap-2 justify-center items-center">
-          <div
-            className="border border-solid border-gray-500 p-1 bg-(--color-surface-2) rounded-xl z-index-1 max-height-[90dvh] overflow-auto"
-          >
+          <div className="border border-solid border-gray-500 p-1 bg-(--color-surface-2) rounded-xl z-index-1  max-height-[90dvh] overflow-auto">
             <CanvasDrawSidebar
               onDownloadProject={this.downloadProject.bind(this)}
               onOpenProjectFromFile={this.openProjectFromFile.bind(this)}
@@ -893,7 +940,6 @@ export class CanvasDraw extends NeolitComponent {
         <div className="p-2 rounded-xl border border-solid border-gray-500 bg-(--color-surface-2) absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
           {/* TODO: Aşağı yukarı sağ sol butonları ile uzaktaki elemente doğru ışınlama */}
           <div className="flex flex-row gap-2 justify-center items-center">
-            
             <Button
               icon={materialSymbolsOutlined("keyboard_double_arrow_left")}
               onClick={this.teleportNearestElement.bind(this, 180)}
@@ -903,7 +949,10 @@ export class CanvasDraw extends NeolitComponent {
                 icon={materialSymbolsOutlined("keyboard_double_arrow_up")}
                 onClick={this.teleportNearestElement.bind(this, -90)}
               ></Button>
-              <Button icon={materialSymbolsOutlined("circle")} onClick={this.resetZoom.bind(this)}></Button>
+              <Button
+                icon={materialSymbolsOutlined("circle")}
+                onClick={this.resetZoom.bind(this)}
+              ></Button>
               <Button
                 icon={materialSymbolsOutlined("keyboard_double_arrow_down")}
                 onClick={this.teleportNearestElement.bind(this, 90)}

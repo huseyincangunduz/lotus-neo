@@ -66,7 +66,7 @@ export class Button extends NeolitComponent<ButtonProps> {
       //   outline: "border border-(--color-border) bg-transparent",
       //   ghost: "",
       // }[visual as "filled" | "outline" | "ghost"];
-
+      
       return `rounded-sm ${variantClass} ${padding === true ? "p-2" : typeof padding === "number" ? `p-${padding}` : ""}`;
     },
   );

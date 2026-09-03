@@ -51,9 +51,7 @@ export class LayerManager {
     }
 
     setActiveLayer(layerId: string): XDrawLayer {
-        this.getActiveLayer().currentSessionActive = false;
         this.activeLayerId = layerId;
-        this.getActiveLayer().currentSessionActive = true;
         return this.ensureLayer(layerId);
     }
 

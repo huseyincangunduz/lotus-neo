@@ -57,8 +57,8 @@ export class ProjectDataRasterizer {
     private static readonly MASK_MAX_PIXELS = 4_000_000;
     private static readonly DRAW_CACHE_MAX_PIXELS = 8_000_000;
     // Content buffer icin margin, mask'tan daha genis: pan sirasinda yeniden olusturma sikligini azaltir.
-    private static readonly CONTENT_MARGIN_RATIO = 0.5;
-    private static readonly CONTENT_MAX_PIXELS = 4_000_000;
+    private static readonly CONTENT_MARGIN_RATIO = 0.6;
+    private static readonly CONTENT_MAX_PIXELS = window.innerWidth * window.innerHeight * 4;
     // Kamera olcegi, buffer'in olceginden bu oranin disina ciktiginda buffer gecersiz sayilir.
     private static readonly CONTENT_SCALE_MIN_RATIO = 0.85;
     private static readonly CONTENT_SCALE_MAX_RATIO = 1.18;
@@ -636,8 +636,9 @@ export class ProjectDataRasterizer {
         }
 
         const cameraScale = this.cam.scale;
-        const marginX = Math.round(canvas.width * ProjectDataRasterizer.CONTENT_MARGIN_RATIO);
-        const marginY = Math.round(canvas.height * ProjectDataRasterizer.CONTENT_MARGIN_RATIO);
+        const marginRatio = ProjectDataRasterizer.CONTENT_MARGIN_RATIO;
+        const marginX = Math.round(canvas.width * marginRatio);
+        const marginY = Math.round(canvas.height * marginRatio);
         let width = Math.max(1, canvas.width + marginX * 2);
         let height = Math.max(1, canvas.height + marginY * 2);
         let bufferScale = cameraScale;
@@ -736,7 +737,7 @@ export class ProjectDataRasterizer {
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-        this.drawBackground(context, scale, camX, camY);
+        // this.drawBackground(context, scale, camX, camY);
 
         // Tamamlanmis icerik: buffer gecerli degilse (pan margin disina cikti, zoom esigi
         // asildi ya da icerik degisti) once yeniden olusturulur; sonra tek drawImage ile

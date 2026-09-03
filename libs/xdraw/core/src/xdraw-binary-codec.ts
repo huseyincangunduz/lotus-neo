@@ -53,7 +53,7 @@ interface XDrawSkeletonLayer {
     id: string;
     opacity?: number;
     visible?: boolean;
-    currentSessionActive?: boolean;
+    // currentSessionActive?: boolean;
     elements: XDrawSkeletonElement[];
 }
 
@@ -97,7 +97,6 @@ export function encodeXDrawDataToBuffer(data: XDrawData): { skeleton: XDrawSkele
         id: layer.id,
         opacity: layer.opacity,
         visible: layer.visible,
-        currentSessionActive: layer.currentSessionActive,
         elements: layer.elements.map((element): XDrawSkeletonElement => {
             if (element.type === "draw") {
                 const draw = element as XDrawDrawElement;
@@ -210,7 +209,6 @@ export function decodeXDrawDataFromBuffer(skeleton: XDrawSkeleton, buffer: Float
         const resultLayer: XDrawLayer = { id: skLayer.id, type: "layer", elements };
         if (skLayer.opacity !== undefined) resultLayer.opacity = skLayer.opacity;
         if (skLayer.visible !== undefined) resultLayer.visible = skLayer.visible;
-        if (skLayer.currentSessionActive !== undefined) resultLayer.currentSessionActive = skLayer.currentSessionActive;
         return resultLayer;
     });
 

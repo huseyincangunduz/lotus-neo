@@ -23,6 +23,7 @@ import {
   APP_NATIVE_CONTROLLER_TOKEN,
   type IAppNativeController,
 } from "../app-native-controller";
+import { asset } from "@libs/asset";
 
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDrawSidebar extends NeolitComponent {
@@ -346,7 +347,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
           anchorSelector="#toolbar"
           placement="right"
           width="280px"
-          maxHeight="320px"
           displayHeader={false}
           displayCloseButton={false}
         >
@@ -457,7 +457,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
                 rel="noopener noreferrer"
               >
                 <img
-                  src="tkneolitxdraw.png"
+                  src={asset("tkneolitxdraw.png")}
                   alt="Tetakent Logo"
                   style="display: inline-block; margin-left: 4px; height: 32px; "
                 ></img>
@@ -686,24 +686,18 @@ export class CanvasDrawSidebar extends NeolitComponent {
                     <Button
                       style={{ width: "100%" }}
                       onClick={() => {
-                        if (
-                          this.properties.xdrawDataHolder
-                            .get()
-                            .getActiveLayerId() === layer.id
-                        ) {
-                          this.layerSettingsDialog.set(true);
-                          return;
-                        }
-
-                        this.runMutationWithHistory(() =>
-                          this.properties.xdrawDataHolder
-                            .get()
-                            .setActiveLayer(layer.id),
-                        );
+                        this.properties.xdrawDataHolder
+                          .get()
+                          .setActiveLayer(layer.id);
                       }}
-                      variant={
-                        layer.currentSessionActive ? "filled-primary" : "ghost"
-                      }
+                      variant={computed<ButtonVariant>(
+                        [this.xdrawHolder!.activeLayerId],
+                        ([activeLayerId]) => {
+                          return activeLayerId === layer.id
+                            ? "filled-primary"
+                            : "ghost";
+                        },
+                      )}
                       label={
                         layer.id === "base"
                           ? tr("xdraw.layer.base")

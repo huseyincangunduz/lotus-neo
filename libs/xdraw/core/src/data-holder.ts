@@ -56,6 +56,7 @@ export class XDrawDataHolder {
     private activeStrokeWidth = 1;
     private activeStrokeColor = "#000000";
     layersState: State<XDrawLayer[]> = state<XDrawLayer[]>([]);
+    activeLayerId: State<string> = state("base");
     stopStrokeTimeout: number | undefined = undefined;
     breakBeforeNextPoint: boolean = false;
 
@@ -86,12 +87,14 @@ export class XDrawDataHolder {
     createLayer(layerId?: string, options?: { opacity?: number; visible?: boolean; insertBeforeLayerId?: string; }): XDrawLayer {
         const createdLayer = this.layerManager.createLayer(layerId, options);
         this.syncLayersState();
+        this.setActiveLayer(createdLayer.id);
+        // this.activeLayerId.set(this.getActiveLayerId());
         return createdLayer;
     }
 
     setActiveLayer(layerId: string): XDrawLayer {
         const activeLayer = this.layerManager.setActiveLayer(layerId);
-        this.syncLayersState();
+        this.activeLayerId.set(layerId);
         return activeLayer;
     }
 
@@ -103,6 +106,8 @@ export class XDrawDataHolder {
         const deleted = this.layerManager.deleteLayer(layerId);
         if (deleted) {
             this.syncLayersState();
+            this.activeLayerId.set(this.getActiveLayerId());
+
         }
         return deleted;
     }
@@ -173,6 +178,7 @@ export class XDrawDataHolder {
             ? requestedActiveLayerId
             : (this.xdrawData.layers[0]?.id ?? "base");
         this.layerManager = new LayerManager(this.xdrawData, activeLayerId);
+        this.activeLayerId.set(activeLayerId);
         this.activeDrawElement = null;
         this.syncLayersState();
         this.rasterizer.setActiveDrawElement(null);
