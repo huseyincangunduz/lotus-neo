@@ -1,5 +1,5 @@
 import { ColorUtils } from "./color-utils";
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 import { DynamicQueue } from "@ubs-platform/dynamic-queue";
 // const QUEUE_MODE =
@@ -251,26 +251,40 @@ export class ProjectDataRasterizer {
         let maxX = -Infinity;
         let maxY = -Infinity;
 
-        if (element.type === "draw") {
-            const drawElement = element as XDrawDrawElement;
-            for (const point of drawElement.points) {
-                if (point.x < minX) minX = point.x;
-                if (point.y < minY) minY = point.y;
-                if (point.x > maxX) maxX = point.x;
-                if (point.y > maxY) maxY = point.y;
-            }
-        } else if (element.type === "fill") {
-            const fillElement = element as XDrawFillElement;
-            for (const ring of fillElement.rings) {
-                for (const point of ring) {
+        switch (element.type) {
+            case "draw": {
+                const drawElement = element as XDrawDrawElement;
+                for (const point of drawElement.points) {
                     if (point.x < minX) minX = point.x;
                     if (point.y < minY) minY = point.y;
                     if (point.x > maxX) maxX = point.x;
                     if (point.y > maxY) maxY = point.y;
                 }
+                break;
             }
-        } else {
-            return false;
+            case "fill": {
+                const fillElement = element as XDrawFillElement;
+                for (const ring of fillElement.rings) {
+                    for (const point of ring) {
+                        if (point.x < minX) minX = point.x;
+                        if (point.y < minY) minY = point.y;
+                        if (point.x > maxX) maxX = point.x;
+                        if (point.y > maxY) maxY = point.y;
+                    }
+                }
+                break;
+            }
+            case "text": {
+                const textElement = element as XDrawTextElement;
+                const pos = textElement.position;
+                minX = pos.x;
+                minY = pos.y;
+                maxX = pos.x + textElement.fontSize * textElement.text.length; // Approximate width
+                maxY = pos.y + textElement.fontSize; // Approximate height
+                break;
+            }
+            default:
+                return false;
         }
 
         if (!Number.isFinite(minX)) {
@@ -710,6 +724,9 @@ export class ProjectDataRasterizer {
                     case "fill":
                         this.drawFillElement(context, element as XDrawFillElement);
                         break;
+                    case "text":
+                        this.drawTextElement(context, element as XDrawTextElement);
+                        break;
                 }
             },
         );
@@ -719,6 +736,15 @@ export class ProjectDataRasterizer {
 
         this.contentBuffer = { originX, originY, scale: bufferScale, width, height };
         this.contentBufferValid = true;
+    }
+    drawTextElement(context: CanvasRenderingContext2D, arg1: XDrawTextElement) {
+        const textElement = arg1;
+        const color = ColorUtils.regularizeToHexColor(textElement.color) || textElement.color;
+        context.fillStyle = color;
+        context.font = `${textElement.fontSize}px sans-serif`;
+        context.textBaseline = "top";
+        context.fillText(textElement.text, textElement.position.x, textElement.position.y);
+        console.debug(`Text element ${textElement.id} rendered at (${textElement.position.x}, ${textElement.position.y}) with font size ${textElement.fontSize}`);
     }
 
     // Dunya koordinatli XDrawData'yi kameraya gore canvas'a cizer.

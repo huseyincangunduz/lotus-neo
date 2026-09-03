@@ -15,6 +15,7 @@ import {
   type TranslationPartAsync,
 } from "@ubs-platform/translator-core";
 import { Observable, of } from "rxjs";
+import { asset } from "@libs/asset";
 // import { CanvasDraw } from "./pages/canvas-draw";
 
 const availableLanguages = ["tr-tr", "en-us"];
@@ -33,7 +34,7 @@ translationRepository
   .getLazyloadHelper()
   .insert(
     new AsyncActionLazyloadHandler((language) =>
-      fetch([import.meta.env.BASE_URL || "", `lang/${language}.json`].filter(a => a).join("/")).then((res) => res.json()),
+      fetch(asset(`lang/${language}.json`)).then((res) => res.json()),
     ),
   );
 
