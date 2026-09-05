@@ -1,4 +1,4 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "./xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 
 export interface XDrawElementCropData {
@@ -209,49 +209,62 @@ export class XdrawDataUtils {
     }
 
     public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): {elements: XDrawElement[], hasChanges: boolean} {
+        const newElements: XDrawElement[] = [];
         let hasChanges = false;
-        const elementsAfterRemoval = elements.map(element => {
-            if (element.type === "draw") {
-                const drawElement = element as XDrawDrawElement; // Tip güvenliği için uygun bir tip tanımlayın
-                const filteredPoints: XDrawDrawElement["points"] = [];
-                let removedSincePreviousPoint = false;
-                for (const point of drawElement.points) {
-                    const dx = point.x - x;
-                    const dy = point.y - y;
-                    if ((dx * dx + dy * dy) <= (radius * radius)) {
-                        removedSincePreviousPoint = true;
-                        continue;
-                    }
+        for (const element of elements) {
+            switch (element.type) {
+                case "draw":
+                    const drawElement = element as XDrawDrawElement;
+                    const filteredPoints: XDrawDrawElement["points"] = [];
+                    let removedSincePreviousPoint = false;
+                    for (const point of drawElement.points) {
+                        const dx = point.x - x;
+                        const dy = point.y - y;
+                        if ((dx * dx + dy * dy) <= (radius * radius)) {
+                            removedSincePreviousPoint = true;
+                            continue;
+                        }
 
-                    filteredPoints.push(
-                        removedSincePreviousPoint ? { ...point, breakBefore: true } : point,
-                    );
-                    removedSincePreviousPoint = false;
-                }
-                if (filteredPoints.length !== drawElement.points.length) {
-                    hasChanges = true;
-                }
-                return { ...drawElement, points: filteredPoints };
+                        filteredPoints.push(
+                            removedSincePreviousPoint ? { ...point, breakBefore: true } : point,
+                        );
+                        removedSincePreviousPoint = false;
+                    }
+                    if (filteredPoints.length > 0) {
+                        newElements.push({ ...drawElement, points: filteredPoints } as XDrawDrawElement);
+                    }
+                    if (filteredPoints.length !== drawElement.points.length) {
+                        hasChanges = true;
+                    }
+                    break;
+                case "fill":
+                    const fillElement = element as XDrawFillElement;
+                    const touchesEraser = fillElement.rings.some((ring) => ring.some((point) => {
+                        const dx = point.x - x;
+                        const dy = point.y - y;
+                        return (dx * dx + dy * dy) <= (radius * radius);
+                    }));
+                    if (!touchesEraser) {
+                        newElements.push(fillElement);
+                    } else {
+                        hasChanges = true;
+                    }
+                    break;
+                case "text":
+                    const textElement = element as XDrawTextElement;
+                    const dx = textElement.position.x - x;
+                    const dy = textElement.position.y - y;
+                    if ((dx * dx + dy * dy) > (radius * radius)) {
+                        newElements.push(textElement);
+                    } else {
+                        hasChanges = true;
+                    }
+                    break;
             }
-            return element;
-        }).filter(element => {
-            if (element.type === "draw") {
-                const drawElement = element as XDrawDrawElement; // Tip güvenliği için uygun bir tip tanımlayın
-                return drawElement.points.length > 0;
-            }
-            if (element.type === "fill") {
-                // Silgi bir dolguya degdiyse tum dolgu elementi silinir (v1: delik acma yok).
-                const fillElement = element as XDrawFillElement;
-                const touchesEraser = fillElement.rings.some((ring) => ring.some((point) => {
-                    const dx = point.x - x;
-                    const dy = point.y - y;
-                    return (dx * dx + dy * dy) <= (radius * radius);
-                }));
-                return !touchesEraser;
-            }
-            return true;
-        });
-        return { elements: elementsAfterRemoval, hasChanges };
+        }
+        return { elements: newElements, hasChanges };
+
+
     }
 
     public static generateUniqueId(): string {

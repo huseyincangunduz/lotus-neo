@@ -57,11 +57,20 @@ export interface XDrawElement {
     partial?: boolean;
 }
 
-
 export interface XDrawDrawElement extends XDrawElement {
     type: "draw";
     color: string;
     points: Array<XDrawElementPosition>;
+    finalized?: boolean;
+}
+
+export interface XDrawTextElement extends XDrawElement {
+    type: "text";
+    text: string;
+    position: XDrawElementPosition;
+    fontSize: number;
+    fontFamily: string;
+    color: string;
     finalized?: boolean;
 }
 

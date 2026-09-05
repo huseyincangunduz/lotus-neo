@@ -892,7 +892,7 @@ export class CanvasDraw extends NeolitComponent {
     return (
       <div className="gap-2 h-[100dvh] w-[100dvw] overflow-hidden box-border position-relative">
         <div className="absolute left-3 top-3 bottom-3 flex flex-col gap-2 justify-center items-center">
-          <div className="border border-solid border-gray-500 p-1 bg-(--color-surface-2) rounded-xl z-index-1">
+          <div className="border border-solid border-gray-500 p-1 bg-(--color-surface-2) rounded-xl z-index-1  max-height-[90dvh] overflow-auto">
             <CanvasDrawSidebar
               onDownloadProject={this.downloadProject.bind(this)}
               onOpenProjectFromFile={this.openProjectFromFile.bind(this)}

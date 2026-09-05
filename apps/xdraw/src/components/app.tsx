@@ -1,7 +1,7 @@
 import { NeolitComponent } from "@ubs-platform/neolit/core";
 import "@libs/ui/webdialog";
 import { AlertToastContainer } from "@libs/ui/alert-toast";
-import { Outlet, RouteMap } from "@ubs-platform/neolit/routing";
+import { Outlet, RouteMap, Router } from "@ubs-platform/neolit/routing";
 import {
   APP_NATIVE_CONTROLLER_TOKEN,
   CanvasDraw,
@@ -15,6 +15,7 @@ import {
   type TranslationPartAsync,
 } from "@ubs-platform/translator-core";
 import { Observable, of } from "rxjs";
+import { asset } from "@libs/asset";
 // import { CanvasDraw } from "./pages/canvas-draw";
 
 const availableLanguages = ["tr-tr", "en-us"];
@@ -33,7 +34,7 @@ translationRepository
   .getLazyloadHelper()
   .insert(
     new AsyncActionLazyloadHandler((language) =>
-      fetch(`lang/${language}.json`).then((res) => res.json()),
+      fetch(asset(`lang/${language}.json`)).then((res) => res.json()),
     ),
   );
 
@@ -102,11 +103,18 @@ export class AppComponent extends NeolitComponent {
       componentFactory: () => <CanvasDraw></CanvasDraw>,
     },
   ]);
+
+  readonly router = new Router({
+    // vite config base path
+    parentPath: import.meta.env.BASE_URL || "",
+    // initialPath: "/postral" + window.location.pathname.replace("/postral", ""),
+    routeMap: this.routeMap,
+  });
   render() {
     return (
       <>
         <AlertToastContainer messageTimeout={5000}></AlertToastContainer>
-        <Outlet routeMap={this.routeMap}></Outlet>
+        <Outlet routeMap={this.routeMap} router={this.router}></Outlet>
       </>
     );
   }
