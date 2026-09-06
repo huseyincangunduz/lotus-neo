@@ -1,14 +1,6 @@
 import { ColorUtils } from "./color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
-import { DynamicQueue } from "@ubs-platform/dynamic-queue";
-// const QUEUE_MODE =
-//     false;
-// şimdilik disable kalsın... aktif olacağı zaman başındaki false'ı kaldırın
-const BROWSER_SUPPORTS_OFFSCREEN_CANVAS = false && typeof window !== "undefined" && typeof window.OffscreenCanvas === "function";
-// canvas2dtowebgl kütüphanesi, WebGL desteği olan tarayıcılarda 2D canvas'ı WebGL ile hızlandırmak için kullanılabilir. Ancak, bazı tarayıcılarda veya cihazlarda bu kütüphane düzgün çalışmayabilir. Bu nedenle, WebGL desteği ve kütüphanenin kullanılabilirliği kontrol edilmelidir.
-// Not: Kütüphane istediğim gibi çalışmıyor. Ancak hoşuma gitti mantığı şimdilik kalsın. hiç kullanılmazsa kaldırırım
-const WEBGL_RENDERER_AVAILABLE = false && typeof window !== "undefined" && typeof window.WebGLRenderingContext === "function" && window["enableWebGLCanvas" as any];
 // Bir cizgi elemani, kalinlik degistigi her yerde yeni bir Path2D'ye bolunur.
 interface DrawPathSegment {
     path: Path2D;
@@ -16,22 +8,8 @@ interface DrawPathSegment {
     fill: boolean;
 }
 
-interface DrawSpecialCanvas {
-    canvas: HTMLCanvasElement | OffscreenCanvas;
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-    scale: number;
-}
-
 interface DrawPathCacheEntry {
-    // minLineWidth, cachelenmis cizgi segmentlerinin dunya birimi cinsinden alt siniridir. Bu deger, maske olcegine gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
-    minLineWidth?: number;
     segments: DrawPathSegment[];
-    specialCanvas?: DrawSpecialCanvas; // Özel bir canvas kullanılarak oluşturulmuşsa, bu canvas referansı saklanır. Bu, belirli durumlarda performans optimizasyonu için kullanılabilir.
-    // Ölçeklere göre img bitmap. eğer aşırı yakınsa path2d ya da sıfırdan path yaratma işine girilebilir. Ancak belli uzaklıktakileri img bitmap olarak saklamak daha hızlı olabilir. Bu yüzden cache entry'ye img bitmap eklenebilir. Ancak bu, bellek kullanımını artırabilir ve bazı durumlarda gereksiz olabilir. Bu nedenle, img bitmap kullanımı opsiyonel olarak bırakılmıştır.
-    // img: ImageBitmap | null;
 }
 
 interface DrawPointRange {
@@ -55,7 +33,6 @@ export class ProjectDataRasterizer {
     // Maske, viewport'un biraz disini da kapsar; boylece kenarda olusan dolgu dikisleri azalir.
     private static readonly MASK_MARGIN_RATIO = 0.25;
     private static readonly MASK_MAX_PIXELS = 4_000_000;
-    private static readonly DRAW_CACHE_MAX_PIXELS = 8_000_000;
     // Content buffer icin margin, mask'tan daha genis: pan sirasinda yeniden olusturma sikligini azaltir.
     private static readonly CONTENT_MARGIN_RATIO = 0.6;
     private static readonly CONTENT_MAX_PIXELS = window.innerWidth * window.innerHeight * 4;
@@ -72,9 +49,7 @@ export class ProjectDataRasterizer {
     private renderScheduled = false;
     private fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
     private drawPathCache = new WeakMap<XDrawPoint[], DrawPathCacheEntry>();
-    // private testQueue = QUEUE_MODE ? new DynamicQueue() : { push: (fn: () => void) => fn() };
     // Anahtar rings array referansi: geometri degisince yeni array gelir ve cache kendiliginden duser.
-    // private lastRenderTimeMs = 1000 / 30;
     // Anahtar points array referansi: crop callback her karede yeni element objesi urettigi icin
     // element referansi anahtar olarak kullanilamaz.
 
@@ -134,9 +109,6 @@ export class ProjectDataRasterizer {
     }
 
     getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
-        if (WebGL2RenderingContext && WEBGL_RENDERER_AVAILABLE) {
-            return (window["enableWebGLCanvas" as any] as any as Function)?.(canvas);
-        }
         return canvas.getContext("2d", { desynchronized: true });
     }
 
@@ -350,7 +322,7 @@ export class ProjectDataRasterizer {
         context.globalAlpha = 1;
 
     }
-    private drawBackground(context: CanvasRenderingContext2D, scale: number, camX: number, camY: number) {
+    drawBackground(context: CanvasRenderingContext2D, scale: number, camX: number, camY: number) {
         if (!this.backgroundPattern) {
             return;
         }
@@ -414,11 +386,6 @@ export class ProjectDataRasterizer {
     }
 
     private drawElementSegments(segments: DrawPathCacheEntry, context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, color: string) {
-        if (segments.specialCanvas) {
-            const specialCanvas = segments.specialCanvas;
-            context.drawImage(specialCanvas.canvas, specialCanvas.left, specialCanvas.top, specialCanvas.width, specialCanvas.height);
-            return;
-        }
         const segmentList = segments.segments;
         for (const segment of segmentList) {
             if (segment.fill) {
@@ -433,81 +400,27 @@ export class ProjectDataRasterizer {
     }
 
     private getDrawPrebuilts(draw: XDrawDrawElement, minLineWidth: number, startIndex: number, endIndex: number): DrawPathCacheEntry {
-        // if (startIndex !== 0 || endIndex !== draw.points.length - 1) {
-        //     return this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
-        // }
+        const usesFullRange = startIndex === 0 && endIndex === draw.points.length - 1;
+        // Mask cizgilerindeki minimum kalinlik, normal render cache'iyle paylasilamaz.
+        // Partial araliklar da tam stroke cache'ine yazilmaz.
+        if (minLineWidth > 0 || !usesFullRange) {
+            return { segments: this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex).segments };
+        }
+
         const cached = this.drawPathCache.get(draw.points);
-        // minLineWidth maske olceginee gore degistigi icin cache ancak ayni degerle yeniden kullanilabilir.
-        const renderScale = Math.max(0.001, this.cam.scale);
         if (cached) {
-            if (BROWSER_SUPPORTS_OFFSCREEN_CANVAS && (!cached.specialCanvas || (cached.specialCanvas.scale < renderScale))) {
-                Object.assign(cached, { specialCanvas: this.buildOffscreenCanvasIfAvailable(draw, renderScale, cached.segments, cached.specialCanvas?.canvas) });
-            }
             return cached;
         }
 
         const built = this.buildDrawSegments(draw, minLineWidth, startIndex, endIndex);
         if (built.cacheable) {
-            let specialCanvas: DrawSpecialCanvas | undefined;
-            // Çizim tamamen kesinleşmişse ve minLineWidth 0 ise, çizimi offscreen canvas'a rasterize ederek cache'leyebiliriz. Bu, özellikle yüksek çözünürlükte performansı artırabilir.
-            if (minLineWidth === 0) {
-                specialCanvas = this.buildOffscreenCanvasIfAvailable(draw, renderScale, built.segments);
-            }
-
             const cacheEntry = {
-                minLineWidth,
                 segments: built.segments,
-                specialCanvas: specialCanvas, // Özel canvas referansını cache'e ekle
             };
             this.drawPathCache.set(draw.points, cacheEntry);
             return cacheEntry;
-        } else if (cached) {
-            this.drawPathCache.delete(draw.points);
         }
         return built;
-    }
-
-    private buildOffscreenCanvasIfAvailable(draw: XDrawDrawElement, renderScale: number, segments: DrawPathSegment[], browserCanvasExisting?: HTMLCanvasElement | OffscreenCanvas): DrawSpecialCanvas | undefined {
-        // return undefined; // OffscreenCanvas oluşturma işlemi devre dışı bırakıldı. Gerekirse buraya geri eklenebilir.
-        if (!BROWSER_SUPPORTS_OFFSCREEN_CANVAS || !draw.finalized || (renderScale < 3)) {
-            return undefined; // Yeterince yakın değilse veya çizim tamamlanmamışsa, özel canvas oluşturma işlemi yapılmaz.
-        }
-        console.info(`Attempting to build offscreen canvas for draw element ${draw.id} at render scale ${renderScale}`);
-        let specialCanvas: DrawSpecialCanvas | undefined;
-        let bottom = -Infinity, right = -Infinity, left = Infinity, top = Infinity;
-        for (const point of draw.points) {
-            const radius = point.size / 2;
-            left = Math.min(left, point.x - radius);
-            top = Math.min(top, point.y - radius);
-            right = Math.max(right, point.x + radius);
-            bottom = Math.max(bottom, point.y + radius);
-        }
-        const boundsPadding = 1 / renderScale;
-        left -= boundsPadding;
-        top -= boundsPadding;
-        right += boundsPadding;
-        bottom += boundsPadding;
-        const width = Math.max(1, right - left);
-        const height = Math.max(1, bottom - top);
-        const pixelWidth = Math.max(1, Math.ceil(width * renderScale));
-        const pixelHeight = Math.max(1, Math.ceil(height * renderScale));
-        if (pixelWidth * pixelHeight <= ProjectDataRasterizer.DRAW_CACHE_MAX_PIXELS) {
-            const canvas = browserCanvasExisting ?? new OffscreenCanvas(pixelWidth, pixelHeight);
-            canvas.width = pixelWidth;
-            canvas.height = pixelHeight;
-            const context = canvas.getContext("2d") as CanvasRenderingContext2D; // Canvas'i olusturmak icin context'e ihtiyac var, ancak kullanmayacagiz.
-            if (context) {
-                context.globalAlpha = 1;
-                context.globalCompositeOperation = "source-over";
-                context.setTransform(renderScale, 0, 0, renderScale, -left * renderScale, -top * renderScale);
-                context.lineCap = "round";
-                context.lineJoin = "round";
-                context.fillStyle = ColorUtils.regularizeToHexColor(draw.color) || draw.color;
-                this.drawElementSegments({ segments: segments }, context, draw.color);
-                specialCanvas = { canvas, left, top, width, height, scale: renderScale };
-            }
-        }
-        return specialCanvas;
     }
 
     // Partial cizgiler ve nokta atlama uygulanmis cizgiler cachelenmez: geometri henuz kesinlesmemistir.
@@ -742,10 +655,9 @@ export class ProjectDataRasterizer {
         const color = ColorUtils.regularizeToHexColor(textElement.color) || textElement.color;
         context.fillStyle = color;
         context.lineWidth = 1;
-        context.font = `${textElement.fontSize}px sans-serif`;
+        context.font = `${textElement.fontSize}px ${textElement.fontFamily || "sans-serif"}`;
         context.textBaseline = "top";
         context.fillText(textElement.text, textElement.position.x, textElement.position.y);
-        console.debug(`Text element ${textElement.id} rendered at (${textElement.position.x}, ${textElement.position.y}) with font size ${textElement.fontSize}`);
     }
 
     // Dunya koordinatli XDrawData'yi kameraya gore canvas'a cizer.
@@ -763,8 +675,6 @@ export class ProjectDataRasterizer {
 
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.clearRect(0, 0, canvas.width, canvas.height);
-
-        // this.drawBackground(context, scale, camX, camY);
 
         // Tamamlanmis icerik: buffer gecerli degilse (pan margin disina cikti, zoom esigi
         // asildi ya da icerik degisti) once yeniden olusturulur; sonra tek drawImage ile

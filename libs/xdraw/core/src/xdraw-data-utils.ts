@@ -130,8 +130,12 @@ export class XdrawDataUtils {
             const element = elements[i];
             if (element.type === "text") {
                 const textElement = element as XDrawTextElement;
-                if (textElement.position.x >= left && textElement.position.x <= right &&
-                    textElement.position.y >= top && textElement.position.y <= bottom) {
+                const textLeft = textElement.position.x;
+                const textTop = textElement.position.y;
+                const textRight = textLeft + textElement.fontSize * textElement.text.length;
+                const textBottom = textTop + textElement.fontSize;
+                if (textLeft <= right && textRight >= left &&
+                    textTop <= bottom && textBottom >= top) {
                     if (onFound) {
                         onFound({
                             ...initialFoundElement,
@@ -145,6 +149,7 @@ export class XdrawDataUtils {
                         } as any as XDrawElementCropData);
                     }
                 }
+                continue;
             }
             if (element.type === "fill") {
                 const fillElement = element as XDrawFillElement;
