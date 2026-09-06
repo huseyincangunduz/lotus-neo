@@ -62,6 +62,8 @@ export class XDrawDataHolder {
     breakBeforeNextPoint: boolean = false;
     undoRedoHelper: UndoRedoHelper = new UndoRedoHelper();
     insertedElements: XDrawElement[] = [];
+    // Elementler json array olacak
+    activeLayerSnapshotBeforeErase: string = "";
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -301,22 +303,23 @@ export class XDrawDataHolder {
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
 
-        const insertedElements = this.insertedElements.slice();
+        const insertedElementsSnapshot = this.insertedElements.slice();
         const activeLayer = this.layerManager.getActiveLayer();
         this.undoRedoHelper.pushOperationQueue({
             apply: () => {
-                activeLayer.elements.push(...this.insertedElements);
+                activeLayer.elements.push(...insertedElementsSnapshot);
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
                 // this.insertedElements = [];
             },
             revert: () => {
-                activeLayer.elements = activeLayer.elements.filter(el => !insertedElements.includes(el));
+                activeLayer.elements = activeLayer.elements.filter(el => !insertedElementsSnapshot.includes(el));
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
                 // this.insertedElements = insertedElements;
             },
         }, true, false);
+        this.insertedElements = [];
     }
 
     // Boya kovasi henuz XDrawData icin uygulanmadi.
@@ -347,13 +350,18 @@ export class XDrawDataHolder {
     // x, y ve radius dunya koordinatindadir.
     erasePathSegmentsAtPoint(x: number, y: number, radius: number): boolean {
         const activeLayer = this.layerManager.getActiveLayer();
+        if (!this.activeLayerSnapshotBeforeErase) {
+            this.activeLayerSnapshotBeforeErase = JSON.stringify(activeLayer.elements);
+        }
         const removalResult = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
         activeLayer.elements = removalResult.elements;
         if (removalResult.hasChanges) {
             this.rasterizer.invalidateContentBuffer();
             this.rasterizer.setProjectData(this.xdrawData);
         }
+
         return removalResult.hasChanges;
+
     }
 
     setCursorPosition(position: CursorPosition | undefined) {
@@ -376,5 +384,27 @@ export class XDrawDataHolder {
         // Katman yapisi (olusturma/silme/gorunurluk/opaklik) degisti; buffer artik gecersiz.
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.requestRender();
+    }
+
+    addUndoRedoForEraseWithSnapshot(activeLayerId: string) {
+        if (!this.activeLayerSnapshotBeforeErase) {
+            return;
+        }
+        const beforeEraseSnapshot = JSON.parse(this.activeLayerSnapshotBeforeErase);
+        const currentSnapshotAfterRemoval = this.layerManager.getLayer(activeLayerId)!.elements.slice();
+        this.undoRedoHelper.pushOperationQueue({
+            apply: async () => {
+                // Do nothing, changes are already applied
+                this.layerManager.getLayer(activeLayerId)!.elements = currentSnapshotAfterRemoval;
+                this.rasterizer.invalidateContentBuffer();
+                this.rasterizer.setProjectData(this.xdrawData);
+            },
+            revert: async () => {
+                this.layerManager.getLayer(activeLayerId)!.elements = beforeEraseSnapshot;
+                this.rasterizer.invalidateContentBuffer();
+                this.rasterizer.setProjectData(this.xdrawData);
+            },
+        }, true, false);
+        this.activeLayerSnapshotBeforeErase = "";
     }
 }

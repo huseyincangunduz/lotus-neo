@@ -139,6 +139,7 @@ export class CanvasDrawTools {
 
         if (isErasing || isMarking) {
             this.host.finishGestureHistoryCapture();
+            this.host.svgHolder.addUndoRedoForEraseWithSnapshot(this.host.svgHolder.getActiveLayerId());
         }
 
         this.host.smoothedPressure = null;

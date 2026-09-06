@@ -132,7 +132,6 @@ export class CanvasDraw extends NeolitComponent {
       {this.canvas}
     </div>
   );
-  svgHolder = new XDrawDataHolder();
 
   mode = state<"pointer" | "draw">("pointer");
   stylusModeEnabled = state(true);
@@ -149,8 +148,9 @@ export class CanvasDraw extends NeolitComponent {
   smoothedPressure: number | null = null;
   lastDrawPoint: { x: number; y: number } | null = null;
   lastErasePoint: { x: number; y: number } | null = null;
+  svgHolder = new XDrawDataHolder();
+  private undoRedoHelper = this.svgHolder.undoRedoHelper;
   private drawTools = new CanvasDrawTools(this);
-  private undoRedoHelper = new UndoRedoHelper();
   private gestureHistoryBeforeSnapshot: XDrawHistorySnapshot | null = null;
   // Kalem kalkinca hemen commit etmek yerine bekletiyoruz; bu sure icinde yeni bir
   // stroke baslarsa ayni undo adimina devam eder ve agir JSON islemleri hic calismaz.
@@ -869,14 +869,15 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   private commitGestureHistory(): void {
-    const before = this.gestureHistoryBeforeSnapshot;
-    if (!before) {
-      return;
-    }
-    this.gestureHistoryBeforeSnapshot = null;
-    const after = this.captureHistorySnapshot();
-    this.pushHistorySnapshotOperation(before, after);
     this.flushAutosave();
+    
+    // const before = this.gestureHistoryBeforeSnapshot;
+    // if (!before) {
+    //   return;
+    // }
+    // this.gestureHistoryBeforeSnapshot = null;
+    // const after = this.captureHistorySnapshot();
+    // this.pushHistorySnapshotOperation(before, after);
   }
 
   // Undo/redo veya sayfa kapanisi gibi anlarda bekleyen commit'i hemen tamamlar.

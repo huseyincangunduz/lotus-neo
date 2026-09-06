@@ -7,14 +7,12 @@ import {
   CanvasDraw,
   type IAppNativeController,
 } from "@libs/xdraw/components";
-import { provideClass, provideValue } from "@ubs-platform/neolit/injectables";
+import { provideValue } from "@ubs-platform/neolit/injectables";
 import {
   AsyncActionLazyloadHandler,
   EnvironmentController,
   TranslationRepository,
-  type TranslationPartAsync,
 } from "@ubs-platform/translator-core";
-import { Observable, of } from "rxjs";
 import { asset } from "@libs/asset";
 // import { CanvasDraw } from "./pages/canvas-draw";
 
