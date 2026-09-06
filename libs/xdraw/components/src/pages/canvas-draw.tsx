@@ -897,9 +897,6 @@ export class CanvasDraw extends NeolitComponent {
                 return this.undoRedoHelper.redo();
               }}
               flushAutosave={this.flushAutosave.bind(this)}
-              pushHistorySnapshotOperation={this.pushHistorySnapshotOperation.bind(
-                this,
-              )}
             ></CanvasDrawSidebar>
           </div>
         </div>

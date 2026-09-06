@@ -16,7 +16,6 @@ import { tr, Tr } from "@libs/ui/i18n";
 import {
   XDrawDataHolder,
   XDrawSettingsConfig,
-  type XDrawHistorySnapshot,
   ColorUtils,
 } from "@libs/xdraw/core";
 import {
@@ -44,10 +43,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
       notifyIncomingWhenSetState: true,
       subscribeIncomingWhenSetState: true,
     }),
-    pushHistorySnapshotOperation: (
-      old: XDrawHistorySnapshot,
-      newData: XDrawHistorySnapshot,
-    ) => {},
   };
   showColorPickerDialog = state(false);
   showPencilSettingsDialog = state(false);

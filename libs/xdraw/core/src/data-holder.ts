@@ -319,15 +319,23 @@ export class XDrawDataHolder {
         this.rasterizer.setProjectData(this.xdrawData);
 
         const insertedElementsSnapshot = this.insertedElements.slice();
-        const activeLayer = this.layerManager.getActiveLayer();
+        const activeLayerId = this.getActiveLayerId();
         this.undoRedoHelper.pushOperationQueue({
             apply: () => {
+                const activeLayer = this.layerManager.getLayer(activeLayerId)
+                if (!activeLayer) {
+                    return;
+                }
                 activeLayer.elements.push(...insertedElementsSnapshot);
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
                 // this.insertedElements = [];
             },
             revert: () => {
+                const activeLayer = this.layerManager.getLayer(activeLayerId)
+                if (!activeLayer) {
+                    return;
+                }
                 activeLayer.elements = activeLayer.elements.filter(el => !insertedElementsSnapshot.includes(el));
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);

@@ -18,7 +18,7 @@ export interface CanvasDrawToolHost {
 }
 
 export class CanvasDrawTools {
-    constructor(private host: CanvasDrawToolHost) {}
+    constructor(private host: CanvasDrawToolHost) { }
 
     shouldPanWithPointer(pointerType: string): boolean {
         return this.host.settings.mode.get() === "pointer" ||
@@ -139,9 +139,10 @@ export class CanvasDrawTools {
 
         if (isErasing || isMarking) {
             this.host.finishGestureHistoryCapture();
+        }
+        if (isErasing) {
             this.host.svgHolder.addUndoRedoForEraseWithSnapshot(this.host.svgHolder.getActiveLayerId());
         }
-
         this.host.smoothedPressure = null;
         this.host.lastDrawPoint = null;
         this.host.lastErasePoint = null;
