@@ -9,12 +9,14 @@ import type {
     XDrawDrawElement,
     XDrawElement,
     XDrawLayer,
+    XDrawTextElement,
 } from "./xdraw-data";
 import { XDRAW_MAX_POINTS_PER_ELEMENT } from "./xdraw-data";
 import { XdrawDataUtils } from "./xdraw-data-utils";
 import { ColorUtils } from "./color-utils";
 import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "./xdraw-binary-codec";
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
+import { CanvasDrawTools } from "./canvas-draw-tools";
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "./xdraw-data";
 
 export interface CursorPosition {
@@ -414,11 +416,11 @@ export class XDrawDataHolder {
             return;
         }
         const beforeEraseSnapshot = JSON.parse(this.activeLayerSnapshotBeforeErase);
-        const currentSnapshotAfterRemoval = this.layerManager.getLayer(activeLayerId)!.elements.slice();
+        const currentSnapshotAfterRemoval = JSON.stringify(this.layerManager.getLayer(activeLayerId)!.elements);
         this.undoRedoHelper.pushOperationQueue({
             apply: async () => {
                 // Do nothing, changes are already applied
-                this.layerManager.getLayer(activeLayerId)!.elements = currentSnapshotAfterRemoval;
+                this.layerManager.getLayer(activeLayerId)!.elements = JSON.parse(currentSnapshotAfterRemoval);
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
             },
@@ -430,4 +432,25 @@ export class XDrawDataHolder {
         }, true, false);
         this.activeLayerSnapshotBeforeErase = "";
     }
+
+    insertTextAtCanvasPoint(offsetX: number, offsetY: number, textPrompt: string, arg3: string) {
+        const activeLayer = this.layerManager.getActiveLayer();
+        if (!activeLayer) {
+            return;
+        }
+        activeLayer.elements.push({
+            id: XdrawDataUtils.generateUniqueId(),
+            type: "text",
+            fontFamily: "system-ui",
+            text: textPrompt,
+            partial: false,
+            color: arg3,
+            finalized: true,
+            fontSize: 16,
+            position: { x: offsetX, y: offsetY },
+        } as XDrawTextElement);
+        this.rasterizer.invalidateContentBuffer();
+        this.rasterizer.setProjectData(this.xdrawData);
+    }
+
 }

@@ -36,6 +36,10 @@ export class CanvasDrawTools {
         return this.host.settings.drawType.get() === "erase" && this.isDrawingPointer(pointerType);
     }
 
+    isTextPointer(): boolean {
+        return this.host.settings.mode.get() === "text";
+    }
+
     isMarkingPointer(pointerType: string): boolean {
         return this.host.settings.drawType.get() !== "erase" &&
             this.host.settings.drawType.get() !== "fill" &&
@@ -50,7 +54,15 @@ export class CanvasDrawTools {
         this.host.clickedCameraX.set(offsetX);
         this.host.clickedCameraY.set(offsetY);
         this.host.svgHolder.setInteractionMode("idle");
-
+        if (this.isTextPointer()) {
+            // this.host.svgHolder.setInteractionMode("text");
+            const textPrompt = prompt("Enter text:");
+            if (textPrompt) {
+                const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
+                this.host.svgHolder.insertTextAtCanvasPoint(point.x, point.y, textPrompt, this.host.settings.strokeColor.get());
+            }
+            return;
+        }
         if (this.shouldPanWithPointer(pointerType)) {
             this.host.svgHolder.setInteractionMode("pan");
             return;
@@ -84,6 +96,7 @@ export class CanvasDrawTools {
             this.host.lastErasePoint = point;
             return;
         }
+
 
         if (this.isMarkingPointer(pointerType)) {
             this.host.svgHolder.setInteractionMode("draw");

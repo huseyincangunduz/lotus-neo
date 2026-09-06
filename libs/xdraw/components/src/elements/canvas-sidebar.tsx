@@ -221,6 +221,25 @@ export class CanvasDrawSidebar extends NeolitComponent {
         ></Button>
         <Button
           variant={computed<ButtonVariant>(
+            [this.settings.mode],
+            ([mode]) =>
+              mode === "text"
+                ? "filled-primary"
+                : "ghost",
+          )}
+          onClick={() => {
+            if (
+              this.settings.mode.get() === "text"
+            ) {
+              this.showPencilSettingsDialog.set(true);
+              return;
+            }
+            this.settings.mode.set("text");
+          }}
+          icon={materialSymbolsOutlined("text_fields")}
+        ></Button>
+        <Button
+          variant={computed<ButtonVariant>(
             [this.settings.mode, this.settings.drawType],
             ([mode, drawType]) =>
               mode === "draw" && drawType === "erase"

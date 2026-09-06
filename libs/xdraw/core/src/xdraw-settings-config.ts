@@ -21,7 +21,7 @@ export const XDRAW_SETTING_KEYS = {
 } as const;
 
 type Theme = "light" | "dark";
-type Mode = "pointer" | "draw";
+type Mode = "pointer" | "draw" | "text";
 type DrawType = "pencil" | "line" | "rectangle" | "erase" | "fill";
 type ZoomDirection = 1 | -1;
 type BackgroundPatternMode = 0 | 1 | 2;
@@ -72,7 +72,7 @@ const persist = (key: string, value: unknown) => {
 // })
 export class XDrawSettingsConfig implements XDrawSettingsState {
   appTheme = state<Theme>(read(XDRAW_SETTING_KEYS.appTheme) === "dark" ? "dark" : "light");
-  mode = state<Mode>(read(XDRAW_SETTING_KEYS.mode) === "draw" ? "draw" : "pointer");
+  mode = state<Mode>(read(XDRAW_SETTING_KEYS.mode) === "draw" ? "draw" : read(XDRAW_SETTING_KEYS.mode) === "text" ? "text" : "pointer");
   drawType = state<DrawType>(read(XDRAW_SETTING_KEYS.drawType) as any || "pencil");
   strokeColor = state<string>(read(XDRAW_SETTING_KEYS.strokeColor) || "#000000");
   strokeAlpha = state<number>(readNumber(XDRAW_SETTING_KEYS.strokeAlpha, 0, 1) ?? 1);

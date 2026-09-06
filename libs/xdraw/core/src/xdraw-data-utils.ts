@@ -128,6 +128,24 @@ export class XdrawDataUtils {
         };
         for (let i = 0; i < elements.length; i++) {
             const element = elements[i];
+            if (element.type === "text") {
+                const textElement = element as XDrawTextElement;
+                if (textElement.position.x >= left && textElement.position.x <= right &&
+                    textElement.position.y >= top && textElement.position.y <= bottom) {
+                    if (onFound) {
+                        onFound({
+                            ...initialFoundElement,
+                            elementId: textElement.id,
+                            elementType: textElement.type,
+                            element: textElement,
+                            position: textElement.position,
+                            color: textElement.color,
+                            fontSize: textElement.fontSize,
+                            partial: false
+                        } as any as XDrawElementCropData);
+                    }
+                }
+            }
             if (element.type === "fill") {
                 const fillElement = element as XDrawFillElement;
                 let isVisible = false;

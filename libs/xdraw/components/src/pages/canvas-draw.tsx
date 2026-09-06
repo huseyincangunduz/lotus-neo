@@ -603,7 +603,6 @@ export class CanvasDraw extends NeolitComponent {
           ? Math.max(0, Math.min(1, event.pressure || 0))
           : null;
       const strokeWidth = this.drawTools.getStrokeWidthFromPressure(event);
-
       this.drawTools.startInteraction(
         pointer.x,
         pointer.y,
