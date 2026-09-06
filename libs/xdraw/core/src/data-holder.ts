@@ -137,8 +137,24 @@ export class XDrawDataHolder {
         return deleted;
     }
 
-    setLayerOpacity(layerId: string, opacity: number): void {
-        const oldOpacity = this.layerManager.getLayer(layerId)?.opacity ?? 1;
+    // Surukleme sirasinda (onChange) her tik icin cagrilir; undo yigina hicbir sey eklemez.
+    // Boylece slider surukleme tek bir undo adimi yerine yuzlerce adima bolunmuyor.
+    setLayerOpacityLive(layerId: string, opacity: number): void {
+        this.layerManager.setLayerOpacity(layerId, opacity);
+        this.syncLayersState();
+    }
+
+    // Surukleme bittiginde (onChangeEnd) tek seferlik commit. previousOpacity verilmezse
+    // mevcut deger baz alinir; live guncellemelerden sonra cagrildigi icin caller surukleme
+    // basindaki gercek eski degeri previousOpacity olarak vermeli, aksi halde undo sadece
+    // son live tike doner.
+    setLayerOpacity(layerId: string, opacity: number, previousOpacity?: number): void {
+        const oldOpacity = previousOpacity ?? (this.layerManager.getLayer(layerId)?.opacity ?? 1);
+        if (oldOpacity === opacity) {
+            return;
+        }
+        this.layerManager.setLayerOpacity(layerId, opacity);
+        this.syncLayersState();
         this.undoRedoHelper.pushOperationQueue({
             apply: () => {
                 this.layerManager.setLayerOpacity(layerId, opacity);
@@ -148,8 +164,7 @@ export class XDrawDataHolder {
                 this.layerManager.setLayerOpacity(layerId, oldOpacity);
                 this.syncLayersState();
             }
-        }, true, true);
-        // this.layerManager.setLayerOpacity(layerId, opacity);
+        }, true, false);
     }
 
     setLayerVisible(layerId: string, visible: boolean): void {

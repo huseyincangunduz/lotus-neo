@@ -151,7 +151,7 @@ export class CanvasDraw extends NeolitComponent {
   svgHolder = new XDrawDataHolder();
   private undoRedoHelper = this.svgHolder.undoRedoHelper;
   private drawTools = new CanvasDrawTools(this);
-  private gestureHistoryBeforeSnapshot: XDrawHistorySnapshot | null = null;
+
   // Kalem kalkinca hemen commit etmek yerine bekletiyoruz; bu sure icinde yeni bir
   // stroke baslarsa ayni undo adimina devam eder ve agir JSON islemleri hic calismaz.
   private gestureFinalizeTimerId: number | null = null;
@@ -848,17 +848,9 @@ export class CanvasDraw extends NeolitComponent {
       window.clearTimeout(this.gestureFinalizeTimerId);
       this.gestureFinalizeTimerId = null;
     }
-    if (this.gestureHistoryBeforeSnapshot) {
-      return;
-    }
-    this.gestureHistoryBeforeSnapshot = this.captureHistorySnapshot();
   }
 
   finishGestureHistoryCapture(): void {
-    if (!this.gestureHistoryBeforeSnapshot) {
-      return;
-    }
-
     if (this.gestureFinalizeTimerId !== null) {
       window.clearTimeout(this.gestureFinalizeTimerId);
     }
@@ -868,16 +860,10 @@ export class CanvasDraw extends NeolitComponent {
     }, CanvasDraw.GESTURE_FINALIZE_DELAY_MS);
   }
 
+  // Draw/erase icin undo adimlari data-holder icinde aksiyon bazli zaten ekleniyor;
+  // burada sadece autosave'i gesture bitince flushluyoruz.
   private commitGestureHistory(): void {
     this.flushAutosave();
-    
-    // const before = this.gestureHistoryBeforeSnapshot;
-    // if (!before) {
-    //   return;
-    // }
-    // this.gestureHistoryBeforeSnapshot = null;
-    // const after = this.captureHistorySnapshot();
-    // this.pushHistorySnapshotOperation(before, after);
   }
 
   // Undo/redo veya sayfa kapanisi gibi anlarda bekleyen commit'i hemen tamamlar.

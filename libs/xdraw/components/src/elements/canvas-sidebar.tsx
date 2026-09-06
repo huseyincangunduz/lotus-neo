@@ -66,6 +66,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
     ([recentColors]) => recentColors.slice(0, 3),
   );
   private colorDialogLastCommittedColor: string | null = null;
+  // Opacity slider surukleme basindaki gercek deger; onChangeEnd'de tek undo adimi icin kullanilir.
+  private opacityDragBeforeValue: number | null = null;
 
   private readonly colorPresets = [
     "#000000",
@@ -718,11 +720,10 @@ export class CanvasDrawSidebar extends NeolitComponent {
                             alert(tr("xdraw.layer.delete-base").get());
                             return;
                           }
-                          this.runMutationWithHistory(() => {
-                            this.properties.xdrawDataHolder
-                              .get()
-                              .deleteLayer(layer.id);
-                          });
+                          // deleteLayer kendi undo adimini zaten data-holder icinde ekliyor.
+                          this.properties.xdrawDataHolder
+                            .get()
+                            .deleteLayer(layer.id);
                         }}
                       ></Button>
                     )}
@@ -731,9 +732,10 @@ export class CanvasDrawSidebar extends NeolitComponent {
             </div>
             <Button
               style={{ width: "100%" }}
-              onClick={this.runMutationWithHistory.bind(this, () => {
+              onClick={() => {
+                // createLayer kendi undo adimini zaten data-holder icinde ekliyor.
                 this.xdrawHolder?.createLayer();
-              })}
+              }}
               label={tr("xdraw.layer.new")}
               icon={materialSymbolsOutlined("add")}
               variant={"outline-primary"}
@@ -756,19 +758,27 @@ export class CanvasDrawSidebar extends NeolitComponent {
               const activeLayerId = this.properties.xdrawDataHolder
                 .get()
                 .getActiveLayerId();
+              if (this.opacityDragBeforeValue === null) {
+                this.opacityDragBeforeValue = this.properties.xdrawDataHolder
+                  .get()
+                  .getActiveLayerOpacity() as number;
+              }
+              // Surukleme sirasinda undo yigina hicbir sey eklenmez, sadece canli onizleme.
               this.properties.xdrawDataHolder
                 .get()
-                .setLayerOpacity(activeLayerId, value);
+                .setLayerOpacityLive(activeLayerId, value);
             }}
             onChangeEnd={(value: number) => {
               const activeLayerId = this.properties.xdrawDataHolder
                 .get()
                 .getActiveLayerId();
-              this.runMutationWithHistory(() => {
-                this.properties.xdrawDataHolder
-                  .get()
-                  .setLayerOpacity(activeLayerId, value);
-              });
+              const beforeValue = this.opacityDragBeforeValue ?? value;
+              this.opacityDragBeforeValue = null;
+              // Tek undo adimi: surukleme basindaki deger -> son deger.
+              this.properties.xdrawDataHolder
+                .get()
+                .setLayerOpacity(activeLayerId, value, beforeValue);
+              this.flushAutosave();
             }}
           ></Trackbar>
         </WebDialog>
@@ -780,29 +790,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
     this.menuDialog.set(false);
   }
 
-  private runMutationWithHistory(mutate: () => void): void {
-    const before = this.captureHistorySnapshot();
-    mutate();
-    const after = this.captureHistorySnapshot();
-    this.pushHistorySnapshotOperation(before, after);
-    this.flushAutosave();
-  }
-
   flushAutosave(): void {
     this.properties.flushAutosave();
-  }
-
-  captureHistorySnapshot(): XDrawHistorySnapshot {
-    if (!this.xdrawHolder) {
-      throw new Error("SVG holder is not initialized.");
-    }
-    return this.xdrawHolder.captureUndoSnapshot();
-  }
-
-  pushHistorySnapshotOperation(
-    before: XDrawHistorySnapshot,
-    after: XDrawHistorySnapshot,
-  ): void {
-    this.properties.pushHistorySnapshotOperation(before, after);
   }
 }
