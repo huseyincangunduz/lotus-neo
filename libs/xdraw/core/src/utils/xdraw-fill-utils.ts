@@ -1,4 +1,4 @@
-import type { XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint } from "./xdraw-data";
+import type { XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint } from "../model/xdraw-data";
 
 export class XdrawFillUtils {
     private static readonly FILL_MASK_ALPHA_THRESHOLD = 16;

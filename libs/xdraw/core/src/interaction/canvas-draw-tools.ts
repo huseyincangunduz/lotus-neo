@@ -1,8 +1,5 @@
-import { inject } from "@ubs-platform/neolit/injectables";
-import { WebdialogOverlayService } from "@libs/ui/webdialog";
-import type { XDrawDataHolder, XDrawHistorySnapshot } from "./data-holder";
-import type { XDrawSettingsConfig } from "./xdraw-settings-config";
-import { tr } from "@libs/ui/i18n";
+import type { XDrawDataHolder, XDrawHistorySnapshot } from "../state/data-holder";
+import type { XDrawSettingsConfig } from "../settings/xdraw-settings-config";
 
 export interface CanvasDrawToolHost {
     svgHolder: XDrawDataHolder;
@@ -18,10 +15,11 @@ export interface CanvasDrawToolHost {
     pushHistorySnapshotOperation(before: XDrawHistorySnapshot, after: XDrawHistorySnapshot): void;
     beginGestureHistoryCapture(): void;
     finishGestureHistoryCapture(): void;
+    // UI concern (dialog/prompt) belongs to the host, not to this generic tool.
+    promptForTextAt(offsetX: number, offsetY: number): void;
 }
 
 export class CanvasDrawTools {
-    readonly wdService = inject(WebdialogOverlayService);
     constructor(private host: CanvasDrawToolHost) { }
 
     shouldPanWithPointer(pointerType: string): boolean {
@@ -59,28 +57,7 @@ export class CanvasDrawTools {
         this.host.clickedCameraY.set(offsetY);
         this.host.svgHolder.setInteractionMode("idle");
         if (this.isTextPointer()) {
-            // this.host.svgHolder.setInteractionMode("text");
-            this.wdService.showTextPrompt(
-                tr("xdraw.enter-text"),
-                tr("xdraw.enter-text-prompt"),
-                "",
-                (closeValue) => {
-                    if (closeValue) {
-                        const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-                        this.host.svgHolder.insertTextAtCanvasPoint(
-                            point.x,
-                            point.y,
-                            closeValue,
-                            this.host.settings.strokeColor.get(),
-                            {
-                                fontFamily: this.host.settings.textFontFamily.get(),
-                                fontSize: this.host.settings.textFontSize.get(),
-                                fontWeight: this.host.settings.textBold.get() ? "bold" : "normal",
-                            },
-                        );
-                    }
-                }
-            );
+            this.host.promptForTextAt(offsetX, offsetY);
             return;
         }
         if (this.shouldPanWithPointer(pointerType)) {

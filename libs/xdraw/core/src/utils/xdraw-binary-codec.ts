@@ -6,7 +6,7 @@ import type {
     XDrawFillElement,
     XDrawLayer,
     XDrawPoint,
-} from "./xdraw-data";
+} from "../model/xdraw-data";
 
 // Undo/redo yigininin en agir kismi points/rings dizileridir. Bunlari JSON metni
 // yerine dogrudan Float32Array'e yaziyoruz: stringify/parse'daki sayi<->metin

@@ -1,4 +1,4 @@
-import type { XDrawData, XDrawLayer } from "./xdraw-data";
+import type { XDrawData, XDrawLayer } from "../model/xdraw-data";
 
 export interface XDrawLayerOptions {
     opacity?: number;

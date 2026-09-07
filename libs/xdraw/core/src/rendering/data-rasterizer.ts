@@ -1,6 +1,6 @@
-import { ColorUtils } from "./color-utils";
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "./xdraw-data";
-import { XdrawDataUtils } from "./xdraw-data-utils";
+import { ColorUtils } from "../utils/color-utils";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawPoint, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
+import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 // Bir cizgi elemani, kalinlik degistigi her yerde yeni bir Path2D'ye bolunur.
 interface DrawPathSegment {
     path: Path2D;

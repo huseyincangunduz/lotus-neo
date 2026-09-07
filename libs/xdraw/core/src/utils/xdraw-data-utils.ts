@@ -1,4 +1,4 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "./xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 
 export interface XDrawElementCropData {

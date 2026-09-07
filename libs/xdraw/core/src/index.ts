@@ -1,11 +1,25 @@
-export * from "./data-holder";
-export * from "./data-rasterizer";
-export * from "./xdraw-data-utils";
-export * from "./xdraw-data";
-export * from "./xdraw-autosave-config";
-export * from "./layer-manager";
-export * from "./xdraw-settings-config"
-export * from "./color-utils";
-export * from "./canvas-draw-tools";
-export * from "./canvas-gesture-listeners";
-export * from "./xdraw-binary-codec";
+// Domain model (plain types, no dependencies)
+export * from "./model/xdraw-data";
+
+// Pure algorithms operating on the domain model
+export * from "./utils/color-utils";
+export * from "./utils/xdraw-fill-utils";
+export * from "./utils/xdraw-data-utils";
+export * from "./utils/xdraw-binary-codec";
+
+// Project state (layers, undo/redo, active document)
+export * from "./state/layer-manager";
+export * from "./state/data-holder";
+
+// Canvas rendering
+export * from "./rendering/data-rasterizer";
+
+// Pointer/keyboard interaction handling
+export * from "./interaction/canvas-gesture-listeners";
+export * from "./interaction/canvas-draw-tools";
+
+// User-configurable settings
+export * from "./settings/xdraw-settings-config";
+
+// Local persistence (autosave)
+export * from "./persistence/xdraw-autosave-config";

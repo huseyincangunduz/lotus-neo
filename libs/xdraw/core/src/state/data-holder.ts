@@ -1,6 +1,6 @@
 import { state, type State, type StateOrPlain } from "@ubs-platform/neolit/core";
 import { LayerManager } from "./layer-manager";
-import { ProjectDataRasterizer } from "./data-rasterizer";
+import { ProjectDataRasterizer } from "../rendering/data-rasterizer";
 import type {
     InteractionMode,
     RenderStats,
@@ -10,14 +10,13 @@ import type {
     XDrawElement,
     XDrawLayer,
     XDrawTextElement,
-} from "./xdraw-data";
-import { XDRAW_MAX_POINTS_PER_ELEMENT } from "./xdraw-data";
-import { XdrawDataUtils } from "./xdraw-data-utils";
-import { ColorUtils } from "./color-utils";
-import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "./xdraw-binary-codec";
+} from "../model/xdraw-data";
+import { XDRAW_MAX_POINTS_PER_ELEMENT } from "../model/xdraw-data";
+import { XdrawDataUtils } from "../utils/xdraw-data-utils";
+import { ColorUtils } from "../utils/color-utils";
+import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "../utils/xdraw-binary-codec";
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
-import { CanvasDrawTools } from "./canvas-draw-tools";
-export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "./xdraw-data";
+export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "../model/xdraw-data";
 
 export interface CursorPosition {
     x: number;

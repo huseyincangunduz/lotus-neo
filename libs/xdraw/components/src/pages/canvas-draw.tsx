@@ -587,6 +587,30 @@ export class CanvasDraw extends NeolitComponent {
     };
   }
 
+  promptForTextAt(offsetX: number, offsetY: number): void {
+    this.wdService.showTextPrompt(
+      tr("xdraw.enter-text"),
+      tr("xdraw.enter-text-prompt"),
+      "",
+      (closeValue) => {
+        if (closeValue) {
+          const point = this.getCanvasPointInViewBox(offsetX, offsetY);
+          this.svgHolder.insertTextAtCanvasPoint(
+            point.x,
+            point.y,
+            closeValue,
+            this.settings.strokeColor.get(),
+            {
+              fontFamily: this.settings.textFontFamily.get(),
+              fontSize: this.settings.textFontSize.get(),
+              fontWeight: this.settings.textBold.get() ? "bold" : "normal",
+            },
+          );
+        }
+      },
+    );
+  }
+
   onPointerDown(event: PointerEvent): void {
     // SAMSUNG SPEN DESTEKLEMİYOR...
     // alert(event.pointerType + " " + event.button);
