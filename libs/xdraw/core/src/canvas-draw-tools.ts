@@ -67,7 +67,17 @@ export class CanvasDrawTools {
                 (closeValue) => {
                     if (closeValue) {
                         const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-                        this.host.svgHolder.insertTextAtCanvasPoint(point.x, point.y, closeValue, this.host.settings.strokeColor.get());
+                        this.host.svgHolder.insertTextAtCanvasPoint(
+                            point.x,
+                            point.y,
+                            closeValue,
+                            this.host.settings.strokeColor.get(),
+                            {
+                                fontFamily: this.host.settings.textFontFamily.get(),
+                                fontSize: this.host.settings.textFontSize.get(),
+                                fontWeight: this.host.settings.textBold.get() ? "bold" : "normal",
+                            },
+                        );
                     }
                 }
             );

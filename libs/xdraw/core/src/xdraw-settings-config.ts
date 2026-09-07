@@ -18,6 +18,9 @@ export const XDRAW_SETTING_KEYS = {
   scaleToolSizesWithZoom: "xdraw.settings.scaleToolSizesWithZoom",
   autosaveSnapshot: "xdraw.settings.autosaveSnapshot",
   backgroundPatternMode: "xdraw.settings.backgroundPatternMode",
+  textFontFamily: "xdraw.settings.textFontFamily",
+  textFontSize: "xdraw.settings.textFontSize",
+  textBold: "xdraw.settings.textBold",
 } as const;
 
 type Theme = "light" | "dark";
@@ -42,6 +45,9 @@ interface XDrawSettingsState {
   zoomDirection: StateOrPlain<ZoomDirection>;
   scaleToolSizesWithZoom: StateOrPlain<boolean>;
   backgroundPatternMode: StateOrPlain<BackgroundPatternMode>;
+  textFontFamily: StateOrPlain<string>;
+  textFontSize: StateOrPlain<number>;
+  textBold: StateOrPlain<boolean>;
 }
 
 
@@ -86,6 +92,9 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
   zoomDirection = state<ZoomDirection>(readNumber(XDRAW_SETTING_KEYS.zoomDirection, -1, 1) === -1 ? -1 : 1);
   scaleToolSizesWithZoom = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.scaleToolSizesWithZoom) ?? true);
   backgroundPatternMode = state<BackgroundPatternMode>(readNumber(XDRAW_SETTING_KEYS.backgroundPatternMode, 0, 2) as any ?? 0);
+  textFontFamily = state<string>(read(XDRAW_SETTING_KEYS.textFontFamily) || "system-ui");
+  textFontSize = state<number>(readNumber(XDRAW_SETTING_KEYS.textFontSize, 8, 120) ?? 16);
+  textBold = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.textBold) ?? false);
 
   constructor(params: XDrawSettingsConfigParams) {
     this.appTheme.subscribe((value) => persist(XDRAW_SETTING_KEYS.appTheme, value));
@@ -110,6 +119,9 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
       persist(XDRAW_SETTING_KEYS.backgroundPatternMode, value);
       params.onBackgroundPatternRestored();
     });
+    this.textFontFamily.subscribe((value) => persist(XDRAW_SETTING_KEYS.textFontFamily, value));
+    this.textFontSize.subscribe((value) => persist(XDRAW_SETTING_KEYS.textFontSize, value));
+    this.textBold.subscribe((value) => persist(XDRAW_SETTING_KEYS.textBold, value));
   }
 
 }

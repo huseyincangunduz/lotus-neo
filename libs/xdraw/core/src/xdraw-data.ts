@@ -70,6 +70,7 @@ export interface XDrawTextElement extends XDrawElement {
     position: XDrawElementPosition;
     fontSize: number;
     fontFamily: string;
+    fontWeight?: "normal" | "bold";
     color: string;
     finalized?: boolean;
 }

@@ -655,7 +655,7 @@ export class ProjectDataRasterizer {
         const color = ColorUtils.regularizeToHexColor(textElement.color) || textElement.color;
         context.fillStyle = color;
         context.lineWidth = 1;
-        context.font = `${textElement.fontSize}px ${textElement.fontFamily || "sans-serif"}`;
+        context.font = `${textElement.fontWeight || "normal"} ${textElement.fontSize}px ${textElement.fontFamily || "sans-serif"}`;
         context.textBaseline = "top";
         context.fillText(textElement.text, textElement.position.x, textElement.position.y);
     }

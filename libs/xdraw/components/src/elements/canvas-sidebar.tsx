@@ -46,6 +46,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
   };
   showColorPickerDialog = state(false);
   showPencilSettingsDialog = state(false);
+  showTextSettingsDialog = state(false);
   showSizeSelectorDialog = state(false);
   menuDialog = state(false);
   layerSettingsDialog = state(false);
@@ -231,7 +232,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             if (
               this.settings.mode.get() === "text"
             ) {
-              this.showPencilSettingsDialog.set(true);
+              this.showTextSettingsDialog.set(true);
               return;
             }
             this.settings.mode.set("text");
@@ -536,6 +537,44 @@ export class CanvasDrawSidebar extends NeolitComponent {
             onChange={(checked: boolean) => {
               this.settings.zoomDirection.set(checked ? -1 : 1);
             }}
+          ></Checkbox>
+        </WebDialog>
+
+        <WebDialog
+          show={this.showTextSettingsDialog}
+          mode="popover"
+          anchorSelector="#toolbar"
+          placement="right"
+          width="280px"
+          displayHeader={false}
+          displayCloseButton={false}
+        >
+          <h2>{tr("xdraw.text.settings")}</h2>
+          <label className="flex flex-col gap-1 text-sm font-medium text-(--color-fg) opacity-80">
+            {tr("xdraw.text.font-family")}
+            <select
+              className="w-full rounded-md border border-(--color-border) bg-(--color-surface-1) px-2 py-2 text-(--color-fg)"
+              value={this.settings.textFontFamily}
+              onChange={(event: Event) => {
+                this.settings.textFontFamily.set((event.target as HTMLSelectElement).value);
+              }}
+            >
+              <option value="system-ui">System UI</option>
+              <option value="Arial">Arial</option>
+              <option value="Georgia">Georgia</option>
+              <option value="monospace">Monospace</option>
+            </select>
+          </label>
+          <Trackbar
+            label={tr("xdraw.text.font-size")}
+            min={8}
+            max={120}
+            step={1}
+            value={this.settings.textFontSize}
+          ></Trackbar>
+          <Checkbox
+            label={tr("xdraw.text.bold")}
+            checked={this.settings.textBold}
           ></Checkbox>
         </WebDialog>
 

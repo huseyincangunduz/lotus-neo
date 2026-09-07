@@ -433,7 +433,13 @@ export class XDrawDataHolder {
         this.activeLayerSnapshotBeforeErase = "";
     }
 
-    insertTextAtCanvasPoint(offsetX: number, offsetY: number, textPrompt: string, arg3: string) {
+    insertTextAtCanvasPoint(
+        offsetX: number,
+        offsetY: number,
+        textPrompt: string,
+        color: string,
+        options?: { fontFamily?: string; fontSize?: number; fontWeight?: "normal" | "bold" },
+    ) {
         const activeLayer = this.layerManager.getActiveLayer();
         if (!activeLayer) {
             return;
@@ -441,12 +447,13 @@ export class XDrawDataHolder {
         activeLayer.elements.push({
             id: XdrawDataUtils.generateUniqueId(),
             type: "text",
-            fontFamily: "system-ui",
+            fontFamily: options?.fontFamily || "system-ui",
             text: textPrompt,
             partial: false,
-            color: arg3,
+            color,
             finalized: true,
-            fontSize: 16,
+            fontSize: options?.fontSize || 16,
+            fontWeight: options?.fontWeight || "normal",
             position: { x: offsetX, y: offsetY },
         } as XDrawTextElement);
         this.rasterizer.invalidateContentBuffer();
