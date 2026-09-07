@@ -1,5 +1,8 @@
+import { inject } from "@ubs-platform/neolit/injectables";
+import { WebdialogOverlayService } from "@libs/ui/webdialog";
 import type { XDrawDataHolder, XDrawHistorySnapshot } from "./data-holder";
 import type { XDrawSettingsConfig } from "./xdraw-settings-config";
+import { tr } from "@libs/ui/i18n";
 
 export interface CanvasDrawToolHost {
     svgHolder: XDrawDataHolder;
@@ -18,6 +21,7 @@ export interface CanvasDrawToolHost {
 }
 
 export class CanvasDrawTools {
+    readonly wdService = inject(WebdialogOverlayService);
     constructor(private host: CanvasDrawToolHost) { }
 
     shouldPanWithPointer(pointerType: string): boolean {
@@ -56,11 +60,17 @@ export class CanvasDrawTools {
         this.host.svgHolder.setInteractionMode("idle");
         if (this.isTextPointer()) {
             // this.host.svgHolder.setInteractionMode("text");
-            const textPrompt = prompt("Enter text:");
-            if (textPrompt) {
-                const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-                this.host.svgHolder.insertTextAtCanvasPoint(point.x, point.y, textPrompt, this.host.settings.strokeColor.get());
-            }
+            this.wdService.showTextPrompt(
+                tr("xdraw.enter-text"),
+                tr("xdraw.enter-text-prompt"),
+                "",
+                (closeValue) => {
+                    if (closeValue) {
+                        const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
+                        this.host.svgHolder.insertTextAtCanvasPoint(point.x, point.y, closeValue, this.host.settings.strokeColor.get());
+                    }
+                }
+            );
             return;
         }
         if (this.shouldPanWithPointer(pointerType)) {

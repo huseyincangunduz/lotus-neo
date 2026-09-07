@@ -1,70 +1,33 @@
-import {
-  NeolitComponent,
-  State,
-  type NeolitNode,
-  type StateOrPlain,
-} from "@ubs-platform/neolit/core";
+import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
+import { WebdialogOverlayService } from "./wd-overlay.service";
+import type { WebDialogConfig } from "./wd-overlay.service";
 import { WebDialog } from "./_index";
-import { fromState } from "@ubs-platform/neolit/structural";
-import { Button } from "@libs/ui/button";
-
-export interface WebDialogConfig {
-  title: StateOrPlain<string>;
-  children: (
-    closeDialog: (closeValue: any) => void,
-  ) => NeolitNode | NeolitNode[] | NeolitComponent | HTMLElement;
-  onClose?: (closeValue: any) => void;
-}
+import { inject } from "@ubs-platform/neolit/injectables";
 
 export interface WebDialogContainerProperties {
   dialogs: WebDialogConfig[];
 }
 
-export class WebDialogContainer extends NeolitComponent {
-  properties: WebDialogContainerProperties = {
-    dialogs: [
-      {
-        title: "Default Title",
-        onClose: (closeValue) => {
-          console.log("Dialog closed with value:", closeValue);
-        },
-        children: (closeDialog) => (
-          <div>
-            Default Content
-            <Button
-              onClick={() => {
-                this.addDialogToStack({
-                  title: "New Title",
-                  children: (closeDialog) => (
-                    <div>
-                      New Content
-                      <Button
-                        onClick={() => closeDialog("lala")}
-                        label={"Close"}
-                      ></Button>
-                    </div>
-                  ),
-                });
-              }}
-              label={"Click Me"}
-            ></Button>
-          </div>
-        ),
-      },
-    ],
-  };
+type DialogStackItem = {
+  dialogConfig: WebDialogConfig;
+  dialogId: number;
+  dialogDom: NeolitNode | NeolitNode[] | NeolitComponent | HTMLElement;
+};
 
-  dialogStack = [
-    ...this.properties.dialogs.map((dialog, index) => ({
-      dialogId: index,
-      dialogConfig: dialog,
-      dialogDom: (
-        <WebDialog displayHeader={true} title={dialog.title} show={true}>
-          {dialog.children(() => this.closeDialog(dialog)) as any}
-        </WebDialog>
-      ),
-    })),
-  ];
+export class WebDialogContainer extends NeolitComponent {
+  readonly webDialogOverlayService = inject<WebdialogOverlayService>(
+    WebdialogOverlayService,
+  );
+
+  dialogStack: DialogStackItem[] = [];
+
+  onInit(): void {
+    this.webDialogOverlayService.listenDialogConfig((dialogConfig) => {
+      if (dialogConfig) {
+        this.addDialogToStack(dialogConfig);
+      }
+    });
+  }
 
   addDialogToStack(dialog: WebDialogConfig) {
     const addMask = this.dialogStack.length === 0;
@@ -78,7 +41,11 @@ export class WebDialogContainer extends NeolitComponent {
           show={true}
           showMask={addMask}
         >
-          {dialog.children(() => this.closeDialog(dialog)) as any}
+          {
+            dialog.children((closeValue) =>
+              this.closeDialog(dialog, closeValue),
+            ) as any
+          }
         </WebDialog>
       ),
     });
@@ -86,10 +53,11 @@ export class WebDialogContainer extends NeolitComponent {
     this.rerender();
   }
 
-  closeDialog(dialog: WebDialogConfig) {
+  closeDialog(dialog: WebDialogConfig, closeValue?: any) {
     const index = this.dialogStack.findIndex((d) => d.dialogConfig == dialog);
     if (index !== -1) {
-      this.dialogStack.splice(index, 1);
+      this.dialogStack[index].dialogConfig.onClose?.(closeValue);
+      this.dialogStack = this.dialogStack.slice(0, index).concat(this.dialogStack.slice(index + 1));
       this.rerender();
     }
   }

@@ -27,6 +27,8 @@ import {
 } from "../app-native-controller";
 import { Button } from "@libs/ui/button";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
+import { WebdialogOverlayService } from "@libs/ui/webdialog";
+import { tr } from "@libs/ui/i18n";
 import "./canvas-draw.css";
 
 interface AutosavePayload {
@@ -58,6 +60,7 @@ export class CanvasDraw extends NeolitComponent {
   // appTheme = state<"light" | "dark">("light");
   settings = inject(XDrawSettingsConfig);
   appController = inject<IAppNativeController>(APP_NATIVE_CONTROLLER_TOKEN);
+  wdService = inject(WebdialogOverlayService);
 
   viewPort = computed(
     [this.worldX, this.worldY, this.zoomFactor],
@@ -336,7 +339,10 @@ export class CanvasDraw extends NeolitComponent {
       await this.importProjectContent(content);
     } catch (error) {
       console.error("Dosya acilamadi:", error);
-      alert("Dosya acilamadi. Lutfen gecerli bir XDraw dosyasi secin.");
+      this.wdService.showAlertDialog(
+        tr("general.error"),
+        tr("xdraw.file-open-error"),
+      );
     }
   }
 
@@ -383,27 +389,31 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   generateNew() {
-    const confirmed = confirm(
-      "Yeni bir proje oluşturmak istediğinize emin misiniz?",
+    this.wdService.showApproveDialog(
+      tr("general.confirm"),
+      tr("xdraw.new-project-confirm"),
+      (confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        // this.properties.generateNew();
+        this.svgHolder.restoreDrawingSnapshot({
+          data: {
+            layers: [
+              {
+                type: "layer",
+                opacity: 1,
+                visible: true,
+                id: "base",
+                elements: [],
+              },
+            ],
+          },
+          activeLayerId: "base",
+        });
+        this.undoRedoHelper.reset();
+      },
     );
-    if (confirmed) {
-      // this.properties.generateNew();
-      this.svgHolder.restoreDrawingSnapshot({
-        data: {
-          layers: [
-            {
-              type: "layer",
-              opacity: 1,
-              visible: true,
-              id: "base",
-              elements: [],
-            },
-          ],
-        },
-        activeLayerId: "base",
-      });
-      this.undoRedoHelper.reset();
-    }
   }
 
   onInit(): void {

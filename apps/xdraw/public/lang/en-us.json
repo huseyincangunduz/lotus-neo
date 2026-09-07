@@ -48,6 +48,8 @@
       "draw.scale-tool-sizes-with-zoom": "Scale tool sizes with zoom",
       "draw.pen-pressure-smoothing": "Pen Pressure Smoothing",
       "draw.invert-zoom-direction": "Invert Zoom Direction",
+      "new-project-confirm": "Are you sure you want to create a new project?",
+      "file-open-error": "The file could not be opened. Please select a valid XDraw file.",
       "erase": "Erase",
       "select": "Select",
       "move": "Move",
@@ -84,8 +86,9 @@
       "about.description": "XDraw is a web-based drawing application. You can easily create, edit, and share your drawings.",
       "about.version": "Version: {version}",
       "about.author": "Author: {author}",
-      "about.copyright": "Copyright © {year} {author}.\nAll rights reserved."
-
+      "about.copyright": "Copyright © {year} {author}.\nAll rights reserved.",
+      "enter-text": "Enter Text",
+      "enter-text-prompt": "Please enter the text you want to add."
     }
   }
 ]

@@ -48,6 +48,8 @@
       "draw.scale-tool-sizes-with-zoom": "Zoom ile fırça ve silgi boyutunu ölçeklendir",
       "draw.pen-pressure-smoothing": "Kalem Basınç Yumuşatma",
       "draw.invert-zoom-direction": "Zoom yönünü ters çevir",
+      "new-project-confirm": "Yeni bir proje oluşturmak istediğinize emin misiniz?",
+      "file-open-error": "Dosya açılamadı. Lütfen geçerli bir XDraw dosyası seçin.",
       "erase": "Silgi",
       "select": "Seçim",
       "move": "Taşı",
@@ -84,8 +86,9 @@
       "about.description": "XDraw, web tabanlı bir çizim uygulamasıdır. Çizimlerinizi kolayca oluşturabilir, düzenleyebilir ve paylaşabilirsiniz.",
       "about.version": "Sürüm: {version}",
       "about.author": "Yazar: {author}",
-      "about.copyright": "Telif Hakkı © {year} {author}.\nTüm hakları saklıdır."
-
+      "about.copyright": "Telif Hakkı © {year} {author}.\nTüm hakları saklıdır.",
+      "enter-text": "Metin Girin",
+      "enter-text-prompt": "Lütfen eklemek istediğiniz metni girin"
     }
   }
 ]
