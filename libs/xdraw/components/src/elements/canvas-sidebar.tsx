@@ -697,7 +697,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             <div className="flex flex-col gap-1">
               {fromState(this.layersState)
                 .keyFn((a) => a.id)
-                .renderForLegacy((layer) => (
+                .renderFor((layer) => (
                   <div className="flex flex-row gap-1 items-center">
                     <Button
                       style={{ width: "100%" }}
