@@ -10,7 +10,7 @@ import { Button } from "@libs/ui/button";
 
 export interface WebDialogConfig {
   title: StateOrPlain<string>;
-  children: () => NeolitNode | NeolitNode[] | NeolitComponent | HTMLElement;
+  children: NeolitNode | NeolitNode[] | NeolitComponent | HTMLElement;
 }
 
 export interface WebDialogContainerProperties {
@@ -22,20 +22,19 @@ export class WebDialogContainer extends NeolitComponent {
     dialogs: [
       {
         title: "Default Title",
-        children: () => (
+        children: 
           <div>
             Default Content
             <Button
               onClick={() => {
                 this.addDialogToStack({
                   title: "New Title",
-                  children: () => <div>New Content</div>,
+                  children: <div>New Content</div>,
                 });
               }}
               label={"Click Me"}
             ></Button>
           </div>
-        ),
       },
     ],
   };
@@ -43,7 +42,7 @@ export class WebDialogContainer extends NeolitComponent {
   dialogStack = [
     ...this.properties.dialogs.map((dialog) => (
       <WebDialog displayHeader={true} title={dialog.title} show={true}>
-        {dialog.children() as any}
+        {dialog.children as any}
       </WebDialog>
     )),
   ];
@@ -52,7 +51,7 @@ export class WebDialogContainer extends NeolitComponent {
     const addMask = this.dialogStack.length === 0;
     this.dialogStack.push(
       <WebDialog displayHeader={true} title={dialog.title} show={true} showMaskInPopover={addMask}>
-        {dialog.children() as any}
+        {dialog.children as any}
       </WebDialog>
     );
 
