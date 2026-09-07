@@ -3,7 +3,6 @@ import {
   state,
   type NeolitNode,
 } from "@ubs-platform/neolit/core";
-import { fromState } from "@ubs-platform/neolit/structural";
 import { Button } from "@libs/ui/button";
 import {
   materialSymbolsOutlined,
@@ -25,6 +24,7 @@ export interface ToastItem {
    * Varsayılan: 3500
    */
   duration?: number | null;
+  
 }
 
 // ─── Toast Servisi (singleton) ────────────────────────────────────────────────
@@ -117,7 +117,14 @@ function resolveToastStyle(type: AlertToastType): {
 class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
   properties = {
     toast: null as unknown as ToastItem,
+    enableInitialAnimation: state(true);
   };
+
+  onInit(): void {
+    setTimeout(() => {
+      this.properties.enableInitialAnimation.set(false);
+    }, this.properties.toast.duration ?? 500);
+  }
 
   render(): NeolitNode | NeolitNode[] {
     const { toast } = this.properties;
@@ -125,10 +132,11 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
 
     return (
       <div
-        className={
+        className={[
           `neolit-toast flex items-start gap-3 px-4 py-3 rounded-sm shadow-lg` +
-          ` backdrop-blur-sm text-sm font-medium leading-snug max-w-sm w-min-300px ${resolvedToastIconStyles.containerClass}`
-        }
+            ` backdrop-blur-sm text-sm font-medium leading-snug max-w-sm w-min-300px ${resolvedToastIconStyles.containerClass}`,
+          this.properties.enableInitialAnimation.map((enabled) => (enabled ? "toast-in" : "")),
+        ]}
         role="alert"
       >
         <Icon {...resolvedToastIconStyles.iconProperties} />
@@ -164,8 +172,40 @@ class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
  * );
  */
 export class AlertToastContainer extends NeolitComponent {
+  // Forv2/fromState, listeden bir öğe silindiğinde kalan öğelerin index'i kaydığı için
+  // hepsini yeniden oluşturup animasyonu tekrar tetikliyordu. Bunun yerine WebDialogContainer'daki
+  // gibi kendi DOM node stack'imizi tutup sadece eklenen/çıkarılan id'leri güncelliyoruz.
+  private toastNodes: { id: string; dom: NeolitNode }[] = [];
+  private readonly listener = () => this.syncToasts();
+
   onInit(): void {
-    // this.watchToRerender(toastService.toasts);
+    toastService.toasts.subscribe(this.listener);
+    this.syncToasts();
+  }
+
+  destroy(): void {
+    toastService.toasts.unsubscribe(this.listener);
+    super.destroy();
+  }
+
+  private syncToasts(): void {
+    const toasts = toastService.toasts.get();
+    const nextIds = new Set(toasts.map((t) => t.id));
+
+    // Kaldırılan toast'ları at, kalanların DOM node'unu koru (yeniden oluşturma yok).
+    this.toastNodes = this.toastNodes.filter((node) => nextIds.has(node.id));
+
+    const existingIds = new Set(this.toastNodes.map((n) => n.id));
+    for (const toast of toasts) {
+      if (!existingIds.has(toast.id)) {
+        this.toastNodes.push({
+          id: toast.id,
+          dom: <SingleToast toast={toast} />,
+        });
+      }
+    }
+
+    this.rerender();
   }
 
   render(): NeolitNode | NeolitNode[] {
@@ -175,15 +215,7 @@ export class AlertToastContainer extends NeolitComponent {
         aria-live="polite"
         aria-atomic="false"
       >
-        {fromState(toastService.toasts)
-          .keyFn((a) => a.id)
-          .renderFor((toast) => {
-            return (
-              <>
-                <SingleToast toast={toast} />
-              </>
-            );
-          })}
+        {this.toastNodes.map((n) => n.dom)}
       </div>
     );
   }
