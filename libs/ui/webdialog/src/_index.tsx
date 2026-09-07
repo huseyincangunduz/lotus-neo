@@ -535,7 +535,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
                   this.properties.displayCloseButton as State<boolean>,
                 ).renderIf(() => (
                   <Button
-                    icon={materialSymbolsOutlined("close", "0", "1.5em")}
+                    icon={materialSymbolsOutlined("close")}
                     variant="ghost"
                     onClick={() => this.closeDialog()}
                     style={{ padding: "0.25em" }}
