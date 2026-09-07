@@ -419,9 +419,13 @@ export class CanvasDraw extends NeolitComponent {
   onInit(): void {
     // this.restoreSettings();
     this.startAutosaveLoop();
-    this.undoRedoHelper.canUndo.subscribe((canUndo) =>
-      this.canUndo.set(canUndo),
-    );
+    // updateAbilities() fires on every push/undo/redo, not just on canUndo transitions;
+    // action-based undo (draw/erase/layer ops in data-holder) never calls scheduleAutosave
+    // itself, so this is the single choke point that marks autosave dirty for ALL mutations.
+    this.undoRedoHelper.canUndo.subscribe((canUndo) => {
+      this.canUndo.set(canUndo);
+      this.scheduleAutosave();
+    });
     this.undoRedoHelper.canRedo.subscribe((canRedo) =>
       this.canRedo.set(canRedo),
     );
