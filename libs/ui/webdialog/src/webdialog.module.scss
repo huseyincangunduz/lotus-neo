@@ -36,9 +36,15 @@
     background-color: transparent;
     animation: none;
 
-    &[show-mask-in-popover="true"] {
+    &[show-mask="true"] {
       background-color: rgba(0, 0, 0, 0.12);
     }
+  }
+
+  /* Maske her modda kapatılabilir; mask kapalıyken tıklama yine yakalanır. */
+  &[show-mask="false"] {
+    background-color: transparent;
+    animation: none;
   }
 }
 
@@ -283,6 +289,33 @@
       animation-direction: reverse;
     }
   }
+
+  /* x/y verildiğinde align/placement kurallarını ezip serbest konumlanıyor. */
+  &[dialog-free-position="true"][dialog-mode][dialog-align] {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    width: max-content;
+    max-height: calc(100dvh - 16px);
+    transform: none;
+    transform-origin: top left;
+
+    &[animation-state="BEGIN"] {
+      animation: dialog-popover-in;
+      animation-duration: var(--duration);
+    }
+
+    &[animation-state="HOLD"] {
+      transform: none;
+    }
+
+    &[animation-state="OUT"] {
+      animation: dialog-popover-in;
+      animation-duration: var(--duration);
+      animation-direction: reverse;
+    }
+  }
+
   position: fixed; /* Stay in place */
   // width: 500px;
   max-width: 100dvw;

@@ -14,6 +14,7 @@ import {
   TranslationRepository,
 } from "@ubs-platform/translator-core";
 import { asset } from "@libs/asset";
+import { WebDialogContainer } from "@libs/ui/webdialog";
 // import { CanvasDraw } from "./pages/canvas-draw";
 
 const availableLanguages = ["tr-tr", "en-us"];
@@ -111,6 +112,7 @@ export class AppComponent extends NeolitComponent {
   render() {
     return (
       <>
+        <WebDialogContainer></WebDialogContainer>
         <AlertToastContainer messageTimeout={5000}></AlertToastContainer>
         <Outlet routeMap={this.routeMap} router={this.router}></Outlet>
       </>

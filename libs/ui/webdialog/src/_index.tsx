@@ -50,6 +50,15 @@ const ALL_POPOVER_PLACEMENTS: DialogPlacement[] = [
 ];
 export type AnimationState = "HIDE" | "BEGIN" | "HOLD" | "OUT";
 
+function isCoordinateGiven(value: number | string | null | undefined): boolean {
+  return value !== null && value !== undefined && value !== "";
+}
+
+function toCssLength(value: number | string | null | undefined): string {
+  if (!isCoordinateGiven(value)) return "";
+  return typeof value === "number" ? `${value}px` : `${value}`;
+}
+
 export interface WebDialogProps {
   children: NeolitChild[] | State<NeolitChild | NeolitChild[]>;
   title?: StateOrPlain<string>;
@@ -73,7 +82,11 @@ export interface WebDialogProps {
   autoFlip?: StateOrPlain<boolean>;
   popoverOffset?: StateOrPlain<number>;
   popoverBoundaryPadding?: StateOrPlain<number>;
-  showMaskInPopover?: StateOrPlain<boolean>;
+  /** Maskeyi her modda açar/kapar. Verilmezse modal'da açık, popover'da kapalı kabul edilir. */
+  showMask?: StateOrPlain<boolean | null>;
+  /** position/placement yerine ekran koordinatı (sayı verilirse px kabul edilir). */
+  x?: StateOrPlain<number | string | null>;
+  y?: StateOrPlain<number | string | null>;
 }
 
 export class WebDialog extends NeolitComponent<WebDialogProps> {
@@ -98,7 +111,9 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     autoFlip: state<boolean>(true),
     popoverOffset: state<number>(8),
     popoverBoundaryPadding: state<number>(8),
-    showMaskInPopover: state<boolean>(false),
+    showMask: state<boolean | null>(null),
+    x: state<number | string | null>(null),
+    y: state<number | string | null>(null),
     onClose: () => { },
     children: <></>,
   };
@@ -120,13 +135,31 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   private popoverTop = state<string>("0px");
   private popoverLeft = state<string>("0px");
   private popoverMaxWidth = state<string>("calc(100dvw - 16px)");
+  private maskVisible = computed(
+    [this.properties.showMask, this.properties.mode],
+    ([showMask, mode]) => (showMask == null ? mode !== "popover" : !!showMask),
+  );
+  private freePosition = computed(
+    [this.properties.x, this.properties.y],
+    ([x, y]) => isCoordinateGiven(x) || isCoordinateGiven(y),
+  );
   private dialogTopStyle = computed(
-    [this.properties.mode, this.popoverTop],
-    ([mode, top]) => (mode === "popover" ? top : ""),
+    [this.properties.mode, this.popoverTop, this.properties.y],
+    ([mode, top, y]) =>
+      isCoordinateGiven(y)
+        ? toCssLength(y)
+        : mode === "popover"
+          ? top
+          : "",
   );
   private dialogLeftStyle = computed(
-    [this.properties.mode, this.popoverLeft],
-    ([mode, left]) => (mode === "popover" ? left : ""),
+    [this.properties.mode, this.popoverLeft, this.properties.x],
+    ([mode, left, x]) =>
+      isCoordinateGiven(x)
+        ? toCssLength(x)
+        : mode === "popover"
+          ? left
+          : "",
   );
   private dialogMaxWidthStyle = computed(
     [this.properties.mode, this.properties.maxWidth, this.popoverMaxWidth],
@@ -211,6 +244,10 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
 
   private updatePopoverPosition() {
     if (!this.isPopoverMode() || this.animationState.get() === "HIDE") {
+      return;
+    }
+
+    if (this.freePosition.get()) {
       return;
     }
 
@@ -463,7 +500,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
         className={styles.modal}
         animation-state={this.animationState}
         dialog-mode={this.properties.mode}
-        show-mask-in-popover={this.properties.showMaskInPopover}
+        show-mask={this.maskVisible}
         data-webdialog-id={this.dialogDomId}
         style={{
           "--duration": this.durationMs,
@@ -476,6 +513,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
           animation-state={this.animationState}
           dialog-align={this.properties.position}
           dialog-mode={this.properties.mode}
+          dialog-free-position={this.freePosition}
           style={{
             top: this.dialogTopStyle,
             left: this.dialogLeftStyle,
