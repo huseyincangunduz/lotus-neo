@@ -4,6 +4,7 @@ import {
   type StateOrPlain,
   state,
 } from "@ubs-platform/neolit/core";
+import { materialSymbolsOutlined } from "@libs/ui/icon";
 import { provideValue } from "@ubs-platform/neolit/injectables";
 import { Button } from "@libs/ui/button";
 import { TextInput } from "@libs/ui/text-input";
@@ -41,18 +42,22 @@ export class WebdialogOverlayService {
       children: (closeDialog) => (
         <div>
           <p>{description}</p>
-          <Button
-            onClick={() => {
-              closeDialog(true);
-            }}
-            label={tr("general.yes")}
-          ></Button>
-          <Button
-            onClick={() => {
-              closeDialog(false);
-            }}
-            label={tr("general.no")}
-          ></Button>
+          <div className="mt-1 flex gap-2 justify-center">
+            <Button
+              onClick={() => {
+                closeDialog(true);
+              }}
+              icon={materialSymbolsOutlined("check")}
+              label={tr("general.yes")}
+            ></Button>
+            <Button
+              onClick={() => {
+                closeDialog(false);
+              }}
+              icon={materialSymbolsOutlined("close")}
+              label={tr("general.no")}
+            ></Button>
+          </div>
         </div>
       ),
       onClose,
@@ -73,6 +78,7 @@ export class WebdialogOverlayService {
             onClick={() => {
               closeDialog(true);
             }}
+            icon={materialSymbolsOutlined("check")}
             label={tr("general.ok")}
           ></Button>
         </div>
@@ -99,12 +105,14 @@ export class WebdialogOverlayService {
             }}
             value={inputValue}
           ></TextInput>
-          <Button
-            onClick={() => {
-              closeDialog(inputValue);
-            }}
-            label="OK"
-          ></Button>
+          <div className="mt-1 flex justify-center">
+            <Button
+              onClick={() => {
+                closeDialog(inputValue);
+              }}
+              label={tr("general.ok")}
+            ></Button>
+          </div>
         </div>
       ),
       onClose,

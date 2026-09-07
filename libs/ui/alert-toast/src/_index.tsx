@@ -117,7 +117,7 @@ function resolveToastStyle(type: AlertToastType): {
 class SingleToast extends NeolitComponent<{ toast: ToastItem }> {
   properties = {
     toast: null as unknown as ToastItem,
-    enableInitialAnimation: state(true);
+    enableInitialAnimation: state(true),
   };
 
   onInit(): void {
