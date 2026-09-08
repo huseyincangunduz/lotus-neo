@@ -1,6 +1,6 @@
 import { state, type State, type StateOrPlain } from "@ubs-platform/neolit/core";
 import { LayerManager } from "./layer-manager";
-import { ProjectDataRasterizer } from "../rendering/data-rasterizer";
+import { ProjectDataRasterizer, type XDrawImageExportOptions } from "../rendering/data-rasterizer";
 import type {
     InteractionMode,
     RenderStats,
@@ -190,6 +190,45 @@ export class XDrawDataHolder {
 
     getXdrawData(): XDrawData {
         return this.xdrawData;
+    }
+
+    getContentBounds(): { x: number; y: number; width: number; height: number } | null {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        const includePoint = (x: number, y: number, padding = 0) => {
+            minX = Math.min(minX, x - padding);
+            minY = Math.min(minY, y - padding);
+            maxX = Math.max(maxX, x + padding);
+            maxY = Math.max(maxY, y + padding);
+        };
+
+        for (const layer of this.xdrawData.layers) {
+            if (layer.visible === false || layer.opacity === 0) continue;
+            for (const element of layer.elements) {
+                if (element.type === "draw") {
+                    for (const point of (element as XDrawDrawElement).points) {
+                        includePoint(point.x, point.y, point.size / 2);
+                    }
+                } else if (element.type === "fill") {
+                    for (const ring of (element as any).rings) {
+                        for (const point of ring) includePoint(point.x, point.y);
+                    }
+                } else if (element.type === "text") {
+                    const text = element as XDrawTextElement;
+                    includePoint(text.position.x, text.position.y);
+                    includePoint(text.position.x + text.fontSize * text.text.length, text.position.y + text.fontSize);
+                }
+            }
+        }
+        if (!Number.isFinite(minX)) return null;
+        const padding = 24;
+        return { x: minX - padding, y: minY - padding, width: Math.max(1, maxX - minX + padding * 2), height: Math.max(1, maxY - minY + padding * 2) };
+    }
+
+    exportImage(options: XDrawImageExportOptions): Promise<Blob> {
+        return this.rasterizer.exportImage(options);
     }
 
     getActiveCanvas(): HTMLCanvasElement | null {
@@ -443,7 +482,7 @@ export class XDrawDataHolder {
         if (!activeLayer) {
             return;
         }
-        activeLayer.elements.push({
+        const textConfig = {
             id: XdrawDataUtils.generateUniqueId(),
             type: "text",
             fontFamily: options?.fontFamily || "system-ui",
@@ -454,9 +493,28 @@ export class XDrawDataHolder {
             fontSize: options?.fontSize || 16,
             fontWeight: options?.fontWeight || "normal",
             position: { x: offsetX, y: offsetY },
-        } as XDrawTextElement);
-        this.rasterizer.invalidateContentBuffer();
-        this.rasterizer.setProjectData(this.xdrawData);
+        } as XDrawTextElement
+
+        this.undoRedoHelper.pushOperationQueue(
+            {
+                apply: async () => {
+                    activeLayer.elements.push(textConfig);
+                    this.rasterizer.invalidateContentBuffer();
+                    this.rasterizer.setProjectData(this.xdrawData);
+                },
+                revert: async () => {
+                    activeLayer.elements = activeLayer.elements.filter(el => el.id !== textConfig.id);
+                    this.rasterizer.invalidateContentBuffer();
+                    this.rasterizer.setProjectData(this.xdrawData);
+                },
+            },
+            true,
+            true
+        );
+
+        // activeLayer.elements.push(textConfig);
+        // this.rasterizer.invalidateContentBuffer();
+        // this.rasterizer.setProjectData(this.xdrawData);
     }
 
 }

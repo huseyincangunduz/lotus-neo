@@ -307,6 +307,44 @@ export class CanvasDraw extends NeolitComponent {
     );
   }
 
+  private exportImage(options: {
+    area: "screen" | "content";
+    background: "white" | "transparent" | "grid";
+    scale: 1 | 2;
+    format: "png" | "webp" | "jpg";
+  }): void {
+    this.flushPendingGestureHistory();
+    const screenBounds = {
+      x: this.worldX.get(),
+      y: this.worldY.get(),
+      width: this.canvasWidth.get() / this.zoomFactor.get(),
+      height: this.canvasHeight.get() / this.zoomFactor.get(),
+    };
+    const bounds = options.area === "content"
+      ? this.svgHolder.getContentBounds() ?? screenBounds
+      : screenBounds;
+    const pixelsPerWorldUnit = (options.area === "screen" ? this.zoomFactor.get() : 1) * options.scale;
+    const pixelCount = Math.ceil(bounds.width * pixelsPerWorldUnit) * Math.ceil(bounds.height * pixelsPerWorldUnit);
+    const createExport = async () => {
+      try {
+        const format = options.format === "jpg" ? "jpeg" : options.format;
+        const blob = await this.svgHolder.exportImage({ ...options, bounds, pixelsPerWorldUnit, format });
+        await this.appController.downloadDataRequest(blob, `image/${format}`, `xdraw_export.${options.format}`);
+      } catch (error) {
+        console.error("Export olusturulamadi:", error);
+        this.wdService.showAlertDialog(tr("general.error"), "Gorsel export olusturulamadi.");
+      }
+    };
+
+    if (pixelCount > 32_000_000) {
+      this.wdService.showApproveDialog(tr("general.confirm"), `Bu export ${Math.round(pixelCount / 1_000_000)} milyon piksel olacak ve cihazı yavaşlatabilir. Devam edilsin mi?`, (confirmed) => {
+        if (confirmed) void createExport();
+      });
+      return;
+    }
+    void createExport();
+  }
+
   private async saveAndShareProject(): Promise<void> {
     const payload = this.buildExportPayload(false);
     const serialized = JSON.stringify(payload, null, 2);
@@ -921,6 +959,7 @@ export class CanvasDraw extends NeolitComponent {
               onDownloadProject={this.downloadProject.bind(this)}
               onOpenProjectFromFile={this.openProjectFromFile.bind(this)}
               onSaveAndShareProject={this.saveAndShareProject.bind(this)}
+              onExportImage={this.exportImage.bind(this)}
               xdrawDataHolder={this.svgHolder}
               canRedo={this.canRedo}
               generateNew={this.generateNew.bind(this)}

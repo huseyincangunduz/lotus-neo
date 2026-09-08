@@ -31,6 +31,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
     onDownloadProject: (saveAs?: boolean) => {},
     onOpenProjectFromFile: () => {},
     onSaveAndShareProject: () => {},
+    onExportImage: (_options: { area: "screen" | "content"; background: "white" | "transparent" | "grid"; scale: 1 | 2; format: "png" | "webp" | "jpg" }) => {},
     flushAutosave: () => {},
     redo: () => {},
     undo: () => {},
@@ -48,6 +49,11 @@ export class CanvasDrawSidebar extends NeolitComponent {
   showPencilSettingsDialog = state(false);
   showTextSettingsDialog = state(false);
   showSizeSelectorDialog = state(false);
+  showExportDialog = state(false);
+  exportArea = state<"screen" | "content">("screen");
+  exportBackground = state<"white" | "transparent" | "grid">("white");
+  exportScale = state<1 | 2 | 4>(1);
+  exportFormat = state<"png" | "webp" | "jpg">("png");
   menuDialog = state(false);
   layerSettingsDialog = state(false);
   zoomFactor = state(1);
@@ -135,6 +141,17 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
   private saveAndShareProject(): void {
     this.properties.onSaveAndShareProject();
+    this.menuDialog.set(false);
+  }
+
+  private exportImage(): void {
+    this.properties.onExportImage({
+      area: this.exportArea.get(),
+      background: this.exportBackground.get(),
+      scale: this.exportScale.get(),
+      format: this.exportFormat.get(),
+    });
+    this.showExportDialog.set(false);
     this.menuDialog.set(false);
   }
 
@@ -405,6 +422,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
                 this.downloadProject();
               }}
             ></Button>
+            <Button
+              variant="ghost"
+              label="Export"
+              padding={1}
+              icon={materialSymbolsOutlined("image")}
+              onClick={() => this.showExportDialog.set(true)}
+            ></Button>
 
             {(this.appController.isMobileApp ||
               this.appController.isElectronApp) && (
@@ -482,6 +506,50 @@ export class CanvasDrawSidebar extends NeolitComponent {
             </p>
           </sub>
           {/* <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo"></img> */}
+        </WebDialog>
+        <WebDialog
+          show={this.showExportDialog}
+          mode="modal"
+          width="360px"
+          title="Export"
+          onClose={() => this.showExportDialog.set(false)}
+        >
+          {[
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              Alan
+              <select value={this.exportArea} onChange={(event: Event) => this.exportArea.set((event.target as HTMLSelectElement).value as "screen" | "content")}>
+                <option value="screen">Ekran</option>
+                <option value="content">Cizimin sinirlari</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Arkaplan
+              <select value={this.exportBackground} onChange={(event: Event) => this.exportBackground.set((event.target as HTMLSelectElement).value as "white" | "transparent" | "grid")}>
+                <option value="white">Beyaz</option>
+                <option value="transparent">Saydam</option>
+                <option value="grid">Grid</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Olcek
+              <select value={this.exportScale} onChange={(event: Event) => this.exportScale.set(Number((event.target as HTMLSelectElement).value) as 1 | 2 | 4)}>
+                <option value="1">1x</option>
+                <option value="2">2x</option>
+                <option value="4">4x</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Format
+              <select value={this.exportFormat} onChange={(event: Event) => this.exportFormat.set((event.target as HTMLSelectElement).value as "png" | "webp" | "jpg")}>
+                <option value="png">PNG</option>
+                <option value="webp">WEBP</option>
+                <option value="jpg">JPG</option>
+              </select>
+            </label>
+            <Button label="Olustur ve indir" variant="filled-primary" onClick={() => this.exportImage()}></Button>
+          </div>,
+          ]}
         </WebDialog>
         <WebDialog
           show={this.showPencilSettingsDialog}

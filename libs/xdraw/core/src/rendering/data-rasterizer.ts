@@ -29,6 +29,13 @@ interface ContentBufferInfo {
     height: number;
 }
 
+export interface XDrawImageExportOptions {
+    bounds: { x: number; y: number; width: number; height: number };
+    pixelsPerWorldUnit: number;
+    background: "white" | "transparent" | "grid";
+    format: "png" | "webp" | "jpeg";
+}
+
 export class ProjectDataRasterizer {
     // Maske, viewport'un biraz disini da kapsar; boylece kenarda olusan dolgu dikisleri azalir.
     private static readonly MASK_MARGIN_RATIO = 0.25;
@@ -83,6 +90,89 @@ export class ProjectDataRasterizer {
 
     getActiveCanvas(): HTMLCanvasElement | undefined {
         return this.activeCanvas;
+    }
+
+    async exportImage(options: XDrawImageExportOptions): Promise<Blob> {
+        if (!this.projectData) {
+            throw new Error("Disa aktarilacak cizim verisi bulunamadi.");
+        }
+
+        const { bounds, pixelsPerWorldUnit, background, format } = options;
+        const width = Math.max(1, Math.ceil(bounds.width * pixelsPerWorldUnit));
+        const height = Math.max(1, Math.ceil(bounds.height * pixelsPerWorldUnit));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+            throw new Error("Export canvas baglami olusturulamadi.");
+        }
+
+        if (background === "white" || format === "jpeg") {
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, width, height);
+        }
+        if (background === "grid") {
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, width, height);
+            this.drawExportGrid(context, bounds, pixelsPerWorldUnit);
+        }
+
+        context.setTransform(
+            pixelsPerWorldUnit,
+            0,
+            0,
+            pixelsPerWorldUnit,
+            -bounds.x * pixelsPerWorldUnit,
+            -bounds.y * pixelsPerWorldUnit,
+        );
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        for (const layer of this.projectData.layers) {
+            if (layer.visible === false || layer.opacity === 0) {
+                continue;
+            }
+            context.globalAlpha = layer.opacity ?? 1;
+            for (const element of layer.elements) {
+                if (element.type === "draw") {
+                    this.drawDrawElement(context, element as XDrawDrawElement);
+                } else if (element.type === "fill") {
+                    this.drawFillElement(context, element as XDrawFillElement);
+                } else if (element.type === "text") {
+                    this.drawTextElement(context, element as XDrawTextElement);
+                }
+            }
+        }
+        context.globalAlpha = 1;
+
+        const mimeType = `image/${format}`;
+        return new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(blob);
+                } else {
+                    reject(new Error("Gorsel olusturulamadi."));
+                }
+            }, mimeType, format === "jpeg" ? 0.92 : undefined);
+        });
+    }
+
+    private drawExportGrid(context: CanvasRenderingContext2D, bounds: XDrawImageExportOptions["bounds"], pixelsPerWorldUnit: number): void {
+        const spacing = 20 * pixelsPerWorldUnit;
+        context.strokeStyle = "#d1d5db";
+        context.lineWidth = 1;
+        for (let x = ((-bounds.x * pixelsPerWorldUnit) % spacing + spacing) % spacing; x <= context.canvas.width; x += spacing) {
+            context.beginPath();
+            context.moveTo(x, 0);
+            context.lineTo(x, context.canvas.height);
+            context.stroke();
+        }
+        for (let y = ((-bounds.y * pixelsPerWorldUnit) % spacing + spacing) % spacing; y <= context.canvas.height; y += spacing) {
+            context.beginPath();
+            context.moveTo(0, y);
+            context.lineTo(context.canvas.width, y);
+            context.stroke();
+        }
     }
 
     setCursorPosition(cursor: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" } | undefined) {
