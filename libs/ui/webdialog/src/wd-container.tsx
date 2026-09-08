@@ -63,6 +63,23 @@ export class WebDialogContainer extends NeolitComponent {
   }
 
   render(): NeolitNode | NeolitNode[] | NeolitComponent | null {
-    return <>{this.dialogStack.map((a) => a.dialogDom)}</>;
+    return <>
+      {this.dialogStack.map((a) => a.dialogDom)}
+      <WebDialog
+        show={this.webDialogOverlayService.isLoading}
+        mode="modal"
+        displayHeader={false}
+        displayCloseButton={false}
+        dismissOnClickMask={false}
+        width="280px"
+      >
+        {[
+          <div className="flex flex-col items-center gap-3 p-2 text-center">
+            <span className="material-symbols-outlined animate-spin">progress_activity</span>
+            <p>{this.webDialogOverlayService.loadingMessage}</p>
+          </div>,
+        ]}
+      </WebDialog>
+    </>;
   }
 }

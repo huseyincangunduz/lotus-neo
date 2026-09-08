@@ -326,6 +326,7 @@ export class CanvasDraw extends NeolitComponent {
     const pixelsPerWorldUnit = (options.area === "screen" ? this.zoomFactor.get() : 1) * options.scale;
     const pixelCount = Math.ceil(bounds.width * pixelsPerWorldUnit) * Math.ceil(bounds.height * pixelsPerWorldUnit);
     const createExport = async () => {
+      const closeLoading = this.wdService.showLoading("Lutfen bekleyin, gorsel olusturuluyor...");
       try {
         const format = options.format === "jpg" ? "jpeg" : options.format;
         const blob = await this.svgHolder.exportImage({ ...options, bounds, pixelsPerWorldUnit, format });
@@ -333,6 +334,8 @@ export class CanvasDraw extends NeolitComponent {
       } catch (error) {
         console.error("Export olusturulamadi:", error);
         this.wdService.showAlertDialog(tr("general.error"), "Gorsel export olusturulamadi.");
+      } finally {
+        closeLoading();
       }
     };
 

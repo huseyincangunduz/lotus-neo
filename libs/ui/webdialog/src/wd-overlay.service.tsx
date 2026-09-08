@@ -1,4 +1,5 @@
 import {
+  computed,
   NeolitComponent,
   type NeolitNode,
   type StateOrPlain,
@@ -19,6 +20,13 @@ export interface WebDialogConfig {
 
 export class WebdialogOverlayService {
   lastDialogConfig = state<WebDialogConfig | null>(null);
+  private loadingStack = state<{ id: number; message: StateOrPlain<string> }[]>([]);
+  private nextLoadingId = 0;
+  isLoading = computed([this.loadingStack], ([stack]) => stack.length > 0);
+  loadingMessage = computed(
+    [this.loadingStack],
+    ([stack]) => stack[stack.length - 1]?.message ?? "",
+  );
 
   showDialog(dialogConfig: WebDialogConfig) {
     this.lastDialogConfig.set(dialogConfig);
@@ -30,6 +38,17 @@ export class WebdialogOverlayService {
         callback(a);
       }
     });
+  }
+
+  showLoading(message: StateOrPlain<string>): () => void {
+    const id = this.nextLoadingId++;
+    this.loadingStack.update((stack) => [...stack, { id, message }]);
+    let closed = false;
+    return () => {
+      if (closed) return;
+      closed = true;
+      this.loadingStack.update((stack) => stack.filter((item) => item.id !== id));
+    };
   }
 
   showApproveDialog(
