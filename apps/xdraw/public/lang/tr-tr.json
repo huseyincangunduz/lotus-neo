@@ -92,7 +92,21 @@
       "about.author": "Yazar: {author}",
       "about.copyright": "Telif Hakkı © {year} {author}.\nTüm hakları saklıdır.",
       "enter-text": "Metin Girin",
-      "enter-text-prompt": "Lütfen eklemek istediğiniz metni girin"
+      "enter-text-prompt": "Lütfen eklemek istediğiniz metni girin",
+      "export.title": "Dışa Aktar",
+      "export.area": "Alan",
+      "export.area-screen": "Ekran",
+      "export.area-content": "Çizimin sınırları",
+      "export.background": "Arkaplan",
+      "export.background-white": "Beyaz",
+      "export.background-transparent": "Saydam",
+      "export.background-grid": "Izgara",
+      "export.scale": "Ölçek",
+      "export.format": "Format",
+      "export.create-and-download": "Oluştur ve indir",
+      "export.preparing": "Lütfen bekleyin, görsel oluşturuluyor...",
+      "export.error": "Görsel dışa aktarımı oluşturulamadı.",
+      "export.large-image-warning": "Bu dışa aktarım {megapixels} milyon piksel olacak ve cihazı yavaşlatabilir. Devam edilsin mi?"
     }
   }
 ]

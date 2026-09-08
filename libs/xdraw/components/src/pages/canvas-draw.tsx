@@ -326,21 +326,21 @@ export class CanvasDraw extends NeolitComponent {
     const pixelsPerWorldUnit = (options.area === "screen" ? this.zoomFactor.get() : 1) * options.scale;
     const pixelCount = Math.ceil(bounds.width * pixelsPerWorldUnit) * Math.ceil(bounds.height * pixelsPerWorldUnit);
     const createExport = async () => {
-      const closeLoading = this.wdService.showLoading("Lutfen bekleyin, gorsel olusturuluyor...");
+      const closeLoading = this.wdService.showLoading(tr("xdraw.export.preparing"));
       try {
         const format = options.format === "jpg" ? "jpeg" : options.format;
         const blob = await this.svgHolder.exportImage({ ...options, bounds, pixelsPerWorldUnit, format });
         await this.appController.downloadDataRequest(blob, `image/${format}`, `xdraw_export.${options.format}`);
       } catch (error) {
         console.error("Export olusturulamadi:", error);
-        this.wdService.showAlertDialog(tr("general.error"), "Gorsel export olusturulamadi.");
+        this.wdService.showAlertDialog(tr("general.error"), tr("xdraw.export.error"));
       } finally {
         closeLoading();
       }
     };
 
     if (pixelCount > 32_000_000) {
-      this.wdService.showApproveDialog(tr("general.confirm"), `Bu export ${Math.round(pixelCount / 1_000_000)} milyon piksel olacak ve cihazı yavaşlatabilir. Devam edilsin mi?`, (confirmed) => {
+      this.wdService.showApproveDialog(tr("general.confirm"), tr("xdraw.export.large-image-warning", { megapixels: String(Math.round(pixelCount / 1_000_000)) }), (confirmed) => {
         if (confirmed) void createExport();
       });
       return;

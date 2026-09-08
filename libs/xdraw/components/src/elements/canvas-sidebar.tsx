@@ -424,7 +424,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             ></Button>
             <Button
               variant="ghost"
-              label="Export"
+              label={tr("xdraw.export.title")}
               padding={1}
               icon={materialSymbolsOutlined("image")}
               onClick={() => this.showExportDialog.set(true)}
@@ -511,28 +511,28 @@ export class CanvasDrawSidebar extends NeolitComponent {
           show={this.showExportDialog}
           mode="modal"
           width="360px"
-          title="Export"
+          title={tr("xdraw.export.title")}
           onClose={() => this.showExportDialog.set(false)}
         >
           {[
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              Alan
+              {tr("xdraw.export.area")}
               <select value={this.exportArea} onChange={(event: Event) => this.exportArea.set((event.target as HTMLSelectElement).value as "screen" | "content")}>
-                <option value="screen">Ekran</option>
-                <option value="content">Cizimin sinirlari</option>
+                <option value="screen">{tr("xdraw.export.area-screen")}</option>
+                <option value="content">{tr("xdraw.export.area-content")}</option>
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Arkaplan
+              {tr("xdraw.export.background")}
               <select value={this.exportBackground} onChange={(event: Event) => this.exportBackground.set((event.target as HTMLSelectElement).value as "white" | "transparent" | "grid")}>
-                <option value="white">Beyaz</option>
-                <option value="transparent">Saydam</option>
-                <option value="grid">Grid</option>
+                <option value="white">{tr("xdraw.export.background-white")}</option>
+                <option value="transparent">{tr("xdraw.export.background-transparent")}</option>
+                <option value="grid">{tr("xdraw.export.background-grid")}</option>
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Olcek
+              {tr("xdraw.export.scale")}
               <select value={this.exportScale} onChange={(event: Event) => this.exportScale.set(Number((event.target as HTMLSelectElement).value) as 1 | 2 | 4)}>
                 <option value="1">1x</option>
                 <option value="2">2x</option>
@@ -540,14 +540,14 @@ export class CanvasDrawSidebar extends NeolitComponent {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Format
+              {tr("xdraw.export.format")}
               <select value={this.exportFormat} onChange={(event: Event) => this.exportFormat.set((event.target as HTMLSelectElement).value as "png" | "webp" | "jpg")}>
                 <option value="png">PNG</option>
                 <option value="webp">WEBP</option>
                 <option value="jpg">JPG</option>
               </select>
             </label>
-            <Button label="Olustur ve indir" variant="filled-primary" onClick={() => this.exportImage()}></Button>
+            <Button label={tr("xdraw.export.create-and-download")} variant="filled-primary" onClick={() => this.exportImage()}></Button>
           </div>,
           ]}
         </WebDialog>

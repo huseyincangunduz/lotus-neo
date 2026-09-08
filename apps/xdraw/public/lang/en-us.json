@@ -92,7 +92,21 @@
       "about.author": "Author: {author}",
       "about.copyright": "Copyright © {year} {author}.\nAll rights reserved.",
       "enter-text": "Enter Text",
-      "enter-text-prompt": "Please enter the text you want to add."
+      "enter-text-prompt": "Please enter the text you want to add.",
+      "export.title": "Export",
+      "export.area": "Area",
+      "export.area-screen": "Screen",
+      "export.area-content": "Drawing bounds",
+      "export.background": "Background",
+      "export.background-white": "White",
+      "export.background-transparent": "Transparent",
+      "export.background-grid": "Grid",
+      "export.scale": "Scale",
+      "export.format": "Format",
+      "export.create-and-download": "Create and download",
+      "export.preparing": "Please wait while the image is being created...",
+      "export.error": "The image export could not be created.",
+      "export.large-image-warning": "This export will be {megapixels} million pixels and may slow down your device. Continue?"
     }
   }
 ]
