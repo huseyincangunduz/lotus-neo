@@ -63,9 +63,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
   appController = inject(
     APP_NATIVE_CONTROLLER_TOKEN,
   ) as any as IAppNativeController;
-  recentColorsLimited = computed(
-    [this.settings.recentColors],
-    ([recentColors]) => recentColors.slice(0, 3),
+  recentColorsLimited = this.settings.recentColors.map(
+    (recentColors) => recentColors.slice(0, 3),
   );
   private colorDialogLastCommittedColor: string | null = null;
   // Opacity slider surukleme basindaki gercek deger; onChangeEnd'de tek undo adimi icin kullanilir.

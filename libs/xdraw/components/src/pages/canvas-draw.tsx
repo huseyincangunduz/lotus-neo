@@ -45,16 +45,13 @@ const MAX_SCALE = 40;
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDraw extends NeolitComponent {
   worldX = state(0);
-  worldXUI = computed([this.worldX], ([x]) => Math.round(x));
+  worldXUI = this.worldX.map(a => Math.round(a));
   worldY = state(0);
-  worldYUI = computed([this.worldY], ([y]) => Math.round(y));
+  worldYUI = this.worldY.map(a => Math.round(a));
   clickedCameraX = state(0);
   clickedCameraY = state(0);
   zoomFactor = state(1);
-  zoomFactorUI = computed(
-    [this.zoomFactor],
-    ([zoom]) => Math.round(zoom * 100) / 100,
-  );
+  zoomFactorUI = this.zoomFactor.map(a => Math.round(a));
   canvasHeight = state(600);
   canvasWidth = state(800);
 
@@ -68,11 +65,11 @@ export class CanvasDraw extends NeolitComponent {
     ([x, y, scale]) => ({ x, y, scale }),
   );
 
-  gridSize = computed([this.zoomFactor], ([zoom]) => {
+  gridSize = this.zoomFactor.map(zoom => {
     const gridSizeRaw = 20 * zoom;
     return gridSizeRaw + "px " + gridSizeRaw + "px";
   });
-  gridMajorSize = computed([this.zoomFactor], ([zoom]) => {
+  gridMajorSize = this.zoomFactor.map(zoom => {
     const gridSizeRaw = 100 * zoom;
     return gridSizeRaw + "px " + gridSizeRaw + "px";
   });
@@ -90,7 +87,7 @@ export class CanvasDraw extends NeolitComponent {
       return `${-(x * zoom) % gridSizeRaw}px ${-(y * zoom) % gridSizeRaw}px`;
     },
   );
-  gridLineWidth = computed([this.zoomFactor], ([zoom]) => {
+  gridLineWidth = this.zoomFactor.map(zoom => {
     return zoom + "px";
   });
   gridClassName = computed(
@@ -797,12 +794,16 @@ export class CanvasDraw extends NeolitComponent {
     renderCursor = true,
   ): void {
     // Boya kovasinda firca onizlemesi anlamsiz; imlec cizilmez.
+    
+    // Android tabletteyse fare renderlanmasın, performans önemli
+    // if (navigator.userAgent.includes("Android")) {
+    //   return;
+    // }
     if (this.settings.drawType.get() === "fill") {
       this.svgHolder.setCursorPosition(undefined);
       return;
     }
     if (!renderCursor) {
-      this.svgHolder.setCursorPosition(undefined);
       return;
     }
     this.svgHolder.setCursorPosition({

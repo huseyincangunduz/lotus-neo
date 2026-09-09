@@ -61,7 +61,7 @@ export class ProjectDataRasterizer {
     // element referansi anahtar olarak kullanilamaz.
 
     // Tamamlanmis icerigin onceden rasterize edildigi offscreen canvas + gecerlilik bilgisi.
-    private contentCanvas?: HTMLCanvasElement;
+    private contentCanvas?: HTMLCanvasElement | OffscreenCanvas;
     private contentBuffer?: ContentBufferInfo;
     private contentBufferValid = false;
     // Su an cizilmekte olan (henuz finalize olmamis) stroke; buffer'a girmez, her karede ustte cizilir.
@@ -451,7 +451,7 @@ export class ProjectDataRasterizer {
     // minLineWidth, cizginin dunya birimi cinsinden alt siniridir; maskede cizginin
     // antialias sonrasi kaybolmamasi icin kullanilir.
     private drawDrawElement(
-        context: CanvasRenderingContext2D,
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         draw: XDrawDrawElement,
         colorOverride?: string,
         minLineWidth = 0,
@@ -576,7 +576,7 @@ export class ProjectDataRasterizer {
         this.fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
     }
 
-    private drawFillElement(context: CanvasRenderingContext2D, fill: XDrawFillElement, colorOverride?: string) {
+    private drawFillElement(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, fill: XDrawFillElement, colorOverride?: string) {
         if (fill.rings.length === 0) {
             return;
         }
@@ -673,7 +673,12 @@ export class ProjectDataRasterizer {
         const originY = this.cam.y - marginY / cameraScale;
 
         if (!this.contentCanvas) {
-            this.contentCanvas = document.createElement("canvas");
+            // Create an offscreen canvas if supported, otherwise fall back to a regular HTML canvas.
+            if (window["OffscreenCanvas"]) {
+                this.contentCanvas = new OffscreenCanvas(width, height);
+            } else {
+                this.contentCanvas = document.createElement("canvas");
+            }
         }
         const contentCanvas = this.contentCanvas;
         if (contentCanvas.width !== width) {
@@ -747,7 +752,7 @@ export class ProjectDataRasterizer {
             console.debug(`[xdraw-perf] rebuildContentBuffer ${rebuildMs.toFixed(1)}ms (width=${width} height=${height})`);
         }
     }
-    drawTextElement(context: CanvasRenderingContext2D, arg1: XDrawTextElement) {
+    drawTextElement(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, arg1: XDrawTextElement) {
         const textElement = arg1;
         const color = ColorUtils.regularizeToHexColor(textElement.color) || textElement.color;
         context.fillStyle = color;
