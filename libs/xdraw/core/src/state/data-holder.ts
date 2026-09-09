@@ -318,22 +318,22 @@ export class XDrawDataHolder {
         if (!this.activeDrawElement) {
             return;
         }
-        // if (this.activeDrawElement.points.length >= XDRAW_MAX_POINTS_PER_ELEMENT) {
-        //     const previousPoint = this.activeDrawElement.points[this.activeDrawElement.points.length - 1];
-        //     this.activeDrawElement.finalized = true;
-        //     this.activeDrawElement = {
-        //         id: XdrawDataUtils.generateUniqueId(),
-        //         type: "draw",
-        //         color: this.activeStrokeColor,
-        //         points: [previousPoint],
-        //         finalized: false,
-        //     };
-        //     this.insertedElements.push(this.activeDrawElement);
-        //     this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
-        //     // Onceki parca finalize oldu; buffer'a girmesi icin yeniden olusturulmasi gerekir.
-        //     this.rasterizer.invalidateContentBuffer();
-        //     this.rasterizer.setActiveDrawElement(this.activeDrawElement, this.layerManager.getActiveLayer().opacity ?? 1);
-        // }
+        if (this.activeDrawElement.points.length >= XDRAW_MAX_POINTS_PER_ELEMENT) {
+            const previousPoint = this.activeDrawElement.points[this.activeDrawElement.points.length - 1];
+            this.activeDrawElement.finalized = true;
+            this.activeDrawElement = {
+                id: XdrawDataUtils.generateUniqueId(),
+                type: "draw",
+                color: this.activeStrokeColor,
+                points: [previousPoint],
+                finalized: false,
+            };
+            this.insertedElements.push(this.activeDrawElement);
+            this.layerManager.getActiveLayer().elements.push(this.activeDrawElement);
+            // Onceki parca finalize oldu; buffer'a girmesi icin yeniden olusturulmasi gerekir.
+            this.rasterizer.invalidateContentBuffer();
+            this.rasterizer.setActiveDrawElement(this.activeDrawElement, this.layerManager.getActiveLayer().opacity ?? 1);
+        }
         const size = this.activeStrokeWidth / this._viewCamera.scale;
         this.activeDrawElement.points.push({ x: worldX, y: worldY, size, breakBefore: this.breakBeforeNextPoint });
         this.breakBeforeNextPoint = false;
