@@ -9,7 +9,7 @@ export interface ObservableLike<T> {
 class ReplayValue<T> implements ObservableLike<T> {
   private subscribers = new Set<(value: T) => void>();
 
-  constructor(private currentValue: T) {}
+  constructor(private currentValue: T) { }
 
   get value(): T {
     return this.currentValue;
@@ -39,9 +39,9 @@ export interface Operation {
   apply(): Promise<void> | void;
   // TODO: Bu alanlar eklenecek
   // finally: operasyondan fazlası
-  // finally(): Promise<void> | void;
+  finally?: (() => Promise<void>) | (() => void) | null;
   // operasyon artık kullanılmayacak olduğunda çağrılacak. Oluşturulan kaynaklar burada temizlenebilir.
-  // dispose(): Promise<void> | void;
+  dispose?: (() => Promise<void>) | (() => void) | null;
 }
 
 export class UndoRedoHelper {
@@ -120,6 +120,7 @@ export class UndoRedoHelper {
       const operation = this.operationsHistory.pop();
       if (operation) {
         await operation.revert();
+        await operation.finally?.();
 
         this.operationReverted.push(operation);
         this.updateAbilities();
@@ -139,6 +140,7 @@ export class UndoRedoHelper {
 
       if (operation) {
         await operation.apply();
+        await operation.finally?.();
         this.operationsHistory.push(operation);
         this.enforceHistoryLimit();
         this.updateAbilities();
@@ -178,7 +180,14 @@ export class UndoRedoHelper {
   private enforceHistoryLimit(): void {
     const overflow = this.operationsHistory.length - this.maxHistorySize;
     if (overflow > 0) {
-      this.operationsHistory.splice(0, overflow);
+      this.operationsHistory = this.operationsHistory.filter((item, index) => {
+        if (index < overflow) {
+          item.dispose?.();
+          return false;
+        }
+        return true;
+      });
+      // this.operationsHistory.splice(0, overflow);
     }
   }
 }

@@ -92,18 +92,24 @@ export class XDrawDataHolder {
     }
 
     createLayer(layerId?: string, options?: { opacity?: number; visible?: boolean; insertBeforeLayerId?: string; }): XDrawLayer {
-        const createdLayer = this.layerManager.createLayer(layerId, options);
+        let createdLayer: XDrawLayer | undefined = this.layerManager.createLayer(layerId, options);
         this.undoRedoHelper.pushOperationQueue({
             apply: () => {
-                this.layerManager.addLayer(createdLayer);
+                this.layerManager.addLayer(createdLayer!);
             },
             revert: () => {
-                this.layerManager.deleteLayer(createdLayer.id);
+                this.layerManager.deleteLayer(createdLayer!.id);
+            },
+            finally: () => {
+                this.syncLayersState();
+            },
+            dispose: () => {
+                createdLayer = undefined
             }
         }, true, false);
         this.syncLayersState();
-        this.setActiveLayer(createdLayer.id);
-        return createdLayer;
+        this.setActiveLayer(createdLayer!.id);
+        return createdLayer!;
     }
 
     setActiveLayer(layerId: string): XDrawLayer {
@@ -117,7 +123,7 @@ export class XDrawDataHolder {
     }
 
     deleteLayer(layerId: string): boolean {
-        const layer = this.layerManager.getLayer(layerId);
+        let layer: XDrawLayer | null | undefined = this.layerManager.getLayer(layerId);
         if (!layer) {
             return false;
         }
@@ -127,7 +133,13 @@ export class XDrawDataHolder {
                 this.layerManager.deleteLayer(layerId);
             },
             revert: () => {
-                this.layerManager.addLayer(layer);
+                this.layerManager.addLayer(layer!);
+            },
+            dispose: () => {
+                layer = undefined;
+            },
+            finally: () => {
+                this.syncLayersState();
             }
         }, true, false);
         const deleted = this.layerManager.deleteLayer(layerId);
@@ -359,7 +371,7 @@ export class XDrawDataHolder {
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
 
-        const insertedElementsSnapshot = cloneObjectDeep(this.insertedElements);
+        let insertedElementsSnapshot = cloneObjectDeep(this.insertedElements);
         const activeLayerId = this.getActiveLayerId();
         this.undoRedoHelper.pushOperationQueue({
             apply: () => {
@@ -368,9 +380,6 @@ export class XDrawDataHolder {
                     return;
                 }
                 activeLayer.elements.push(...cloneObjectDeep(insertedElementsSnapshot));
-                this.rasterizer.invalidateContentBuffer();
-                this.rasterizer.setProjectData(this.xdrawData);
-                // this.insertedElements = [];
             },
             revert: () => {
                 const activeLayer = this.layerManager.getLayer(activeLayerId)
@@ -378,10 +387,16 @@ export class XDrawDataHolder {
                     return;
                 }
                 activeLayer.elements = activeLayer.elements.filter(el => !insertedElementsSnapshot.find(el2 => el2.id === el.id));
-                this.rasterizer.invalidateContentBuffer();
-                this.rasterizer.setProjectData(this.xdrawData);
+
                 // this.insertedElements = insertedElements;
             },
+            finally: () => {
+                this.rasterizer.invalidateContentBuffer();
+                this.rasterizer.setProjectData(this.xdrawData);
+            },
+            dispose: () => {
+                insertedElementsSnapshot = undefined as any;
+            }
         }, true, false);
         this.insertedElements = [];
     }
@@ -454,20 +469,24 @@ export class XDrawDataHolder {
         if (!this.activeLayerSnapshotBeforeErase) {
             return;
         }
-        const beforeEraseSnapshot = cloneObjectDeep(this.activeLayerSnapshotBeforeErase);
-        const currentSnapshotAfterRemoval = cloneObjectDeep(this.layerManager.getLayer(activeLayerId)!.elements);
+        let beforeEraseSnapshot = cloneObjectDeep(this.activeLayerSnapshotBeforeErase);
+        let currentSnapshotAfterRemoval = cloneObjectDeep(this.layerManager.getLayer(activeLayerId)!.elements);
         this.undoRedoHelper.pushOperationQueue({
             apply: async () => {
                 // Do nothing, changes are already applied
                 this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(currentSnapshotAfterRemoval);
-                this.rasterizer.invalidateContentBuffer();
-                this.rasterizer.setProjectData(this.xdrawData);
             },
             revert: async () => {
                 this.layerManager.getLayer(activeLayerId)!.elements = beforeEraseSnapshot;
+            },
+            dispose: () => {
+                beforeEraseSnapshot = undefined as any;
+                currentSnapshotAfterRemoval = undefined as any;
+            },
+            finally: () => {
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
-            },
+            }
         }, true, false);
         this.activeLayerSnapshotBeforeErase = [];
     }
@@ -483,7 +502,7 @@ export class XDrawDataHolder {
         if (!activeLayer) {
             return;
         }
-        const textConfig = {
+        let textConfig = {
             id: XdrawDataUtils.generateUniqueId(),
             type: "text",
             fontFamily: options?.fontFamily || "system-ui",
@@ -500,14 +519,20 @@ export class XDrawDataHolder {
             {
                 apply: async () => {
                     activeLayer.elements.push(textConfig);
-                    this.rasterizer.invalidateContentBuffer();
-                    this.rasterizer.setProjectData(this.xdrawData);
+
                 },
                 revert: async () => {
                     activeLayer.elements = activeLayer.elements.filter(el => el.id !== textConfig.id);
+
+                },
+                finally: async () => {
                     this.rasterizer.invalidateContentBuffer();
                     this.rasterizer.setProjectData(this.xdrawData);
                 },
+                dispose: () => {
+                    // Clean up any resources if necessary
+                    textConfig = undefined as any;
+                }
             },
             true,
             true
