@@ -1,5 +1,6 @@
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
+import { cloneObjectDeep } from "./clone-utils";
 
 export interface XDrawElementCropData {
     layerId: string;
@@ -28,7 +29,7 @@ export class XdrawDataUtils {
      * @returns Yeni bir XDrawData nesnesi.
      */
     public static deepCopyXDrawData(data: XDrawData): XDrawData {
-        return JSON.parse(JSON.stringify(data));
+        return cloneObjectDeep(data);
     }
 
     public static serializeXDrawData(data: XDrawData, optimize = false): string {

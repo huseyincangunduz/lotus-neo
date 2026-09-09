@@ -1,3 +1,4 @@
+import { cloneObjectDeep } from "../utils/clone-utils";
 import { state, type State, type StateOrPlain } from "@ubs-platform/neolit/core";
 import { LayerManager } from "./layer-manager";
 import { ProjectDataRasterizer, type XDrawImageExportOptions } from "../rendering/data-rasterizer";
@@ -61,10 +62,10 @@ export class XDrawDataHolder {
     activeLayerId: State<string> = state("base");
     stopStrokeTimeout: number | undefined = undefined;
     breakBeforeNextPoint: boolean = false;
-    undoRedoHelper: UndoRedoHelper = new UndoRedoHelper();
+    undoRedoHelper: UndoRedoHelper = new UndoRedoHelper(10);
     insertedElements: XDrawElement[] = [];
     // Elementler json array olacak
-    activeLayerSnapshotBeforeErase: string = "";
+    activeLayerSnapshotBeforeErase: XDrawElement[] = [];
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -358,7 +359,7 @@ export class XDrawDataHolder {
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
 
-        const insertedElementsSnapshot = this.insertedElements.slice();
+        const insertedElementsSnapshot = cloneObjectDeep(this.insertedElements);
         const activeLayerId = this.getActiveLayerId();
         this.undoRedoHelper.pushOperationQueue({
             apply: () => {
@@ -366,7 +367,7 @@ export class XDrawDataHolder {
                 if (!activeLayer) {
                     return;
                 }
-                activeLayer.elements.push(...insertedElementsSnapshot);
+                activeLayer.elements.push(...cloneObjectDeep(insertedElementsSnapshot));
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
                 // this.insertedElements = [];
@@ -376,7 +377,7 @@ export class XDrawDataHolder {
                 if (!activeLayer) {
                     return;
                 }
-                activeLayer.elements = activeLayer.elements.filter(el => !insertedElementsSnapshot.includes(el));
+                activeLayer.elements = activeLayer.elements.filter(el => !insertedElementsSnapshot.find(el2 => el2.id === el.id));
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
                 // this.insertedElements = insertedElements;
@@ -414,7 +415,7 @@ export class XDrawDataHolder {
     erasePathSegmentsAtPoint(x: number, y: number, radius: number): boolean {
         const activeLayer = this.layerManager.getActiveLayer();
         if (!this.activeLayerSnapshotBeforeErase) {
-            this.activeLayerSnapshotBeforeErase = JSON.stringify(activeLayer.elements);
+            this.activeLayerSnapshotBeforeErase = cloneObjectDeep(activeLayer.elements);
         }
         const removalResult = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
         activeLayer.elements = removalResult.elements;
@@ -453,12 +454,12 @@ export class XDrawDataHolder {
         if (!this.activeLayerSnapshotBeforeErase) {
             return;
         }
-        const beforeEraseSnapshot = JSON.parse(this.activeLayerSnapshotBeforeErase);
-        const currentSnapshotAfterRemoval = JSON.stringify(this.layerManager.getLayer(activeLayerId)!.elements);
+        const beforeEraseSnapshot = cloneObjectDeep(this.activeLayerSnapshotBeforeErase);
+        const currentSnapshotAfterRemoval = cloneObjectDeep(this.layerManager.getLayer(activeLayerId)!.elements);
         this.undoRedoHelper.pushOperationQueue({
             apply: async () => {
                 // Do nothing, changes are already applied
-                this.layerManager.getLayer(activeLayerId)!.elements = JSON.parse(currentSnapshotAfterRemoval);
+                this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(currentSnapshotAfterRemoval);
                 this.rasterizer.invalidateContentBuffer();
                 this.rasterizer.setProjectData(this.xdrawData);
             },
@@ -468,7 +469,7 @@ export class XDrawDataHolder {
                 this.rasterizer.setProjectData(this.xdrawData);
             },
         }, true, false);
-        this.activeLayerSnapshotBeforeErase = "";
+        this.activeLayerSnapshotBeforeErase = [];
     }
 
     insertTextAtCanvasPoint(

@@ -6,6 +6,7 @@ export * from "./utils/color-utils";
 export * from "./utils/xdraw-fill-utils";
 export * from "./utils/xdraw-data-utils";
 export * from "./utils/xdraw-binary-codec";
+export * from "./utils/clone-utils";
 
 // Project state (layers, undo/redo, active document)
 export * from "./state/layer-manager";

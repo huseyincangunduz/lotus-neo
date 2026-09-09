@@ -40,7 +40,7 @@ export interface XDrawElementPosition {
     breakBefore?: boolean;
 }
 
-export const XDRAW_MAX_POINTS_PER_ELEMENT = 256;
+export const XDRAW_MAX_POINTS_PER_ELEMENT = 15000;
 
 export interface XDrawSize {
     width: number;
