@@ -79,28 +79,6 @@ export class XdrawDataUtils {
         const worldTop = cam.y;
         const worldRight = cam.x + screenWidth / cam.scale;
         const worldBottom = cam.y + screenHeight / cam.scale;
-        // const boundKey = [worldLeft, worldTop, worldRight, worldBottom].join("-");
-        // if (this.cropDataMap.has(boundKey)) {
-        //     const cachedData = this.cropDataMap.get(boundKey)!;
-        //     for (const cropData of cachedData) {
-        //         onFound?.(cropData);
-        //     }
-        //     return;
-        // }
-
-        // const cropKeys = this.cropDataMap.keys();
-        // for (const key of cropKeys) {
-        //     const [left, top, right, bottom] = key.split("-").map(Number);
-        //     if (left > worldLeft && top > worldTop && right < worldRight && bottom < worldBottom) {
-        //         // const cachedData = this.cropDataMap.get(key)!;
-        //         const currentCropElementsFoundData = this.cropDataMap.get(key)!;
-        //         this.cropDataMap.set(boundKey, currentCropElementsFoundData);
-        //         for (const cropData of currentCropElementsFoundData) {
-        //             onFound?.(cropData);
-        //         }
-        //         return;
-        //     }
-        // }
 
         for (const layer of data.layers) {
             if (layer.visible === false || layer.opacity === 0) {
@@ -108,13 +86,6 @@ export class XdrawDataUtils {
             }
             this.cropXDrawDataElements(layer.elements, worldLeft, worldTop, worldRight, worldBottom, { layerId: layer.id, layerOpacity: layer.opacity },
                 onFound,
-                // (a) => {
-                // if (!this.cropDataMap.has(boundKey)) {
-                //     this.cropDataMap.set(boundKey, []);
-                // }
-                // this.cropDataMap.get(boundKey)!.push(a);
-                // onFound?.(a);
-                // }
             );
         }
     }
@@ -139,7 +110,9 @@ export class XdrawDataUtils {
                     textTop <= bottom && textBottom >= top) {
                     if (onFound) {
                         onFound({
-                            ...initialFoundElement,
+                            // ...initialFoundElement,
+                            layerId: initialFoundElement.layerId,
+                            layerOpacity: initialFoundElement.layerOpacity,
                             elementId: textElement.id,
                             elementType: textElement.type,
                             element: textElement,
@@ -168,7 +141,8 @@ export class XdrawDataUtils {
                 }
                 if (isVisible && onFound) {
                     onFound({
-                        ...initialFoundElement,
+                        layerId: initialFoundElement.layerId,
+                        layerOpacity: initialFoundElement.layerOpacity,
                         elementId: fillElement.id,
                         elementType: fillElement.type,
                         element: fillElement,
@@ -217,7 +191,8 @@ export class XdrawDataUtils {
                 if (onFound) {
 
                     onFound({
-                        ...initialFoundElement,
+                        layerId: initialFoundElement.layerId,
+                        layerOpacity: initialFoundElement.layerOpacity,
                         element: drawElement,
                         elementId: drawElement.id,
                         elementType: drawElement.type,
@@ -232,7 +207,7 @@ export class XdrawDataUtils {
         }
     }
 
-    public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): {elements: XDrawElement[], hasChanges: boolean} {
+    public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): { elements: XDrawElement[], hasChanges: boolean } {
         const newElements: XDrawElement[] = [];
         let hasChanges = false;
         for (const element of elements) {

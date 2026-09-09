@@ -772,49 +772,52 @@ export class ProjectDataRasterizer {
         if (!context) {
             return;
         }
-        this.startContext2d(context);
-        const { x: camX, y: camY, scale } = this.cam;
-
-        context.setTransform(1, 0, 0, 1, 0, 0);
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
         // Tamamlanmis icerik: buffer gecerli degilse (pan margin disina cikti, zoom esigi
         // asildi ya da icerik degisti) once yeniden olusturulur; sonra tek drawImage ile
         // basilir. Boylece pan/zoom sirasinda katmanlardaki tum elementler tekrar taranmaz.
-        if (!this.isContentBufferCurrent()) {
+        const needRebuild = !this.isContentBufferCurrent();
+        if (needRebuild) {
             this.rebuildContentBuffer();
         }
-        if (this.contentCanvas && this.contentBuffer) {
-            const buffer = this.contentBuffer;
-            const scaleRatio = scale / buffer.scale;
+        const { x: camX, y: camY, scale } = this.cam;
+        const showScreenFunc = () => {
+            this.renderScheduled = false;
+            this.startContext2d(context);
             context.setTransform(1, 0, 0, 1, 0, 0);
-            context.drawImage(
-                this.contentCanvas,
-                (buffer.originX - camX) * scale,
-                (buffer.originY - camY) * scale,
-                buffer.width * scaleRatio,
-                buffer.height * scaleRatio,
-            );
-        }
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            if (this.contentCanvas && this.contentBuffer) {
+                const buffer = this.contentBuffer;
+                const scaleRatio = scale / buffer.scale;
+                context.setTransform(1, 0, 0, 1, 0, 0);
+                context.drawImage(
+                    this.contentCanvas,
+                    (buffer.originX - camX) * scale,
+                    (buffer.originY - camY) * scale,
+                    buffer.width * scaleRatio,
+                    buffer.height * scaleRatio,
+                );
+            }
 
-        // Aktif (henuz finalize olmamis) stroke, buffer'da olmadigi icin her karede
-        // ayrica dunya donusumuyle ustte cizilir.
-        const activeElement = this.activeDrawElement;
-        if (activeElement) {
-            context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
-            context.lineCap = "round";
-            context.lineJoin = "round";
-            context.globalAlpha = this.activeDrawElementLayerOpacity;
-            this.drawDrawElement(context, activeElement);
+            // Aktif (henuz finalize olmamis) stroke, buffer'da olmadigi icin her karede
+            // ayrica dunya donusumuyle ustte cizilir.
+            const activeElement = this.activeDrawElement;
+            if (activeElement) {
+                context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+                context.lineCap = "round";
+                context.lineJoin = "round";
+                context.globalAlpha = this.activeDrawElementLayerOpacity;
+                this.drawDrawElement(context, activeElement);
+                context.globalAlpha = 1;
+            }
+
+            // Cursor (ozellikle silgi outline'i) aktif stroke olmadan da (hover/erase sirasinda) gorunmeli;
+            // eskiden bu "return" yuzunden yalniz cizim modunda stroke devam ederken cizilebiliyordu.
+            this.drawCursor(context);
+            context.setTransform(1, 0, 0, 1, 0, 0);
             context.globalAlpha = 1;
+            this.endContext2d(context);
         }
-
-        // Cursor (ozellikle silgi outline'i) aktif stroke olmadan da (hover/erase sirasinda) gorunmeli;
-        // eskiden bu "return" yuzunden yalniz cizim modunda stroke devam ederken cizilebiliyordu.
-        this.drawCursor(context);
-        context.setTransform(1, 0, 0, 1, 0, 0);
-        context.globalAlpha = 1;
-        this.endContext2d(context);
+        requestAnimationFrame(showScreenFunc);
     }
 
     private throttledRender() {
@@ -822,11 +825,10 @@ export class ProjectDataRasterizer {
             return;
         }
         this.renderScheduled = true;
-
-        requestAnimationFrame(() => {
-            this.renderScheduled = false;
-            this.rasterizeProjectDataToCanvas();
-        });
+        // requestAnimationFrame(() => {
+        //     this.renderScheduled = false;
+        // });
+        this.rasterizeProjectDataToCanvas();
 
     }
 
