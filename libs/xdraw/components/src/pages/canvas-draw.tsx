@@ -196,6 +196,7 @@ export class CanvasDraw extends NeolitComponent {
       savedAt: new Date().toISOString(),
     };
 
+    // TODO: IndexedDB'e de kaydedelim, çünkü dosya vs. çok büyüyor ve takılmasına sebep oluyor... yani sanırım...
     try {
       localStorage.setItem(
         XDRAW_SETTING_KEYS.autosaveSnapshot,
