@@ -647,6 +647,7 @@ export class ProjectDataRasterizer {
     // boyutunda sabit bir offscreen canvas'a rasterize eder. Aktif stroke her zaman
     // bu buffer'in disinda, ustte ayrica cizilir (bkz. rasterizeProjectDataToCanvas).
     private rebuildContentBuffer() {
+        const rebuildStart = performance.now();
         const canvas = this.activeCanvas;
         if (!canvas || !this.projectData) {
             return;
@@ -739,6 +740,12 @@ export class ProjectDataRasterizer {
 
         this.contentBuffer = { originX, originY, scale: bufferScale, width, height };
         this.contentBufferValid = true;
+
+        // Tanida amacli: tablette gorulen "donup duz cizgi atma" sikayeti icin, uzun surenlerini yakalar.
+        const rebuildMs = performance.now() - rebuildStart;
+        if (rebuildMs > 16) {
+            console.debug(`[xdraw-perf] rebuildContentBuffer ${rebuildMs.toFixed(1)}ms (width=${width} height=${height})`);
+        }
     }
     drawTextElement(context: CanvasRenderingContext2D, arg1: XDrawTextElement) {
         const textElement = arg1;

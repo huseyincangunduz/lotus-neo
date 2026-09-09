@@ -331,6 +331,8 @@ export class XDrawDataHolder {
             return;
         }
         if (this.activeDrawElement.points.length >= XDRAW_MAX_POINTS_PER_ELEMENT) {
+            // Tanida amacli: bu dal "donup duz cizgi atma" supheli nedenlerden biri (bkz. rebuildContentBuffer log'u).
+            console.debug(`[xdraw-perf] chunk split at ${this.activeDrawElement.points.length} points`);
             const previousPoint = this.activeDrawElement.points[this.activeDrawElement.points.length - 1];
             this.activeDrawElement.finalized = true;
             this.activeDrawElement = {
@@ -371,7 +373,13 @@ export class XDrawDataHolder {
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
 
+        const cloneStart = performance.now();
         let insertedElementsSnapshot = cloneObjectDeep(this.insertedElements);
+        // Tanida amacli: uzun surenlerini yakalar, bkz. rebuildContentBuffer log'u.
+        const cloneMs = performance.now() - cloneStart;
+        if (cloneMs > 16) {
+            console.debug(`[xdraw-perf] stopStrokeImmediately clone ${cloneMs.toFixed(1)}ms (elements=${insertedElementsSnapshot.length})`);
+        }
         const activeLayerId = this.getActiveLayerId();
         this.undoRedoHelper.pushOperationQueue({
             apply: () => {
