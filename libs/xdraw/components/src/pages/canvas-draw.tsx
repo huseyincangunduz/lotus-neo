@@ -29,6 +29,7 @@ import { Button } from "@libs/ui/button";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
 import { WebdialogOverlayService } from "@libs/ui/webdialog";
 import { tr } from "@libs/ui/i18n";
+import { IdbKeyValueStore } from "@libs/utils/idb-store";
 import "./canvas-draw.css";
 
 interface AutosavePayload {
@@ -161,6 +162,8 @@ export class CanvasDraw extends NeolitComponent {
   private static readonly GESTURE_FINALIZE_DELAY_MS = 500;
   private autosaveTimerId: number | null = null;
   private autosaveDirty = false;
+  // localStorage'in aksine buyuk cizimlerde kota hatasi vermiyor.
+  private autosaveStore = new IdbKeyValueStore("xdraw-autosave", "snapshots");
   private readonly handleWindowResize = () => {
     this.syncCanvasViewportSize();
   };
@@ -169,7 +172,7 @@ export class CanvasDraw extends NeolitComponent {
   };
   private readonly handleBeforeUnload = () => {
     this.flushPendingGestureHistory();
-    this.flushAutosave();
+    void this.flushAutosave();
   };
 
   private buildExportPayload(optimize = false) {
@@ -189,30 +192,26 @@ export class CanvasDraw extends NeolitComponent {
     this.autosaveDirty = true;
   }
 
-  private writeAutosave(): void {
+  private async writeAutosave(): Promise<void> {
     const payload: AutosavePayload = {
       snapshot: this.svgHolder.captureDrawingSnapshot(),
       viewport: this.viewPort.get(),
       savedAt: new Date().toISOString(),
     };
 
-    // TODO: IndexedDB'e de kaydedelim, çünkü dosya vs. çok büyüyor ve takılmasına sebep oluyor... yani sanırım...
     try {
-      localStorage.setItem(
-        XDRAW_SETTING_KEYS.autosaveSnapshot,
-        JSON.stringify(payload),
-      );
+      await this.autosaveStore.set(XDRAW_SETTING_KEYS.autosaveSnapshot, payload);
       this.autosaveDirty = false;
     } catch (error) {
       console.error("Autosave yazilamadi:", error);
     }
   }
 
-  private flushAutosave(): void {
+  private async flushAutosave(): Promise<void> {
     if (!this.autosaveDirty) {
       return;
     }
-    this.writeAutosave();
+    await this.writeAutosave();
   }
 
   private startAutosaveLoop(): void {
@@ -221,7 +220,7 @@ export class CanvasDraw extends NeolitComponent {
     }
 
     this.autosaveTimerId = window.setInterval(() => {
-      this.flushAutosave();
+      void this.flushAutosave();
     }, 1200);
   }
 
@@ -234,7 +233,48 @@ export class CanvasDraw extends NeolitComponent {
     this.autosaveTimerId = null;
   }
 
-  private tryRestoreAutosave(): boolean {
+  private isValidAutosavePayload(
+    parsed: Partial<AutosavePayload> | undefined,
+  ): parsed is AutosavePayload {
+    return !!(
+      parsed?.snapshot &&
+      parsed.snapshot.data &&
+      typeof parsed.snapshot.activeLayerId === "string" &&
+      parsed.viewport &&
+      Number.isFinite(parsed.viewport.x) &&
+      Number.isFinite(parsed.viewport.y)
+    );
+  }
+
+  private applyRestoredAutosave(parsed: AutosavePayload): void {
+    this.svgHolder.restoreDrawingSnapshot(parsed.snapshot).catch((error) => {
+      console.error("Autosave geri yuklenemedi:", error);
+    });
+
+    const restoredScale = Number(parsed.viewport.scale);
+    if (Number.isFinite(restoredScale) && restoredScale > 0) {
+      this.zoomFactor.set(restoredScale);
+    }
+
+    this.syncCanvasViewportSize();
+    this.worldX.set(parsed.viewport.x);
+    this.worldY.set(parsed.viewport.y);
+  }
+
+  private async tryRestoreAutosave(): Promise<boolean> {
+    try {
+      const fromIdb = await this.autosaveStore.get<AutosavePayload>(
+        XDRAW_SETTING_KEYS.autosaveSnapshot,
+      );
+      if (this.isValidAutosavePayload(fromIdb)) {
+        this.applyRestoredAutosave(fromIdb);
+        return true;
+      }
+    } catch (error) {
+      console.error("Autosave (IndexedDB) okunamadi:", error);
+    }
+
+    // Eskiden localStorage'a yazilmis kayit varsa bir kereligine IndexedDB'ye tasi.
     const raw = localStorage.getItem(XDRAW_SETTING_KEYS.autosaveSnapshot);
     if (!raw) {
       return false;
@@ -242,29 +282,13 @@ export class CanvasDraw extends NeolitComponent {
 
     try {
       const parsed = JSON.parse(raw) as Partial<AutosavePayload>;
-      if (
-        !parsed.snapshot ||
-        !parsed.snapshot.data ||
-        typeof parsed.snapshot.activeLayerId !== "string" ||
-        !parsed.viewport ||
-        !Number.isFinite(parsed.viewport.x) ||
-        !Number.isFinite(parsed.viewport.y)
-      ) {
+      if (!this.isValidAutosavePayload(parsed)) {
         return false;
       }
 
-      this.svgHolder.restoreDrawingSnapshot(parsed.snapshot).catch((error) => {
-        console.error("Autosave geri yuklenemedi:", error);
-      });
-
-      const restoredScale = Number(parsed.viewport.scale);
-      if (Number.isFinite(restoredScale) && restoredScale > 0) {
-        this.zoomFactor.set(restoredScale);
-      }
-
-      this.syncCanvasViewportSize();
-      this.worldX.set(parsed.viewport.x);
-      this.worldY.set(parsed.viewport.y);
+      this.applyRestoredAutosave(parsed);
+      localStorage.removeItem(XDRAW_SETTING_KEYS.autosaveSnapshot);
+      await this.autosaveStore.set(XDRAW_SETTING_KEYS.autosaveSnapshot, parsed);
 
       return true;
     } catch (error) {
@@ -399,7 +423,7 @@ export class CanvasDraw extends NeolitComponent {
     const after = this.captureHistorySnapshot();
     this.pushHistorySnapshotOperation(before, after);
     this.scheduleAutosave();
-    this.flushAutosave();
+    await this.flushAutosave();
   }
 
   private determineSizeOfCanvasPixels(el: HTMLElement) {
@@ -502,11 +526,12 @@ export class CanvasDraw extends NeolitComponent {
         scale: this.zoomFactor.get(),
       });
 
-      const restored = this.tryRestoreAutosave();
-      if (!restored) {
-        this.scheduleAutosave();
-        this.flushAutosave();
-      }
+      void this.tryRestoreAutosave().then((restored) => {
+        if (!restored) {
+          this.scheduleAutosave();
+          void this.flushAutosave();
+        }
+      });
 
       void this.appController.checkPendingExternalFile?.().then((file) => {
         if (file) {
@@ -519,7 +544,7 @@ export class CanvasDraw extends NeolitComponent {
   onDestroy(): void {
     this.stopAutosaveLoop();
     this.flushPendingGestureHistory();
-    this.flushAutosave();
+    void this.flushAutosave();
     window.removeEventListener("resize", this.handleWindowResize);
     window.visualViewport?.removeEventListener(
       "resize",
@@ -942,7 +967,7 @@ export class CanvasDraw extends NeolitComponent {
   // Draw/erase icin undo adimlari data-holder icinde aksiyon bazli zaten ekleniyor;
   // burada sadece autosave'i gesture bitince flushluyoruz.
   private commitGestureHistory(): void {
-    this.flushAutosave();
+    void this.flushAutosave();
   }
 
   // Undo/redo veya sayfa kapanisi gibi anlarda bekleyen commit'i hemen tamamlar.
