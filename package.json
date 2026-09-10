@@ -7,6 +7,7 @@
     "dev": "tools/vite-serve.sh",
     "android": "tools/vite-capacitor-serve-android.sh",
     "build": "tools/vite-build.sh",
+    "deploy:web": "tools/deploy-web.sh",
     "preview": "tools/vite-preview.sh",
     "clear-cache": "rm -rf node_modules/.vite"
   },
