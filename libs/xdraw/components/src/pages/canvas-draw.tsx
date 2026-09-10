@@ -217,6 +217,9 @@ export class CanvasDraw extends NeolitComponent {
     }
 
     this.autosaveTimerId = window.setInterval(() => {
+      if (this.isPointerDragging) {
+        return;
+      }
       void this.flushAutosave();
     }, 1200);
   }
