@@ -330,6 +330,7 @@ export class XDrawDataHolder {
         if (!this.activeDrawElement) {
             return;
         }
+        let finalizedChunk = false;
         if (this.activeDrawElement.points.length >= XDRAW_MAX_POINTS_PER_ELEMENT) {
             // Tanida amacli: bu dal "donup duz cizgi atma" supheli nedenlerden biri (bkz. rebuildContentBuffer log'u).
             console.debug(`[xdraw-perf] chunk split at ${this.activeDrawElement.points.length} points`);
@@ -347,11 +348,16 @@ export class XDrawDataHolder {
             // Onceki parca finalize oldu; buffer'a girmesi icin yeniden olusturulmasi gerekir.
             this.rasterizer.invalidateContentBuffer();
             this.rasterizer.setActiveDrawElement(this.activeDrawElement, this.layerManager.getActiveLayer().opacity ?? 1);
+            finalizedChunk = true;
         }
         const size = this.activeStrokeWidth / this._viewCamera.scale;
         this.activeDrawElement.points.push({ x: worldX, y: worldY, size, breakBefore: this.breakBeforeNextPoint });
         this.breakBeforeNextPoint = false;
-        this.rasterizer.setProjectData(this.xdrawData);
+        if (finalizedChunk) {
+            this.rasterizer.setProjectData(this.xdrawData);
+        } else {
+            this.rasterizer.requestRender();
+        }
     }
 
     stopStroke(): void {

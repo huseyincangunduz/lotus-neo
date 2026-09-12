@@ -62,6 +62,7 @@ export class ProjectDataRasterizer {
         }
         this.workerBackendAttempted = true;
         if (
+            // true || // bir şeyi test ediyorum o yüzden worker çalışmasın
             typeof Worker === "undefined" ||
             typeof OffscreenCanvas === "undefined" ||
             typeof createImageBitmap === "undefined" ||
