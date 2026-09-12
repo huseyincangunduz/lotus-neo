@@ -103,4 +103,4 @@ Active points do not trigger `setSnapshot`. This avoids structured-cloning the g
 | Main thread to worker | `initialize`, `set-snapshot`, `set-viewport`, `invalidate`, `render` |
 | Worker to main thread | `initialized`, `buffer-ready`, `error` |
 
-The current protocol sends full snapshots at commit boundaries. Element-level upsert/delete messages can be added later if profiling shows that finalized snapshot transfer is still significant.
+The protocol sends full snapshots at commit boundaries. During an erase gesture, the fallback backend temporarily renders the shared project data on the main thread for immediate feedback. When the gesture ends, one full snapshot is sent to the worker; the local frame remains visible until the worker returns the matching frame. Other element-level upsert/delete messages can be added later if profiling shows that finalized snapshot transfer is still significant.

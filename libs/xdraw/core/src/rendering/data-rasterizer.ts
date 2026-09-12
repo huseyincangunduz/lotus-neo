@@ -8,6 +8,7 @@ import { FallbackContentBufferBackend } from "./fallback-content-buffer-backend"
 import { FillMaskRenderer } from "./fill-mask-renderer";
 import { LocalContentBufferBackend } from "./local-content-buffer-backend";
 import { WorkerContentBufferBackend } from "./worker-content-buffer-backend";
+import { XDRAW_SETTING_KEYS } from "../settings/xdraw-settings-config";
 
 export interface XDrawImageExportOptions {
     bounds: { x: number; y: number; width: number; height: number };
@@ -25,6 +26,7 @@ export class ProjectDataRasterizer {
     private renderScheduled = false;
     private dataRevision = 0;
     private renderRevision = 0;
+    private interactionMode: InteractionMode = "idle";
     private elementPainter = new CanvasElementPainter();
     private fillMaskRenderer = new FillMaskRenderer(this.elementPainter, () => document.createElement("canvas"));
     private readonly contentBufferOptions: ContentBufferRendererOptions = {
@@ -61,8 +63,10 @@ export class ProjectDataRasterizer {
             return;
         }
         this.workerBackendAttempted = true;
+        if (localStorage.getItem(XDRAW_SETTING_KEYS.useWebWorker) === "false") {
+            return;
+        }
         if (
-            // true || // bir şeyi test ediyorum o yüzden worker çalışmasın
             typeof Worker === "undefined" ||
             typeof OffscreenCanvas === "undefined" ||
             typeof createImageBitmap === "undefined" ||
@@ -228,6 +232,14 @@ export class ProjectDataRasterizer {
         this.requestRender();
     }
 
+    updateProjectDataLocally(projectData: XDrawData) {
+        this.projectData = projectData;
+        this.dataRevision++;
+        this.contentBufferBackend.invalidate();
+        this.contentBufferBackend.setSnapshot(projectData, this.dataRevision);
+        this.requestRender();
+    }
+
     setViewCamera(camera: XDrawCanvasCamera) {
         this.cam = camera;
         if (this.activeCanvas) {
@@ -241,7 +253,26 @@ export class ProjectDataRasterizer {
     }
 
     setInteractionMode(_mode: InteractionMode) {
-        // Etkilesim modu su an render'i etkilemiyor.
+        const previousMode = this.interactionMode;
+        this.interactionMode = _mode;
+
+        if (_mode === "erase" && previousMode !== "erase") {
+            this.contentBufferBackend.setUseLocalRendering(true);
+            if (this.projectData) {
+                this.contentBufferBackend.invalidate();
+                this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
+                this.requestRender();
+            }
+            return;
+        }
+
+        if (previousMode === "erase" && _mode !== "erase" && this.projectData) {
+            this.contentBufferBackend.setUseLocalRendering(false);
+            this.dataRevision++;
+            this.contentBufferBackend.invalidate();
+            this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
+            this.requestRender();
+        }
     }
 
     getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {

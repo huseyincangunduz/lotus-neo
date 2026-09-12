@@ -43,6 +43,8 @@ export class WorkerContentBufferBackend implements ContentBufferBackend {
         this.postMessage({ type: "set-snapshot", data, dataRevision });
     }
 
+    setUseLocalRendering(_enabled: boolean): void { }
+
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void {
         this.viewport = viewport;
         this.renderRevision = renderRevision;

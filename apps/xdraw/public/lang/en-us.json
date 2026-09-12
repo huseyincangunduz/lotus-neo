@@ -47,6 +47,7 @@
       "draw.size-change-by-pressure": "Change brush size by pressure",
       "draw.scale-tool-sizes-with-zoom": "Scale tool sizes with zoom",
       "draw.pen-pressure-smoothing": "Pen Pressure Smoothing",
+      "draw.use-web-worker": "Use Web Worker (restart required)",
       "draw.invert-zoom-direction": "Invert Zoom Direction",
       "text.settings": "Text Settings",
       "text.font-family": "Font Family",

@@ -596,6 +596,10 @@ export class CanvasDrawSidebar extends NeolitComponent {
           ></Trackbar>
           <h2>{tr("xdraw.draw.navigation-settings")}</h2>
           <Checkbox
+            label={tr("xdraw.draw.use-web-worker")}
+            checked={this.settings.useWebWorker}
+          ></Checkbox>
+          <Checkbox
             label={tr("xdraw.draw.invert-zoom-direction")}
             checked={computed(
               [this.settings.zoomDirection],

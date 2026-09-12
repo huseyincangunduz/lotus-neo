@@ -22,6 +22,8 @@ export class LocalContentBufferBackend implements ContentBufferBackend {
         this.dataRevision = dataRevision;
     }
 
+    setUseLocalRendering(_enabled: boolean): void { }
+
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void {
         this.viewport = viewport;
         this.renderRevision = renderRevision;

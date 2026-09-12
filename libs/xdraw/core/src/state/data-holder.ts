@@ -65,7 +65,7 @@ export class XDrawDataHolder {
     undoRedoHelper: UndoRedoHelper = new UndoRedoHelper(10);
     insertedElements: XDrawElement[] = [];
     // Elementler json array olacak
-    activeLayerSnapshotBeforeErase: XDrawElement[] = [];
+    activeLayerSnapshotBeforeErase: XDrawElement[] | null = null;
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -449,8 +449,7 @@ export class XDrawDataHolder {
         const removalResult = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
         activeLayer.elements = removalResult.elements;
         if (removalResult.hasChanges) {
-            this.rasterizer.invalidateContentBuffer();
-            this.rasterizer.setProjectData(this.xdrawData);
+            this.rasterizer.updateProjectDataLocally(this.xdrawData);
         }
 
         return removalResult.hasChanges;
@@ -491,7 +490,7 @@ export class XDrawDataHolder {
                 this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(currentSnapshotAfterRemoval);
             },
             revert: async () => {
-                this.layerManager.getLayer(activeLayerId)!.elements = beforeEraseSnapshot;
+                this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(beforeEraseSnapshot);
             },
             dispose: () => {
                 beforeEraseSnapshot = undefined as any;
@@ -502,7 +501,7 @@ export class XDrawDataHolder {
                 this.rasterizer.setProjectData(this.xdrawData);
             }
         }, true, false);
-        this.activeLayerSnapshotBeforeErase = [];
+        this.activeLayerSnapshotBeforeErase = null;
     }
 
     insertTextAtCanvasPoint(

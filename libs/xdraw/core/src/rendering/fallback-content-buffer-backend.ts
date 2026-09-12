@@ -9,6 +9,9 @@ import type {
 
 export class FallbackContentBufferBackend implements ContentBufferBackend {
     private activeBackend: ContentBufferBackend;
+    private primaryFailed = false;
+    private useLocalRendering = false;
+    private activatePrimaryOnNextFrame = false;
     private listeners = new Set<ContentBufferReadyListener>();
     private unsubscribePrimary: () => void;
     private unsubscribeFallback: () => void;
@@ -23,8 +26,22 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     }
 
     setSnapshot(data: XDrawData, dataRevision: number): void {
-        this.primaryBackend.setSnapshot(data, dataRevision);
+        if (!this.useLocalRendering) {
+            this.primaryBackend.setSnapshot(data, dataRevision);
+        }
         this.fallbackBackend.setSnapshot(data, dataRevision);
+    }
+
+    setUseLocalRendering(enabled: boolean): void {
+        this.useLocalRendering = enabled;
+        if (enabled) {
+            this.activatePrimaryOnNextFrame = false;
+            this.activeBackend = this.fallbackBackend;
+            return;
+        }
+        if (!this.primaryFailed && this.activeBackend === this.fallbackBackend) {
+            this.activatePrimaryOnNextFrame = true;
+        }
     }
 
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void {
@@ -33,19 +50,26 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     }
 
     invalidate(): void {
-        this.primaryBackend.invalidate();
+        if (!this.useLocalRendering) {
+            this.primaryBackend.invalidate();
+        }
         this.fallbackBackend.invalidate();
     }
 
     async requestBuffer(): Promise<void> {
+        const requestedBackend = this.activatePrimaryOnNextFrame
+            ? this.primaryBackend
+            : this.activeBackend;
         try {
-            await this.activeBackend.requestBuffer();
+            await requestedBackend.requestBuffer();
         } catch (error) {
-            if (this.activeBackend !== this.primaryBackend) {
+            if (requestedBackend !== this.primaryBackend) {
                 throw error;
             }
             console.warn("Content buffer worker kullanilamadi, local renderer'a geciliyor.", error);
             toastService.warning("Content buffer: Worker hatasi, local renderer'a gecildi.", 3500);
+            this.primaryFailed = true;
+            this.activatePrimaryOnNextFrame = false;
             this.activeBackend = this.fallbackBackend;
             this.primaryBackend.dispose();
             await this.fallbackBackend.requestBuffer();
@@ -70,6 +94,10 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     }
 
     private emitFrame(backend: ContentBufferBackend, frame: ContentBufferFrame): void {
+        if (backend === this.primaryBackend && this.activatePrimaryOnNextFrame) {
+            this.activatePrimaryOnNextFrame = false;
+            this.activeBackend = this.primaryBackend;
+        }
         if (backend !== this.activeBackend) {
             return;
         }

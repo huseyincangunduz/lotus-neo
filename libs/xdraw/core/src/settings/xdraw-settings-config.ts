@@ -16,6 +16,7 @@ export const XDRAW_SETTING_KEYS = {
   minSegmentLength: "xdraw.settings.minSegmentLength",
   zoomDirection: "xdraw.settings.zoomDirection",
   scaleToolSizesWithZoom: "xdraw.settings.scaleToolSizesWithZoom",
+  useWebWorker: "xdraw.settings.useWebWorker",
   autosaveSnapshot: "xdraw.settings.autosaveSnapshot",
   backgroundPatternMode: "xdraw.settings.backgroundPatternMode",
   textFontFamily: "xdraw.settings.textFontFamily",
@@ -44,6 +45,7 @@ interface XDrawSettingsState {
   minSegmentLength: StateOrPlain<number>;
   zoomDirection: StateOrPlain<ZoomDirection>;
   scaleToolSizesWithZoom: StateOrPlain<boolean>;
+  useWebWorker: StateOrPlain<boolean>;
   backgroundPatternMode: StateOrPlain<BackgroundPatternMode>;
   textFontFamily: StateOrPlain<string>;
   textFontSize: StateOrPlain<number>;
@@ -91,6 +93,7 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
   minSegmentLength = state<number>(readNumber(XDRAW_SETTING_KEYS.minSegmentLength, 0, 100) ?? 1);
   zoomDirection = state<ZoomDirection>(readNumber(XDRAW_SETTING_KEYS.zoomDirection, -1, 1) === -1 ? -1 : 1);
   scaleToolSizesWithZoom = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.scaleToolSizesWithZoom) ?? true);
+  useWebWorker = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.useWebWorker) ?? true);
   backgroundPatternMode = state<BackgroundPatternMode>(readNumber(XDRAW_SETTING_KEYS.backgroundPatternMode, 0, 2) as any ?? 0);
   textFontFamily = state<string>(read(XDRAW_SETTING_KEYS.textFontFamily) || "system-ui");
   textFontSize = state<number>(readNumber(XDRAW_SETTING_KEYS.textFontSize, 8, 120) ?? 16);
@@ -115,6 +118,7 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
     this.minSegmentLength.subscribe((value) => persist(XDRAW_SETTING_KEYS.minSegmentLength, value));
     this.zoomDirection.subscribe((value) => persist(XDRAW_SETTING_KEYS.zoomDirection, value));
     this.scaleToolSizesWithZoom.subscribe((value) => persist(XDRAW_SETTING_KEYS.scaleToolSizesWithZoom, value));
+    this.useWebWorker.subscribe((value) => persist(XDRAW_SETTING_KEYS.useWebWorker, value));
     this.backgroundPatternMode.subscribe((value) => {
       persist(XDRAW_SETTING_KEYS.backgroundPatternMode, value);
       params.onBackgroundPatternRestored();
