@@ -14,6 +14,8 @@ export * from "./state/data-holder";
 
 // Canvas rendering
 export * from "./rendering/data-rasterizer";
+export * from "./rendering/content-buffer-backend";
+export * from "./rendering/content-buffer-worker-messages";
 
 // Pointer/keyboard interaction handling
 export * from "./interaction/canvas-gesture-listeners";
