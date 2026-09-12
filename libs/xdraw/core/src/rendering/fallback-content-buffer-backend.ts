@@ -1,3 +1,4 @@
+import { toastService } from "@libs/ui/alert-toast";
 import type { XDrawData } from "../model/xdraw-data";
 import type {
     ContentBufferBackend,
@@ -44,6 +45,7 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
                 throw error;
             }
             console.warn("Content buffer worker kullanilamadi, local renderer'a geciliyor.", error);
+            toastService.warning("Content buffer: Worker hatasi, local renderer'a gecildi.", 3500);
             this.activeBackend = this.fallbackBackend;
             this.primaryBackend.dispose();
             await this.fallbackBackend.requestBuffer();

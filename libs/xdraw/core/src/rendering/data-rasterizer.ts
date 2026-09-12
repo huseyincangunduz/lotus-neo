@@ -1,3 +1,4 @@
+import { toastService } from "@libs/ui/alert-toast";
 import { ColorUtils } from "../utils/color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
@@ -66,6 +67,7 @@ export class ProjectDataRasterizer {
             typeof createImageBitmap === "undefined" ||
             typeof Path2D === "undefined"
         ) {
+            toastService.warning("Content buffer: Web Worker desteklenmiyor, local renderer kullaniliyor.", 3500);
             return;
         }
 
@@ -80,12 +82,14 @@ export class ProjectDataRasterizer {
                 new WorkerContentBufferBackend(worker, this.contentBufferOptions),
                 fallbackBackend,
             );
+            toastService.info("Content buffer: Web Worker kullaniliyor.", 3500);
             this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
             if (this.projectData) {
                 this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
             }
         } catch (error) {
             console.warn("Content buffer worker baslatilamadi, local renderer kullaniliyor.", error);
+            toastService.warning("Content buffer: Worker baslatilamadi, local renderer kullaniliyor.", 3500);
         }
     }
 
