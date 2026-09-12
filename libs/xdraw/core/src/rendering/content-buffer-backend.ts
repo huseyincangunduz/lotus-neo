@@ -22,7 +22,7 @@ export interface ContentBufferBackend {
     setSnapshot(data: XDrawData, dataRevision: number): void;
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void;
     invalidate(): void;
-    requestBuffer(): void;
+    requestBuffer(): Promise<void>;
     getCurrentFrame(): ContentBufferFrame | undefined;
     onBufferReady(listener: ContentBufferReadyListener): () => void;
     dispose(): void;

@@ -16,6 +16,7 @@ export * from "./state/data-holder";
 export * from "./rendering/data-rasterizer";
 export * from "./rendering/content-buffer-backend";
 export * from "./rendering/content-buffer-worker-messages";
+export * from "./rendering/local-content-buffer-backend";
 
 // Pointer/keyboard interaction handling
 export * from "./interaction/canvas-gesture-listeners";

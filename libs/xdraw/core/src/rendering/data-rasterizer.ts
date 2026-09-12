@@ -1,8 +1,10 @@
 import { ColorUtils } from "../utils/color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
+import type { ContentBufferBackend } from "./content-buffer-backend";
 import { ContentBufferRenderer } from "./content-buffer-renderer";
 import { FillMaskRenderer } from "./fill-mask-renderer";
+import { LocalContentBufferBackend } from "./local-content-buffer-backend";
 
 export interface XDrawImageExportOptions {
     bounds: { x: number; y: number; width: number; height: number };
@@ -18,29 +20,43 @@ export class ProjectDataRasterizer {
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
     private renderScheduled = false;
+    private dataRevision = 0;
+    private renderRevision = 0;
     private elementPainter = new CanvasElementPainter();
     private fillMaskRenderer = new FillMaskRenderer(this.elementPainter, () => document.createElement("canvas"));
-    private contentBufferRenderer = new ContentBufferRenderer(
-        this.elementPainter,
-        (width, height) => typeof OffscreenCanvas !== "undefined"
-            ? new OffscreenCanvas(width, height)
-            : document.createElement("canvas"),
-        {
-            marginRatio: 0.6,
-            maxPixels: window.innerWidth * window.innerHeight * 4,
-            scaleMinRatio: 0.85,
-            scaleMaxRatio: 1.18,
-        },
+    private contentBufferBackend: ContentBufferBackend = new LocalContentBufferBackend(
+        new ContentBufferRenderer(
+            this.elementPainter,
+            (width, height) => typeof OffscreenCanvas !== "undefined"
+                ? new OffscreenCanvas(width, height)
+                : document.createElement("canvas"),
+            {
+                marginRatio: 0.6,
+                maxPixels: window.innerWidth * window.innerHeight * 4,
+                scaleMinRatio: 0.85,
+                scaleMaxRatio: 1.18,
+            },
+        ),
     );
     // Su an cizilmekte olan (henuz finalize olmamis) stroke; buffer'a girmez, her karede ustte cizilir.
     private activeDrawElement: XDrawDrawElement | null = null;
     private activeDrawElementLayerOpacity = 1;
+    private readonly unsubscribeContentBuffer: () => void;
+
+    constructor() {
+        this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
+    }
 
     // Bir stroke bitip finalize oldugunda veya katman/veri yapisi degistiginde cagrilir;
     // bir sonraki render'da content buffer'i bastan olusturur. Aktif cizim sirasinda
     // (insertPoint) cagrilmamalidir - aksi halde her nokta icin tum katman yeniden taranir.
     invalidateContentBuffer() {
-        this.contentBufferRenderer.invalidate();
+        this.contentBufferBackend.invalidate();
+    }
+
+    dispose() {
+        this.unsubscribeContentBuffer();
+        this.contentBufferBackend.dispose();
     }
 
     // Aktif (henuz finalize olmamis) stroke referansini gunceller; bu element content
@@ -53,6 +69,11 @@ export class ProjectDataRasterizer {
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
+        this.renderRevision++;
+        this.contentBufferBackend.setViewport(
+            { camera: this.cam, width: canvas.width, height: canvas.height },
+            this.renderRevision,
+        );
         this.requestRender();
     }
 
@@ -154,11 +175,20 @@ export class ProjectDataRasterizer {
 
     setProjectData(projectData: XDrawData) {
         this.projectData = projectData;
+        this.dataRevision++;
+        this.contentBufferBackend.setSnapshot(projectData, this.dataRevision);
         this.requestRender();
     }
 
     setViewCamera(camera: XDrawCanvasCamera) {
         this.cam = camera;
+        if (this.activeCanvas) {
+            this.renderRevision++;
+            this.contentBufferBackend.setViewport(
+                { camera, width: this.activeCanvas.width, height: this.activeCanvas.height },
+                this.renderRevision,
+            );
+        }
         this.requestRender();
     }
 
@@ -304,26 +334,26 @@ export class ProjectDataRasterizer {
         if (!context) {
             return;
         }
-        // Tamamlanmis icerik: buffer gecerli degilse (pan margin disina cikti, zoom esigi
-        // asildi ya da icerik degisti) once yeniden olusturulur; sonra tek drawImage ile
-        // basilir. Boylece pan/zoom sirasinda katmanlardaki tum elementler tekrar taranmaz.
-        const needRebuild = !this.contentBufferRenderer.isCurrent(this.cam, canvas.width, canvas.height);
-        if (needRebuild) {
-            this.contentBufferRenderer.rebuild(this.projectData, this.cam, canvas.width, canvas.height);
-        }
+        this.contentBufferBackend.setViewport(
+            { camera: this.cam, width: canvas.width, height: canvas.height },
+            this.renderRevision,
+        );
+        void this.contentBufferBackend.requestBuffer().catch((error: unknown) => {
+            console.error("Content buffer olusturulamadi.", error);
+        });
         const { x: camX, y: camY, scale } = this.cam;
         const showScreenFunc = () => {
             this.renderScheduled = false;
             this.startContext2d(context);
             context.setTransform(1, 0, 0, 1, 0, 0);
             context.clearRect(0, 0, canvas.width, canvas.height);
-            const contentCanvas = this.contentBufferRenderer.getCanvas();
-            const buffer = this.contentBufferRenderer.getBufferInfo();
-            if (contentCanvas && buffer) {
+            const contentFrame = this.contentBufferBackend.getCurrentFrame();
+            if (contentFrame) {
+                const { source, buffer } = contentFrame;
                 const scaleRatio = scale / buffer.scale;
                 context.setTransform(1, 0, 0, 1, 0, 0);
                 context.drawImage(
-                    contentCanvas,
+                    source,
                     (buffer.originX - camX) * scale,
                     (buffer.originY - camY) * scale,
                     buffer.width * scaleRatio,
