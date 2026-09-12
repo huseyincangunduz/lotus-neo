@@ -2,9 +2,11 @@ import { ColorUtils } from "../utils/color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
 import type { ContentBufferBackend } from "./content-buffer-backend";
-import { ContentBufferRenderer } from "./content-buffer-renderer";
+import { ContentBufferRenderer, type ContentBufferRendererOptions } from "./content-buffer-renderer";
+import { FallbackContentBufferBackend } from "./fallback-content-buffer-backend";
 import { FillMaskRenderer } from "./fill-mask-renderer";
 import { LocalContentBufferBackend } from "./local-content-buffer-backend";
+import { WorkerContentBufferBackend } from "./worker-content-buffer-backend";
 
 export interface XDrawImageExportOptions {
     bounds: { x: number; y: number; width: number; height: number };
@@ -24,27 +26,67 @@ export class ProjectDataRasterizer {
     private renderRevision = 0;
     private elementPainter = new CanvasElementPainter();
     private fillMaskRenderer = new FillMaskRenderer(this.elementPainter, () => document.createElement("canvas"));
-    private contentBufferBackend: ContentBufferBackend = new LocalContentBufferBackend(
-        new ContentBufferRenderer(
-            this.elementPainter,
-            (width, height) => typeof OffscreenCanvas !== "undefined"
-                ? new OffscreenCanvas(width, height)
-                : document.createElement("canvas"),
-            {
-                marginRatio: 0.6,
-                maxPixels: window.innerWidth * window.innerHeight * 4,
-                scaleMinRatio: 0.85,
-                scaleMaxRatio: 1.18,
-            },
-        ),
-    );
+    private readonly contentBufferOptions: ContentBufferRendererOptions = {
+        marginRatio: 0.6,
+        maxPixels: window.innerWidth * window.innerHeight * 4,
+        scaleMinRatio: 0.85,
+        scaleMaxRatio: 1.18,
+    };
+    private contentBufferBackend: ContentBufferBackend = this.createLocalContentBufferBackend();
+    private workerBackendAttempted = false;
     // Su an cizilmekte olan (henuz finalize olmamis) stroke; buffer'a girmez, her karede ustte cizilir.
     private activeDrawElement: XDrawDrawElement | null = null;
     private activeDrawElementLayerOpacity = 1;
-    private readonly unsubscribeContentBuffer: () => void;
+    private unsubscribeContentBuffer: () => void;
 
     constructor() {
         this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
+    }
+
+    private createLocalContentBufferBackend(): ContentBufferBackend {
+        return new LocalContentBufferBackend(
+            new ContentBufferRenderer(
+                this.elementPainter,
+                (width, height) => typeof OffscreenCanvas !== "undefined"
+                    ? new OffscreenCanvas(width, height)
+                    : document.createElement("canvas"),
+                this.contentBufferOptions,
+            ),
+        );
+    }
+
+    private enableWorkerContentBuffer(): void {
+        if (this.workerBackendAttempted) {
+            return;
+        }
+        this.workerBackendAttempted = true;
+        if (
+            typeof Worker === "undefined" ||
+            typeof OffscreenCanvas === "undefined" ||
+            typeof createImageBitmap === "undefined" ||
+            typeof Path2D === "undefined"
+        ) {
+            return;
+        }
+
+        try {
+            const worker = new Worker(
+                new URL("./content-buffer.worker.ts", import.meta.url),
+                { type: "module", name: "xdraw-content-buffer" },
+            );
+            const fallbackBackend = this.contentBufferBackend;
+            this.unsubscribeContentBuffer();
+            this.contentBufferBackend = new FallbackContentBufferBackend(
+                new WorkerContentBufferBackend(worker, this.contentBufferOptions),
+                fallbackBackend,
+            );
+            this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
+            if (this.projectData) {
+                this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
+            }
+        } catch (error) {
+            console.warn("Content buffer worker baslatilamadi, local renderer kullaniliyor.", error);
+        }
     }
 
     // Bir stroke bitip finalize oldugunda veya katman/veri yapisi degistiginde cagrilir;
@@ -69,6 +111,7 @@ export class ProjectDataRasterizer {
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
+        this.enableWorkerContentBuffer();
         this.renderRevision++;
         this.contentBufferBackend.setViewport(
             { camera: this.cam, width: canvas.width, height: canvas.height },

@@ -1,6 +1,7 @@
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawTextElement } from "../model/xdraw-data";
 import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 import { CanvasElementPainter, type XDrawRenderingContext } from "./canvas-element-painter";
+import { isContentBufferCurrent } from "./content-buffer-utils";
 
 export type ContentBufferCanvas = HTMLCanvasElement | OffscreenCanvas;
 
@@ -43,27 +44,10 @@ export class ContentBufferRenderer {
     }
 
     isCurrent(camera: XDrawCanvasCamera, viewportWidth: number, viewportHeight: number): boolean {
-        if (!this.valid || !this.buffer) {
-            return false;
-        }
-
-        const scaleRatio = camera.scale / this.buffer.scale;
-        if (scaleRatio < this.options.scaleMinRatio || scaleRatio > this.options.scaleMaxRatio) {
-            return false;
-        }
-
-        const viewRight = camera.x + viewportWidth / camera.scale;
-        const viewBottom = camera.y + viewportHeight / camera.scale;
-        const bufferRight = this.buffer.originX + this.buffer.width / this.buffer.scale;
-        const bufferBottom = this.buffer.originY + this.buffer.height / this.buffer.scale;
-        const safetyPadX = (bufferRight - this.buffer.originX) * 0.05;
-        const safetyPadY = (bufferBottom - this.buffer.originY) * 0.05;
-
-        return (
-            camera.x >= this.buffer.originX + safetyPadX &&
-            camera.y >= this.buffer.originY + safetyPadY &&
-            viewRight <= bufferRight - safetyPadX &&
-            viewBottom <= bufferBottom - safetyPadY
+        return this.valid && isContentBufferCurrent(
+            this.buffer,
+            { camera, width: viewportWidth, height: viewportHeight },
+            this.options,
         );
     }
 
