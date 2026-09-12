@@ -67,7 +67,7 @@ export class ProjectDataRasterizer {
             typeof createImageBitmap === "undefined" ||
             typeof Path2D === "undefined"
         ) {
-            toastService.warning("Content buffer: Web Worker desteklenmiyor, local renderer kullaniliyor.", 3500);
+            toastService.warning("Content buffer: Web Worker desteklenmiyor, local renderer kullaniliyor. Bu nedenle XDraw deneyiminizi yavaşlatabilir.", 3500);
             return;
         }
 
