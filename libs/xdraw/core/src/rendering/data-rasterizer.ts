@@ -42,6 +42,8 @@ export class ProjectDataRasterizer {
     private activeDrawElement: XDrawDrawElement | null = null;
     private activeDrawElementLayerOpacity = 1;
     private unsubscribeContentBuffer: () => void;
+    oldyBuffer: import("./content-buffer-renderer").ContentBufferInfo;
+    oldyFrame: import("./content-buffer-backend").ContentBufferFrame;
 
     constructor() {
         this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
@@ -432,8 +434,11 @@ export class ProjectDataRasterizer {
             this.startContext2d(context);
             context.setTransform(1, 0, 0, 1, 0, 0);
             context.clearRect(0, 0, canvas.width, canvas.height);
-            const contentFrame = this.contentBufferBackend.getCurrentFrame();
-            if (contentFrame?.dataRevision === this.dataRevision) {
+            let contentFrame = this.contentBufferBackend.getCurrentFrame();
+            if (contentFrame == null) {
+                contentFrame = this.oldyFrame;
+            }
+            if (contentFrame && contentFrame.buffer) { // contentFrame?.dataRevision === this.dataRevision
                 const { source, buffer } = contentFrame;
                 const scaleRatio = scale / buffer.scale;
                 context.setTransform(1, 0, 0, 1, 0, 0);
@@ -444,8 +449,9 @@ export class ProjectDataRasterizer {
                     buffer.width * scaleRatio,
                     buffer.height * scaleRatio,
                 );
+                if (this.oldyFrame != contentFrame)
+                    this.oldyFrame = contentFrame;
             }
-
             // Aktif (henuz finalize olmamis) stroke, buffer'da olmadigi icin her karede
             // ayrica dunya donusumuyle ustte cizilir.
             const activeElement = this.activeDrawElement;

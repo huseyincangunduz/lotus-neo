@@ -801,7 +801,7 @@ export class CanvasDraw extends NeolitComponent {
     this.updateCursor(
       pointer.x,
       pointer.y,
-      this.settings.mode.get() === "pointer",
+      this.settings.mode.get() !== "pointer",
     );
 
     if (!this.activePointers.has(event.pointerId)) {
