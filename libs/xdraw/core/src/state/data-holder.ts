@@ -260,8 +260,22 @@ export class XDrawDataHolder {
         };
     }
 
+    captureDrawingSnapshotForPersistence(): XDrawSnapshot {
+        return {
+            data: this.xdrawData,
+            activeLayerId: this.getActiveLayerId(),
+        };
+    }
+
     async restoreDrawingSnapshot(snapshot: XDrawSnapshot): Promise<void> {
         this.applyRestoredData(XdrawDataUtils.deepCopyXDrawData(snapshot.data), snapshot.activeLayerId);
+    }
+
+    async restoreDrawingSnapshotFromPersistence(snapshot: XDrawSnapshot): Promise<void> {
+        this.applyRestoredData(
+            XdrawDataUtils.optimizeXDrawData(snapshot.data),
+            snapshot.activeLayerId,
+        );
     }
 
     // Undo/redo yiginindaki hafif varyant: points/rings dogrudan Float32Array'e yazilir.

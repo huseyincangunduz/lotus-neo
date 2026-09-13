@@ -124,7 +124,7 @@ export class ContentBufferRenderer {
 
         const rebuildMs = performance.now() - rebuildStart;
         if (rebuildMs > 16) {
-            console.debug(`[xdraw-perf] rebuildContentBuffer ${rebuildMs.toFixed(1)}ms (width=${width} height=${height})`);
+            console.warn(`[xdraw-perf] rebuildContentBuffer ${rebuildMs.toFixed(1)}ms (width=${width} height=${height})`);
         }
     }
 

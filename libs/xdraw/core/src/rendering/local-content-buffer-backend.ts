@@ -20,6 +20,8 @@ export class LocalContentBufferBackend implements ContentBufferBackend {
     setSnapshot(data: XDrawData, dataRevision: number): void {
         this.data = data;
         this.dataRevision = dataRevision;
+        this.currentFrame = undefined;
+        this.renderer.invalidate();
     }
 
     setUseLocalRendering(_enabled: boolean): void { }

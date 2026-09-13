@@ -40,6 +40,8 @@ export class WorkerContentBufferBackend implements ContentBufferBackend {
 
     setSnapshot(data: XDrawData, dataRevision: number): void {
         this.dataRevision = dataRevision;
+        this.invalidated = true;
+        this.closeCurrentBitmap();
         this.postMessage({ type: "set-snapshot", data, dataRevision });
     }
 

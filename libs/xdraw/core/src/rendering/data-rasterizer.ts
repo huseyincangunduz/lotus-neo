@@ -64,6 +64,8 @@ export class ProjectDataRasterizer {
         }
         this.workerBackendAttempted = true;
         if (localStorage.getItem(XDRAW_SETTING_KEYS.useWebWorker) === "false") {
+            console.warn("[xdraw-perf] Web Worker ayarlardan kapali; content buffer ana thread'de cizilecek.");
+            toastService.warning("Content buffer: Web Worker ayarlardan kapali. Buyuk cizimlerde arayuz yavaslayabilir.", 5000);
             return;
         }
         if (
@@ -427,7 +429,7 @@ export class ProjectDataRasterizer {
             context.setTransform(1, 0, 0, 1, 0, 0);
             context.clearRect(0, 0, canvas.width, canvas.height);
             const contentFrame = this.contentBufferBackend.getCurrentFrame();
-            if (contentFrame) {
+            if (contentFrame?.dataRevision === this.dataRevision) {
                 const { source, buffer } = contentFrame;
                 const scaleRatio = scale / buffer.scale;
                 context.setTransform(1, 0, 0, 1, 0, 0);
