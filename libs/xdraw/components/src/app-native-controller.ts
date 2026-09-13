@@ -1,11 +1,19 @@
+import type { State } from "@ubs-platform/neolit/core";
+
 export const APP_NATIVE_CONTROLLER_TOKEN = Symbol("APP_NATIVE_CONTROLLER_TOKEN");
 
+export interface IAppNativeMenuItem {
+    label: string;
+    icon?: string;
+    onClick(): void | Promise<void>;
+}
 
 export interface IAppNativeController {
     isMobileApp: boolean;
     isBrowserWebApp: boolean;
     isElectronApp: boolean;
     appName?: string;
+    extraMenuItems?: State<IAppNativeMenuItem[]>;
 
     /**
      * 

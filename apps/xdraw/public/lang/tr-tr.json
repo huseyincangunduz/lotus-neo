@@ -54,6 +54,7 @@
       "text.font-size": "Yazı boyutu",
       "text.bold": "Kalın",
       "new-project-confirm": "Yeni bir proje oluşturmak istediğinize emin misiniz?",
+      "open-project-confirm": "Mevcut çizimin yerine farklı bir dosya açmak istediğinize emin misiniz?",
       "file-open-error": "Dosya açılamadı. Lütfen geçerli bir XDraw dosyası seçin.",
       "erase": "Silgi",
       "select": "Seçim",

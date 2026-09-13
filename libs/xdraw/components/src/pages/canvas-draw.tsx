@@ -391,15 +391,34 @@ export class CanvasDraw extends NeolitComponent {
     );
   }
 
-  private async openProjectFromFile(): Promise<void> {
-    const file = await this.appController.openFileRequest("application/json");
-    if (!file) {
-      return;
-    }
-    await this.loadProjectFromFile(file);
+  private openProjectFromFile(): void {
+    this.confirmProjectReplacement(async () => {
+      const file = await this.appController.openFileRequest("application/json");
+      if (file) {
+        await this.loadProjectFromFileConfirmed(file);
+      }
+    });
   }
 
-  private async loadProjectFromFile(file: File): Promise<void> {
+  private loadProjectFromFile(file: File): void {
+    this.confirmProjectReplacement(() => this.loadProjectFromFileConfirmed(file));
+  }
+
+  private confirmProjectReplacement(
+    onConfirmed: () => void | Promise<void>,
+  ): void {
+    this.wdService.showApproveDialog(
+      tr("general.confirm"),
+      tr("xdraw.open-project-confirm"),
+      (confirmed) => {
+        if (confirmed) {
+          void onConfirmed();
+        }
+      },
+    );
+  }
+
+  private async loadProjectFromFileConfirmed(file: File): Promise<void> {
     try {
       const content = await file.text();
       await this.importProjectContent(content);

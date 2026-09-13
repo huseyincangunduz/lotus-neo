@@ -136,6 +136,12 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
   private openProjectFromFile(): void {
     this.properties.onOpenProjectFromFile();
+    this.menuDialog.set(false);
+  }
+
+  private runExtraMenuItem(onClick: () => void | Promise<void>): void {
+    this.menuDialog.set(false);
+    void onClick();
   }
 
   private saveAndShareProject(): void {
@@ -451,6 +457,29 @@ export class CanvasDrawSidebar extends NeolitComponent {
                 }}
               ></Button>
             )}
+
+            {this.appController.extraMenuItems &&
+              fromState(this.appController.extraMenuItems)
+                .keyFn((item) => item.label)
+                .renderFor((item) => (
+                  <button
+                    type="button"
+                    className="rounded-sm bg-transparent text-(--color-primary-text) hover:bg-(--color-primary-bg-hover) hover:text-(--color-surface-1) p-1"
+                    onClick={() => this.runExtraMenuItem(item.onClick)}
+                  >
+                    <div className="flex items-center gap-1">
+                      {item.icon && (
+                        <i
+                          className="material-symbols-outlined"
+                          style="line-height: 20px; font-size: 20px;"
+                        >
+                          {item.icon}
+                        </i>
+                      )}
+                      <span>{item.label}</span>
+                    </div>
+                  </button>
+                ))}
 
             {/* <Button variant="ghost" label="Kütüphane" ></Button> */}
 
