@@ -24,6 +24,7 @@ export class ProjectDataRasterizer {
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
     private renderScheduled = false;
+    private renderRequestedWhileScheduled = false;
     private dataRevision = 0;
     private renderRevision = 0;
     private interactionMode: InteractionMode = "idle";
@@ -258,7 +259,10 @@ export class ProjectDataRasterizer {
         const previousMode = this.interactionMode;
         this.interactionMode = _mode;
 
-        if (_mode === "erase" && previousMode !== "erase") {
+        const usesLocalRendering = _mode === "erase" || _mode === "fill";
+        const previouslyUsedLocalRendering = previousMode === "erase" || previousMode === "fill";
+
+        if (usesLocalRendering && !previouslyUsedLocalRendering) {
             this.contentBufferBackend.setUseLocalRendering(true);
             if (this.projectData) {
                 this.contentBufferBackend.invalidate();
@@ -268,7 +272,7 @@ export class ProjectDataRasterizer {
             return;
         }
 
-        if (previousMode === "erase" && _mode !== "erase" && this.projectData) {
+        if (previouslyUsedLocalRendering && !usesLocalRendering && this.projectData) {
             this.contentBufferBackend.setUseLocalRendering(false);
             this.dataRevision++;
             this.contentBufferBackend.invalidate();
@@ -460,12 +464,17 @@ export class ProjectDataRasterizer {
             context.setTransform(1, 0, 0, 1, 0, 0);
             context.globalAlpha = 1;
             this.endContext2d(context);
+            if (this.renderRequestedWhileScheduled) {
+                this.renderRequestedWhileScheduled = false;
+                this.requestRender();
+            }
         }
         requestAnimationFrame(showScreenFunc);
     }
 
     private throttledRender() {
         if (this.renderScheduled) {
+            this.renderRequestedWhileScheduled = true;
             return;
         }
         this.renderScheduled = true;
