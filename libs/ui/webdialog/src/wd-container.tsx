@@ -1,5 +1,6 @@
 import {
   NeolitComponent,
+  State,
   state,
   type NeolitNode,
 } from "@ubs-platform/neolit/core";
@@ -13,6 +14,7 @@ export interface WebDialogContainerProperties {
 }
 
 type DialogStackItem = {
+  showState: State<boolean>;
   dialogConfig: WebDialogConfig;
   dialogId: number;
   dialogDom: NeolitNode | NeolitNode[] | NeolitComponent | HTMLElement;
@@ -45,6 +47,7 @@ export class WebDialogContainer extends NeolitComponent {
 
     this.dialogStack = this.dialogStack.filter((item) => !item.closed);
     this.dialogStack.push({
+      showState,
       dialogConfig: dialog,
       dialogId: this.dialogStack.length,
       closed: false,
@@ -76,7 +79,10 @@ export class WebDialogContainer extends NeolitComponent {
       this.dialogStack = this.dialogStack
         .slice(0, index)
         .concat(this.dialogStack.slice(index + 1));
-      this.rerender();
+      if (dialogItem.showState.get()) {
+        // this.rerender();
+        dialogItem.showState.set(false);
+      }
     }
   }
 
