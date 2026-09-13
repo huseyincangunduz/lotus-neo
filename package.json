@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tools/vite-serve.sh",
-    "android": "tools/vite-capacitor-serve-android.sh",
+    "android": "tools/vite-capacitor-serve-android.sh run",
+    "android:production": "tools/vite-capacitor-serve-android.sh production",
     "build": "tools/vite-build.sh",
     "deploy:web": "tools/deploy-web.sh",
     "preview": "tools/vite-preview.sh",

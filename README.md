@@ -38,6 +38,22 @@ npm run preview main
 
 > The scripts use `$1` to forward the app name, so always pass the app folder name as the first argument.
 
+## Android Production Build
+
+Create an upload key once and keep it outside the repository:
+
+```bash
+keytool -genkeypair -v -keystore /secure/path/upload-key.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Add the Android SDK, JDK, and release signing values from `.env.example` to `.env`, then build the signed Play Store App Bundle:
+
+```bash
+npm run android:production xdraw-mobile
+```
+
+The signed bundle is written to `apps/xdraw-mobile/android/app/build/outputs/bundle/release/app-release.aab`. Increment `versionCode` in `apps/xdraw-mobile/android/app/build.gradle` before every Play Store upload. The existing `npm run android xdraw-mobile` command continues to build and run the debug app on a device or emulator.
+
 ## Creating a New Library
 
 1. Create the folder under `libs/`, e.g. `libs/my-lib/src/`.
