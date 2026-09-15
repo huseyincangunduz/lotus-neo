@@ -129,12 +129,25 @@ export class CanvasDraw extends NeolitComponent {
         "--gridMajorOffset": this.gridMajorOffset,
         "--lineWidth": this.gridLineWidth,
       }}
-      className={this.gridClassName}
     ></canvas>
+  );
+
+  grid = (
+    <div
+      className={this.gridClassName}
+      style={{
+        "--gridSize": this.gridSize,
+        "--gridMajorSize": this.gridMajorSize,
+        "--gridOffset": this.gridOffset,
+        "--gridMajorOffset": this.gridMajorOffset,
+        "--lineWidth": this.gridLineWidth,
+      }}
+    ></div>
   );
 
   divBetweenButtonsAndBottom = (
     <div id="canvasViewport" class="w-full h-full">
+      {this.grid}
       {this.canvas}
     </div>
   );

@@ -1,7 +1,23 @@
 .xdraw-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   background-repeat: repeat;
   background-clip: content-box;
   background-origin: 0px 0px;
+}
+
+#canvasViewport {
+  position: relative;
+  background-color: #ffffff;
+}
+
+#myCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .xdraw-grid-off {
