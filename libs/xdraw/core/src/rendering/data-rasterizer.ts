@@ -284,7 +284,7 @@ export class ProjectDataRasterizer {
     }
 
     getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
-        return canvas.getContext("2d", { desynchronized: true });
+        return canvas.getContext("2d");
     }
 
     startContext2d(context: CanvasRenderingContext2D) {
@@ -434,6 +434,8 @@ export class ProjectDataRasterizer {
             this.startContext2d(context);
             context.setTransform(1, 0, 0, 1, 0, 0);
             context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, canvas.width, canvas.height);
             let contentFrame = this.contentBufferBackend.getCurrentFrame();
             if (contentFrame == null) {
                 contentFrame = this.oldyFrame;
