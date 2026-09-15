@@ -108,7 +108,10 @@
       "export.create-and-download": "Oluştur ve indir",
       "export.preparing": "Lütfen bekleyin, görsel oluşturuluyor...",
       "export.error": "Görsel dışa aktarımı oluşturulamadı.",
-      "export.large-image-warning": "Bu dışa aktarım {megapixels} milyon piksel olacak ve cihazı yavaşlatabilir. Devam edilsin mi?"
+      "export.large-image-warning": "Bu dışa aktarım {megapixels} milyon piksel olacak ve cihazı yavaşlatabilir. Devam edilsin mi?",
+      "content-buffer.worker-disabled-by-settings": "Content buffer: Web Worker ayarlardan kapalı. Büyük çizimlerde arayüz yavaşlayabilir.",
+      "content-buffer.worker-not-supported": "Content buffer: Web Worker desteklenmiyor, yerel renderer kullanılıyor. Bu nedenle XDraw deneyiminizi yavaşlatabilir.",
+      "content-buffer.worker-start-failed": "Content buffer: Worker başlatılamadı, yerel renderer kullanılıyor."
     }
   }
 ]

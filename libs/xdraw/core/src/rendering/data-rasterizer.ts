@@ -1,9 +1,10 @@
 import { toastService } from "@libs/ui/alert-toast";
+import { tr } from "@libs/ui/i18n";
 import { ColorUtils } from "../utils/color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
-import type { ContentBufferBackend } from "./content-buffer-backend";
-import { ContentBufferRenderer, type ContentBufferRendererOptions } from "./content-buffer-renderer";
+import type { ContentBufferBackend, ContentBufferFrame } from "./content-buffer-backend";
+import { ContentBufferRenderer, type ContentBufferInfo, type ContentBufferRendererOptions } from "./content-buffer-renderer";
 import { FallbackContentBufferBackend } from "./fallback-content-buffer-backend";
 import { FillMaskRenderer } from "./fill-mask-renderer";
 import { LocalContentBufferBackend } from "./local-content-buffer-backend";
@@ -42,8 +43,7 @@ export class ProjectDataRasterizer {
     private activeDrawElement: XDrawDrawElement | null = null;
     private activeDrawElementLayerOpacity = 1;
     private unsubscribeContentBuffer: () => void;
-    oldyBuffer: import("./content-buffer-renderer").ContentBufferInfo;
-    oldyFrame: import("./content-buffer-backend").ContentBufferFrame;
+    oldyFrame?: ContentBufferFrame;
 
     constructor() {
         this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
@@ -68,7 +68,7 @@ export class ProjectDataRasterizer {
         this.workerBackendAttempted = true;
         if (localStorage.getItem(XDRAW_SETTING_KEYS.useWebWorker) === "false") {
             console.warn("[xdraw-perf] Web Worker ayarlardan kapali; content buffer ana thread'de cizilecek.");
-            toastService.warning("Content buffer: Web Worker ayarlardan kapali. Buyuk cizimlerde arayuz yavaslayabilir.", 5000);
+            toastService.warning(tr("xdraw.content-buffer.worker-disabled-by-settings").get(), 5000);
             return;
         }
         if (
@@ -77,7 +77,7 @@ export class ProjectDataRasterizer {
             typeof createImageBitmap === "undefined" ||
             typeof Path2D === "undefined"
         ) {
-            toastService.warning("Content buffer: Web Worker desteklenmiyor, local renderer kullaniliyor. Bu nedenle XDraw deneyiminizi yavaşlatabilir.", 3500);
+            toastService.warning(tr("xdraw.content-buffer.worker-not-supported").get(), 3500);
             return;
         }
 
@@ -92,14 +92,14 @@ export class ProjectDataRasterizer {
                 new WorkerContentBufferBackend(worker, this.contentBufferOptions),
                 fallbackBackend,
             );
-            toastService.info("Content buffer: Web Worker kullaniliyor.", 3500);
+            // toastService.info("Content buffer: Web Worker kullaniliyor.", 3500);
             this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
             if (this.projectData) {
                 this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
             }
         } catch (error) {
             console.warn("Content buffer worker baslatilamadi, local renderer kullaniliyor.", error);
-            toastService.warning("Content buffer: Worker baslatilamadi, local renderer kullaniliyor.", 3500);
+            toastService.warning(tr("xdraw.content-buffer.worker-start-failed").get(), 3500);
         }
     }
 

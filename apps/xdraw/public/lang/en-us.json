@@ -108,7 +108,10 @@
       "export.create-and-download": "Create and download",
       "export.preparing": "Please wait while the image is being created...",
       "export.error": "The image export could not be created.",
-      "export.large-image-warning": "This export will be {megapixels} million pixels and may slow down your device. Continue?"
+      "export.large-image-warning": "This export will be {megapixels} million pixels and may slow down your device. Continue?",
+      "content-buffer.worker-disabled-by-settings": "Content buffer: Web Worker is disabled in settings. The interface may slow down on large drawings.",
+      "content-buffer.worker-not-supported": "Content buffer: Web Worker is not supported, using local renderer. This may slow down your XDraw experience.",
+      "content-buffer.worker-start-failed": "Content buffer: Worker could not be started, using local renderer."
     }
   }
 ]
