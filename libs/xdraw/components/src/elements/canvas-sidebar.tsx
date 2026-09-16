@@ -31,7 +31,12 @@ export class CanvasDrawSidebar extends NeolitComponent {
     onDownloadProject: (saveAs?: boolean) => {},
     onOpenProjectFromFile: () => {},
     onSaveAndShareProject: () => {},
-    onExportImage: (_options: { area: "screen" | "content"; background: "white" | "transparent" | "grid"; scale: 1 | 2; format: "png" | "webp" | "jpg" }) => {},
+    onExportImage: (_options: {
+      area: "screen" | "content";
+      background: "white" | "transparent" | "grid";
+      scale: 1 | 2;
+      format: "png" | "webp" | "jpg";
+    }) => {},
     flushAutosave: () => {},
     redo: () => {},
     undo: () => {},
@@ -58,8 +63,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
   layerSettingsDialog = state(false);
   zoomFactor = state(1);
   settings = inject(XDrawSettingsConfig);
-  colorRgb = computed([this.settings.strokeColor], ([strokeColor]) =>
-    ColorUtils.hexToRgb(strokeColor) ?? { r: 0, g: 0, b: 0 },
+  colorRgb = computed(
+    [this.settings.strokeColor],
+    ([strokeColor]) => ColorUtils.hexToRgb(strokeColor) ?? { r: 0, g: 0, b: 0 },
   );
   colorHsl = computed([this.settings.strokeColor], ([strokeColor]) => {
     const hsl = ColorUtils.hexToHsl(strokeColor);
@@ -84,8 +90,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
   appController = inject(
     APP_NATIVE_CONTROLLER_TOKEN,
   ) as any as IAppNativeController;
-  recentColorsLimited = this.settings.recentColors.map(
-    (recentColors) => recentColors.slice(0, 3),
+  recentColorsLimited = this.settings.recentColors.map((recentColors) =>
+    recentColors.slice(0, 3),
   );
   private colorDialogLastCommittedColor: string | null = null;
   // Opacity slider surukleme basindaki gercek deger; onChangeEnd'de tek undo adimi icin kullanilir.
@@ -194,9 +200,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
   private setStrokeHsl(channel: "h" | "s" | "l", value: number): void {
     const current = this.colorHsl.get();
     const next = { ...current, [channel]: value };
-    this.settings.strokeColor.set(
-      ColorUtils.hslToHex(next.h, next.s, next.l),
-    );
+    this.settings.strokeColor.set(ColorUtils.hslToHex(next.h, next.s, next.l));
   }
 
   private closeColorPickerDialog(): void {
@@ -264,17 +268,11 @@ export class CanvasDrawSidebar extends NeolitComponent {
           icon={materialSymbolsOutlined("edit")}
         ></Button>
         <Button
-          variant={computed<ButtonVariant>(
-            [this.settings.mode],
-            ([mode]) =>
-              mode === "text"
-                ? "filled-primary"
-                : "ghost",
+          variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
+            mode === "text" ? "filled-primary" : "ghost",
           )}
           onClick={() => {
-            if (
-              this.settings.mode.get() === "text"
-            ) {
+            if (this.settings.mode.get() === "text") {
               this.showTextSettingsDialog.set(true);
               return;
             }
@@ -564,40 +562,93 @@ export class CanvasDrawSidebar extends NeolitComponent {
           onClose={() => this.showExportDialog.set(false)}
         >
           {[
-          <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              {tr("xdraw.export.area")}
-              <select value={this.exportArea} onChange={(event: Event) => this.exportArea.set((event.target as HTMLSelectElement).value as "screen" | "content")}>
-                <option value="screen">{tr("xdraw.export.area-screen")}</option>
-                <option value="content">{tr("xdraw.export.area-content")}</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {tr("xdraw.export.background")}
-              <select value={this.exportBackground} onChange={(event: Event) => this.exportBackground.set((event.target as HTMLSelectElement).value as "white" | "transparent" | "grid")}>
-                <option value="white">{tr("xdraw.export.background-white")}</option>
-                <option value="transparent">{tr("xdraw.export.background-transparent")}</option>
-                <option value="grid">{tr("xdraw.export.background-grid")}</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {tr("xdraw.export.scale")}
-              <select value={this.exportScale} onChange={(event: Event) => this.exportScale.set(Number((event.target as HTMLSelectElement).value) as 1 | 2 | 4)}>
-                <option value="1">1x</option>
-                <option value="2">2x</option>
-                <option value="4">4x</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {tr("xdraw.export.format")}
-              <select value={this.exportFormat} onChange={(event: Event) => this.exportFormat.set((event.target as HTMLSelectElement).value as "png" | "webp" | "jpg")}>
-                <option value="png">PNG</option>
-                <option value="webp">WEBP</option>
-                <option value="jpg">JPG</option>
-              </select>
-            </label>
-            <Button label={tr("xdraw.export.create-and-download")} variant="filled-primary" onClick={() => this.exportImage()}></Button>
-          </div>,
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                {tr("xdraw.export.area")}
+                <select
+                  value={this.exportArea}
+                  onChange={(event: Event) =>
+                    this.exportArea.set(
+                      (event.target as HTMLSelectElement).value as
+                        | "screen"
+                        | "content",
+                    )
+                  }
+                >
+                  <option value="screen">
+                    {tr("xdraw.export.area-screen")}
+                  </option>
+                  <option value="content">
+                    {tr("xdraw.export.area-content")}
+                  </option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                {tr("xdraw.export.background")}
+                <select
+                  value={this.exportBackground}
+                  onChange={(event: Event) =>
+                    this.exportBackground.set(
+                      (event.target as HTMLSelectElement).value as
+                        | "white"
+                        | "transparent"
+                        | "grid",
+                    )
+                  }
+                >
+                  <option value="white">
+                    {tr("xdraw.export.background-white")}
+                  </option>
+                  <option value="transparent">
+                    {tr("xdraw.export.background-transparent")}
+                  </option>
+                  <option value="grid">
+                    {tr("xdraw.export.background-grid")}
+                  </option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                {tr("xdraw.export.scale")}
+                <select
+                  value={this.exportScale}
+                  onChange={(event: Event) =>
+                    this.exportScale.set(
+                      Number((event.target as HTMLSelectElement).value) as
+                        | 1
+                        | 2
+                        | 4,
+                    )
+                  }
+                >
+                  <option value="1">1x</option>
+                  <option value="2">2x</option>
+                  <option value="4">4x</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                {tr("xdraw.export.format")}
+                <select
+                  value={this.exportFormat}
+                  onChange={(event: Event) =>
+                    this.exportFormat.set(
+                      (event.target as HTMLSelectElement).value as
+                        | "png"
+                        | "webp"
+                        | "jpg",
+                    )
+                  }
+                >
+                  <option value="png">PNG</option>
+                  <option value="webp">WEBP</option>
+                  <option value="jpg">JPG</option>
+                </select>
+              </label>
+              <Button
+                label={tr("xdraw.export.create-and-download")}
+                variant="filled-primary"
+                onClick={() => this.exportImage()}
+              ></Button>
+            </div>,
           ]}
         </WebDialog>
         <WebDialog
@@ -677,7 +728,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
               className="w-full rounded-md border border-(--color-border) bg-(--color-surface-1) px-2 py-2 text-(--color-fg)"
               value={this.settings.textFontFamily}
               onChange={(event: Event) => {
-                this.settings.textFontFamily.set((event.target as HTMLSelectElement).value);
+                this.settings.textFontFamily.set(
+                  (event.target as HTMLSelectElement).value,
+                );
               }}
             >
               <option value="system-ui">System UI</option>
@@ -775,20 +828,25 @@ export class CanvasDrawSidebar extends NeolitComponent {
               title="Canli renk onizlemesi"
             ></div> */}
             <div
-              className="h-3 w-full rounded-sm border border-(--color-border)"
-              style={{background: this.hueTrackStyle}}
+              style={{
+                background: this.hueTrackStyle,
+                height: "50px",
+                width: "100%",
+                display: "flex",
+                justifyContent: "center",
+
+              }}
             >
-              <span style={{ opacity: "0" }}>Hue</span>
+              <Trackbar
+                label="H"
+                min={0}
+                max={360}
+                step={1}
+                value={computed([this.colorHsl], ([hsl]) => hsl.h)}
+                onChange={(value: number) => this.setStrokeHsl("h", value)}
+                onChangeEnd={() => this.commitColorDialogSelection()}
+              ></Trackbar>
             </div>
-            <Trackbar
-              label="H"
-              min={0}
-              max={360}
-              step={1}
-              value={computed([this.colorHsl], ([hsl]) => hsl.h)}
-              onChange={(value: number) => this.setStrokeHsl("h", value)}
-              onChangeEnd={() => this.commitColorDialogSelection()}
-            ></Trackbar>
             <Trackbar
               label="S"
               min={0}
