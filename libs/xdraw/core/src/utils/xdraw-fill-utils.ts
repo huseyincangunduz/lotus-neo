@@ -6,6 +6,23 @@ export class XdrawFillUtils {
     private static readonly FILL_SIMPLIFY_EPSILON = 0.75;
 
     public static fillDye(activeLayer: XDrawLayer, mask: XDrawFillMask, x: number, y: number, color: string): boolean {
+        // Existing fills are opaque in the mask, so recolor a hit before flood fill sees it as blocked.
+        for (let index = activeLayer.elements.length - 1; index >= 0; index--) {
+            const element = activeLayer.elements[index];
+            if (element.type !== "fill") {
+                continue;
+            }
+
+            const fillElement = element as XDrawFillElement;
+            if (this.isPointInsideFill(fillElement, x, y)) {
+                if (fillElement.color === color) {
+                    return false;
+                }
+                fillElement.color = color;
+                return true;
+            }
+        }
+
         const fillElements = this.collectFloodFillElements(mask, x, y);
         if (fillElements.length === 0) {
             return false;
@@ -17,6 +34,24 @@ export class XdrawFillUtils {
         // Dolgu, mevcut cizgilerin altinda kalsin diye baslangica eklenir.
         activeLayer.elements.unshift(...fillElements);
         return true;
+    }
+
+    private static isPointInsideFill(fill: XDrawFillElement, x: number, y: number): boolean {
+        let inside = false;
+        for (const ring of fill.rings) {
+            for (let index = 0, previousIndex = ring.length - 1; index < ring.length; previousIndex = index++) {
+                const current = ring[index];
+                const previous = ring[previousIndex];
+                const intersects =
+                    current.y > y !== previous.y > y &&
+                    x < ((previous.x - current.x) * (y - current.y)) /
+                        (previous.y - current.y) + current.x;
+                if (intersects) {
+                    inside = !inside;
+                }
+            }
+        }
+        return inside;
     }
 
     private static collectFloodFillElements(
