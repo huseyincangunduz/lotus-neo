@@ -10,6 +10,7 @@ import { FillMaskRenderer } from "./fill-mask-renderer";
 import { LocalContentBufferBackend } from "./local-content-buffer-backend";
 import { WorkerContentBufferBackend } from "./worker-content-buffer-backend";
 import { XDRAW_SETTING_KEYS } from "../settings/xdraw-settings-config";
+import { AnimationScheduler } from "@ubs-platform/neolit/core";
 
 export interface XDrawImageExportOptions {
     bounds: { x: number; y: number; width: number; height: number };
@@ -485,7 +486,8 @@ export class ProjectDataRasterizer {
                 this.requestRender();
             }
         }
-        requestAnimationFrame(showScreenFunc);
+        AnimationScheduler.singleton.add(showScreenFunc);
+        // requestAnimationFrame(showScreenFunc);
     }
 
     private throttledRender() {

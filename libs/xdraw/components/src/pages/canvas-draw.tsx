@@ -70,31 +70,23 @@ export class CanvasDraw extends NeolitComponent {
     ([x, y, scale]) => ({ x, y, scale }),
   );
 
-  gridSize = this.zoomFactor.map(zoom => {
-    const gridSizeRaw = 20 * zoom;
-    return gridSizeRaw + "px " + gridSizeRaw + "px";
-  });
-  gridMajorSize = this.zoomFactor.map(zoom => {
-    const gridSizeRaw = 100 * zoom;
-    return gridSizeRaw + "px " + gridSizeRaw + "px";
-  });
-  gridOffset = computed(
-    [this.worldX, this.worldY, this.zoomFactor],
-    ([x, y, zoom]) => {
-      const gridSizeRaw = 20 * zoom;
-      return `${-(x * zoom) % gridSizeRaw}px ${-(y * zoom) % gridSizeRaw}px`;
+  gridStyle = computed(
+    [this.settings.backgroundPatternMode, this.worldX, this.worldY, this.zoomFactor],
+    ([, x, y, zoom]) => {
+      const gridSize = 20 * zoom;
+      const majorSize = 100 * zoom;
+      const offset = (world: number, size: number) =>
+        `${-(world * zoom) % size}px`;
+
+      return {
+        "--gridSize": `${gridSize}px ${gridSize}px`,
+        "--gridMajorSize": `${majorSize}px ${majorSize}px`,
+        "--gridOffset": `${offset(x, gridSize)} ${offset(y, gridSize)}`,
+        "--gridMajorOffset": `${offset(x, majorSize)} ${offset(y, majorSize)}`,
+        "--lineWidth": `${zoom}px`,
+      };
     },
   );
-  gridMajorOffset = computed(
-    [this.worldX, this.worldY, this.zoomFactor],
-    ([x, y, zoom]) => {
-      const gridSizeRaw = 100 * zoom;
-      return `${-(x * zoom) % gridSizeRaw}px ${-(y * zoom) % gridSizeRaw}px`;
-    },
-  );
-  gridLineWidth = this.zoomFactor.map(zoom => {
-    return zoom + "px";
-  });
   gridClassName = computed(
     [this.settings.backgroundPatternMode, this.zoomFactor],
     ([mode, zoom]) => {
@@ -120,28 +112,14 @@ export class CanvasDraw extends NeolitComponent {
       id="myCanvas"
       width={this.canvasWidth}
       height={this.canvasHeight}
-      style={{
-        cursor: "crosshair",
-        touchAction: "none",
-        "--gridSize": this.gridSize,
-        "--gridMajorSize": this.gridMajorSize,
-        "--gridOffset": this.gridOffset,
-        "--gridMajorOffset": this.gridMajorOffset,
-        "--lineWidth": this.gridLineWidth,
-      }}
+      style={{ cursor: "crosshair", touchAction: "none" }}
     ></canvas>
   );
 
   grid = (
     <div
       className={this.gridClassName}
-      style={{
-        "--gridSize": this.gridSize,
-        "--gridMajorSize": this.gridMajorSize,
-        "--gridOffset": this.gridOffset,
-        "--gridMajorOffset": this.gridMajorOffset,
-        "--lineWidth": this.gridLineWidth,
-      }}
+      style={this.gridStyle}
     ></div>
   );
 

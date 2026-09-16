@@ -130,11 +130,13 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   private renderDialog = state<boolean>(false);
   private animationState = state<AnimationState>("HIDE");
   private beginTimeout!: ReturnType<typeof setTimeout>;
+  private popoverPositionTimeout: ReturnType<typeof setTimeout> | null = null;
   // TODO: Rastgele id üretimi daha önce crypto.randomUUID(); ile yapılıyordu ancak remote bağlanırken sorun çıkardı. Bu yüzden sonra bu id işlerine bakacağım...
   private dialogDomId = Math.random().toString(36).substring(2, 9);
   private popoverTop = state<string>("0px");
   private popoverLeft = state<string>("0px");
   private popoverMaxWidth = state<string>("calc(100dvw - 16px)");
+  private popoverPositioned = state(false);
   private maskVisible = computed(
     [this.properties.showMask, this.properties.mode],
     ([showMask, mode]) => (showMask == null ? mode !== "popover" : !!showMask),
@@ -265,7 +267,10 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     }
 
     const anchorRect = anchorEl.getBoundingClientRect();
-    const dialogRect = dialogEl.getBoundingClientRect();
+    const dialogRect: Pick<DOMRect, "width" | "height"> = {
+      width: dialogEl.offsetWidth,
+      height: dialogEl.offsetHeight,
+    };
     const placement = this.getPropValue<DialogPlacement>(
       this.properties.placement,
       "bottom-start",
@@ -338,12 +343,13 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
     this.popoverLeft.set(`${left}px`);
     this.popoverTop.set(`${top}px`);
     this.popoverMaxWidth.set(`calc(100dvw - ${boundaryPadding * 2}px)`);
+    this.popoverPositioned.set(true);
   }
 
   private resolvePopoverCoordinates(
     placement: DialogPlacement,
     anchorRect: DOMRect,
-    dialogRect: DOMRect,
+    dialogRect: Pick<DOMRect, "width" | "height">,
     offset: number,
   ): { top: number; left: number } {
     const verticalCenter =
@@ -419,7 +425,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   private calculateOverflowScore(
     top: number,
     left: number,
-    dialogRect: DOMRect,
+    dialogRect: Pick<DOMRect, "width" | "height">,
     viewportWidth: number,
     viewportHeight: number,
     boundaryPadding: number,
@@ -436,11 +442,20 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   }
 
   showDialog() {
+    if (this.isPopoverMode()) {
+      this.popoverPositioned.set(false);
+    }
     this.renderDialog.set(true);
 
     if (this.isPopoverMode()) {
       this.attachPopoverListeners();
-      requestAnimationFrame(() => this.updatePopoverPosition());
+      if (this.popoverPositionTimeout !== null) {
+        clearTimeout(this.popoverPositionTimeout);
+      }
+      this.popoverPositionTimeout = setTimeout(() => {
+        this.popoverPositionTimeout = null;
+        requestAnimationFrame(() => this.updatePopoverPosition());
+      }, 0);
     }
 
     const current = this.animationState.get();
@@ -456,6 +471,10 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
   }
 
   closeDialog(emitOnClose = true) {
+    if (this.popoverPositionTimeout !== null) {
+      clearTimeout(this.popoverPositionTimeout);
+      this.popoverPositionTimeout = null;
+    }
     if (this.isPopoverMode()) {
       this.detachPopoverListeners();
     }
@@ -513,6 +532,7 @@ export class WebDialog extends NeolitComponent<WebDialogProps> {
           animation-state={this.animationState}
           dialog-align={this.properties.position}
           dialog-mode={this.properties.mode}
+          popover-positioned={this.popoverPositioned}
           dialog-free-position={this.freePosition}
           style={{
             top: this.dialogTopStyle,

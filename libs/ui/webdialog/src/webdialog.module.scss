@@ -150,6 +150,11 @@
     max-height: calc(100dvh - 16px);
     transform-origin: top left;
 
+    &[popover-positioned="false"] {
+      visibility: hidden;
+      animation: none;
+    }
+
     &[animation-state="BEGIN"] {
       animation: dialog-popover-in;
       animation-duration: var(--duration);
