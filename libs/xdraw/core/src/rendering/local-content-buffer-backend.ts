@@ -1,6 +1,7 @@
-import type { XDrawData } from "../model/xdraw-data";
+import type { XDrawData, XDrawDrawElement } from "../model/xdraw-data";
 import type {
     ContentBufferBackend,
+    ContentBufferDelta,
     ContentBufferFrame,
     ContentBufferReadyListener,
     ContentBufferViewport,
@@ -80,5 +81,47 @@ export class LocalContentBufferBackend implements ContentBufferBackend {
         this.currentFrame = undefined;
         this.data = undefined;
         this.viewport = undefined;
+    }
+
+    applySnapshotDelta(dataRevision: number, ...deltas: ContentBufferDelta[]): void {
+        if (!this.data) {
+            return;
+        }
+
+        for (const activeLayer of this.data.layers) {
+            for (const delta of deltas) {
+                if (activeLayer.elements.length === 0 || !activeLayer.visible) {
+                    continue;
+                }
+                if (delta.operation === "upsert-element" && delta.upsertData) {
+                    const index = activeLayer.elements.findIndex(e => e.id === delta.elementId);
+                    if (index !== -1) {
+                        activeLayer.elements[index] = delta.upsertData;
+                    } else {
+                        activeLayer.elements.push(delta.upsertData);
+                    }
+
+                }
+                const alreadyExistElement = activeLayer.elements.find(e => e.id === delta.elementId);
+
+                if (delta.operation === "remove-element") {
+                    activeLayer.elements = activeLayer.elements.filter(e => e.id !== delta.elementId);
+                } else if (delta.operation === "insert-points" && delta.points) {
+                    if (alreadyExistElement && alreadyExistElement.type === "draw") {
+                        let alreadyExistDrawELement = alreadyExistElement as XDrawDrawElement
+                        alreadyExistDrawELement.points.push(...delta.points);
+                    }
+                } else if (delta.operation === "remove-points" && delta.points) {
+                    let alreadyExistDrawELement = alreadyExistElement as XDrawDrawElement
+
+                    if (alreadyExistElement && alreadyExistElement.type === "draw" && alreadyExistDrawELement.points) {
+                        alreadyExistDrawELement.points = alreadyExistDrawELement.points.filter(p => !delta.points!.some(dp => dp.x === p.x && dp.y === p.y));
+                    }
+                }
+            }
+        }
+        this.dataRevision = dataRevision;
+        this.currentFrame = undefined;
+        this.renderer.invalidate();
     }
 }

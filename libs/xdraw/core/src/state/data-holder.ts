@@ -17,6 +17,7 @@ import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 import { ColorUtils } from "../utils/color-utils";
 import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "../utils/xdraw-binary-codec";
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
+import type { ContentBufferDelta } from "../rendering/content-buffer-backend";
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "../model/xdraw-data";
 
 export interface CursorPosition {
@@ -66,6 +67,7 @@ export class XDrawDataHolder {
     insertedElements: XDrawElement[] = [];
     // Elementler json array olacak
     activeLayerSnapshotBeforeErase: XDrawElement[] | null = null;
+    deltas: ContentBufferDelta[] = [];
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -368,7 +370,11 @@ export class XDrawDataHolder {
         this.activeDrawElement.points.push({ x: worldX, y: worldY, size, breakBefore: this.breakBeforeNextPoint });
         this.breakBeforeNextPoint = false;
         if (finalizedChunk) {
-            this.rasterizer.setProjectData(this.xdrawData);
+            this.rasterizer.setProjectData(this.xdrawData, this.insertedElements.map(
+                a => {
+                    return { operation: "upsert-element", elementId: a.id, type: a.type as any, dataRevision: null as any, };
+                }
+            ));
         } else {
             this.rasterizer.requestRender();
         }
@@ -462,8 +468,9 @@ export class XDrawDataHolder {
         }
         const removalResult = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
         activeLayer.elements = removalResult.elements;
+        this.deltas.push(...removalResult.removedPoints);
         if (removalResult.hasChanges) {
-            this.rasterizer.updateProjectDataLocally(this.xdrawData);
+            this.rasterizer.updateProjectDataLocally(this.xdrawData, removalResult.removedPoints);
         }
 
         return removalResult.hasChanges;
@@ -498,13 +505,16 @@ export class XDrawDataHolder {
         }
         let beforeEraseSnapshot = cloneObjectDeep(this.activeLayerSnapshotBeforeErase);
         let currentSnapshotAfterRemoval = cloneObjectDeep(this.layerManager.getLayer(activeLayerId)!.elements);
+        let mode : "apply" | "revert" = "apply";
         this.undoRedoHelper.pushOperationQueue({
             apply: async () => {
                 // Do nothing, changes are already applied
                 this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(currentSnapshotAfterRemoval);
+                mode = "apply";
             },
             revert: async () => {
                 this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(beforeEraseSnapshot);
+                mode = "revert";
             },
             dispose: () => {
                 beforeEraseSnapshot = undefined as any;
@@ -515,6 +525,7 @@ export class XDrawDataHolder {
                 this.rasterizer.setProjectData(this.xdrawData);
             }
         }, true, false);
+        this.deltas = [];
         this.activeLayerSnapshotBeforeErase = null;
     }
 

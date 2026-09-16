@@ -3,7 +3,7 @@ import { tr } from "@libs/ui/i18n";
 import { ColorUtils } from "../utils/color-utils";
 import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
-import type { ContentBufferBackend, ContentBufferFrame } from "./content-buffer-backend";
+import type { ContentBufferBackend, ContentBufferDelta, ContentBufferFrame } from "./content-buffer-backend";
 import { ContentBufferRenderer, type ContentBufferInfo, type ContentBufferRendererOptions } from "./content-buffer-renderer";
 import { FallbackContentBufferBackend } from "./fallback-content-buffer-backend";
 import { FillMaskRenderer } from "./fill-mask-renderer";
@@ -230,18 +230,28 @@ export class ProjectDataRasterizer {
         this.requestRender();
     }
 
-    setProjectData(projectData: XDrawData) {
+    setProjectData(projectData: XDrawData, deltas?: ContentBufferDelta[]) {
         this.projectData = projectData;
         this.dataRevision++;
-        this.contentBufferBackend.setSnapshot(projectData, this.dataRevision);
+        if (deltas) {
+            this.contentBufferBackend.applySnapshotDelta(this.dataRevision, ...deltas);
+
+        } else {
+            this.contentBufferBackend.setSnapshot(projectData, this.dataRevision);
+        }
         this.requestRender();
     }
 
-    updateProjectDataLocally(projectData: XDrawData) {
+    updateProjectDataLocally(projectData: XDrawData, deltas?: ContentBufferDelta[]) {
         this.projectData = projectData;
         this.dataRevision++;
         this.contentBufferBackend.invalidate();
-        this.contentBufferBackend.setSnapshot(projectData, this.dataRevision);
+        if (deltas) {
+            this.contentBufferBackend.applySnapshotDelta(this.dataRevision, ...deltas);
+
+        } else {
+            this.contentBufferBackend.setSnapshot(projectData, this.dataRevision);
+        }
         this.requestRender();
     }
 

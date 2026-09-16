@@ -1,6 +1,7 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawElementPosition, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 import { cloneObjectDeep } from "./clone-utils";
+import type { ContentBufferDelta } from "../rendering/content-buffer-backend";
 
 export interface XDrawElementCropData {
     layerId: string;
@@ -207,8 +208,9 @@ export class XdrawDataUtils {
         }
     }
 
-    public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): { elements: XDrawElement[], hasChanges: boolean } {
+    public static removePointsAt(elements: XDrawElement[], x: number, y: number, radius: number): { elements: XDrawElement[], removedPoints: ContentBufferDelta[], hasChanges: boolean } {
         const newElements: XDrawElement[] = [];
+        const deltasByElementId: Map<string, Partial<ContentBufferDelta>> = new Map();
         let hasChanges = false;
         for (const element of elements) {
             switch (element.type) {
@@ -216,10 +218,12 @@ export class XdrawDataUtils {
                     const drawElement = element as XDrawDrawElement;
                     const filteredPoints: XDrawDrawElement["points"] = [];
                     let removedSincePreviousPoint = false;
+                    const removedPointsForElement: XDrawElementPosition[] = [];
                     for (const point of drawElement.points) {
                         const dx = point.x - x;
                         const dy = point.y - y;
                         if ((dx * dx + dy * dy) <= (radius * radius)) {
+                            removedPointsForElement.push(point);
                             removedSincePreviousPoint = true;
                             continue;
                         }
@@ -231,6 +235,11 @@ export class XdrawDataUtils {
                     }
                     if (filteredPoints.length > 0) {
                         newElements.push({ ...drawElement, points: filteredPoints } as XDrawDrawElement);
+                        deltasByElementId.set(drawElement.id, {
+                            operation: "remove-points",
+                            elementId: drawElement.id,
+                            points: removedPointsForElement,
+                        });
                     }
                     if (filteredPoints.length !== drawElement.points.length) {
                         hasChanges = true;
@@ -261,7 +270,7 @@ export class XdrawDataUtils {
                     break;
             }
         }
-        return { elements: newElements, hasChanges };
+        return { elements: newElements, removedPoints: Array.from(deltasByElementId.values()) as ContentBufferDelta[], hasChanges };
 
 
     }

@@ -1,6 +1,7 @@
 import type { XDrawData } from "../model/xdraw-data";
 import type {
     ContentBufferBackend,
+    ContentBufferDelta,
     ContentBufferFrame,
     ContentBufferReadyListener,
     ContentBufferViewport,
@@ -192,5 +193,13 @@ export class WorkerContentBufferBackend implements ContentBufferBackend {
             this.currentFrame.source.close();
         }
         this.currentFrame = undefined;
+    }
+
+    applySnapshotDelta(dataRevision: number, ...deltas: ContentBufferDelta[]): void {
+        this.postMessage({
+            type: "apply-snapshot-delta",
+            deltas,
+            dataRevision,
+        });
     }
 }

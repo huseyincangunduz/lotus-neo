@@ -1,7 +1,8 @@
 import { toastService } from "@libs/ui/alert-toast";
-import type { XDrawData } from "../model/xdraw-data";
+import type { XDrawData, XDrawDrawElement } from "../model/xdraw-data";
 import type {
     ContentBufferBackend,
+    ContentBufferDelta,
     ContentBufferFrame,
     ContentBufferReadyListener,
     ContentBufferViewport,
@@ -15,6 +16,7 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     private listeners = new Set<ContentBufferReadyListener>();
     private unsubscribePrimary: () => void;
     private unsubscribeFallback: () => void;
+
 
     constructor(
         private readonly primaryBackend: ContentBufferBackend,
@@ -104,5 +106,10 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
         for (const listener of this.listeners) {
             listener(frame);
         }
+    }
+
+    applySnapshotDelta(dataRevision: number, ...deltas: ContentBufferDelta[]): void {
+        this.primaryBackend.applySnapshotDelta(dataRevision, ...deltas);
+
     }
 }

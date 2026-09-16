@@ -1,5 +1,5 @@
 import type { XDrawData } from "../model/xdraw-data";
-import type { ContentBufferViewport } from "./content-buffer-backend";
+import type { ContentBufferDelta, ContentBufferViewport } from "./content-buffer-backend";
 import type { ContentBufferInfo, ContentBufferRendererOptions } from "./content-buffer-renderer";
 
 export interface ContentBufferWorkerInitializeMessage {
@@ -29,12 +29,19 @@ export interface ContentBufferWorkerRenderMessage {
     renderRevision: number;
 }
 
+export interface ContentBufferWorkerApplySnapshotDeltaMessage {
+    type: "apply-snapshot-delta";
+    deltas: ContentBufferDelta[];
+    dataRevision: number;
+}
+
 export type ContentBufferWorkerRequest =
     | ContentBufferWorkerInitializeMessage
     | ContentBufferWorkerSetSnapshotMessage
     | ContentBufferWorkerSetViewportMessage
     | ContentBufferWorkerInvalidateMessage
-    | ContentBufferWorkerRenderMessage;
+    | ContentBufferWorkerRenderMessage
+    | ContentBufferWorkerApplySnapshotDeltaMessage;
 
 export interface ContentBufferWorkerInitializedMessage {
     type: "initialized";
