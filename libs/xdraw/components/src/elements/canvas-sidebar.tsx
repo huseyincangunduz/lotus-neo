@@ -58,6 +58,27 @@ export class CanvasDrawSidebar extends NeolitComponent {
   layerSettingsDialog = state(false);
   zoomFactor = state(1);
   settings = inject(XDrawSettingsConfig);
+  colorRgb = computed([this.settings.strokeColor], ([strokeColor]) =>
+    ColorUtils.hexToRgb(strokeColor) ?? { r: 0, g: 0, b: 0 },
+  );
+  colorHsl = computed([this.settings.strokeColor], ([strokeColor]) => {
+    const hsl = ColorUtils.hexToHsl(strokeColor);
+    if (!hsl) {
+      return { h: 0, s: 0, l: 0 };
+    }
+
+    return {
+      h: Math.round(hsl.h),
+      s: Math.round(hsl.s),
+      l: Math.round(hsl.l),
+    };
+  });
+  hueTrackStyle = computed([this.colorHsl], ([{ s, l }]) => {
+    const hues = [0, 60, 120, 180, 240, 300, 360];
+    return `linear-gradient(90deg, ${hues
+      .map((hue) => `hsl(${hue} ${s}% ${l}%)`)
+      .join(", ")})`;
+  });
   layersState = state<any[]>([]);
   xdrawHolder?: XDrawDataHolder = undefined;
   appController = inject(
@@ -160,22 +181,22 @@ export class CanvasDrawSidebar extends NeolitComponent {
     this.menuDialog.set(false);
   }
 
-  private getColorChannels(): { r: number; g: number; b: number } {
-    const rgb = ColorUtils.hexToRgb(this.settings.strokeColor.get());
-    if (!rgb) {
-      return { r: 0, g: 0, b: 0 };
-    }
-    return rgb;
-  }
-
   private setStrokeChannel(channel: "r" | "g" | "b", rawValue: string): void {
     const parsed = Number(rawValue);
     const value = Number.isFinite(parsed)
       ? Math.max(0, Math.min(255, Math.round(parsed)))
       : 0;
-    const current = this.getColorChannels();
+    const current = this.colorRgb.get();
     const next = { ...current, [channel]: value };
     this.settings.strokeColor.set(ColorUtils.rgbToHex(next.r, next.g, next.b));
+  }
+
+  private setStrokeHsl(channel: "h" | "s" | "l", value: number): void {
+    const current = this.colorHsl.get();
+    const next = { ...current, [channel]: value };
+    this.settings.strokeColor.set(
+      ColorUtils.hslToHex(next.h, next.s, next.l),
+    );
   }
 
   private closeColorPickerDialog(): void {
@@ -753,15 +774,45 @@ export class CanvasDrawSidebar extends NeolitComponent {
               )}
               title="Canli renk onizlemesi"
             ></div> */}
+            <div
+              className="h-3 w-full rounded-sm border border-(--color-border)"
+              style={{background: this.hueTrackStyle}}
+            >
+              <span style={{ opacity: "0" }}>Hue</span>
+            </div>
+            <Trackbar
+              label="H"
+              min={0}
+              max={360}
+              step={1}
+              value={computed([this.colorHsl], ([hsl]) => hsl.h)}
+              onChange={(value: number) => this.setStrokeHsl("h", value)}
+              onChangeEnd={() => this.commitColorDialogSelection()}
+            ></Trackbar>
+            <Trackbar
+              label="S"
+              min={0}
+              max={100}
+              step={1}
+              value={computed([this.colorHsl], ([hsl]) => hsl.s)}
+              onChange={(value: number) => this.setStrokeHsl("s", value)}
+              onChangeEnd={() => this.commitColorDialogSelection()}
+            ></Trackbar>
+            <Trackbar
+              label="L"
+              min={0}
+              max={100}
+              step={1}
+              value={computed([this.colorHsl], ([hsl]) => hsl.l)}
+              onChange={(value: number) => this.setStrokeHsl("l", value)}
+              onChangeEnd={() => this.commitColorDialogSelection()}
+            ></Trackbar>
             <Trackbar
               label="R"
               min={0}
               max={255}
               step={1}
-              value={computed(
-                [this.settings.strokeColor],
-                () => this.getColorChannels().r,
-              )}
+              value={computed([this.colorRgb], ([rgb]) => rgb.r)}
               onChange={(value: number) =>
                 this.setStrokeChannel("r", String(value))
               }
@@ -772,10 +823,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
               min={0}
               max={255}
               step={1}
-              value={computed(
-                [this.settings.strokeColor],
-                () => this.getColorChannels().g,
-              )}
+              value={computed([this.colorRgb], ([rgb]) => rgb.g)}
               onChange={(value: number) =>
                 this.setStrokeChannel("g", String(value))
               }
@@ -786,10 +834,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
               min={0}
               max={255}
               step={1}
-              value={computed(
-                [this.settings.strokeColor],
-                () => this.getColorChannels().b,
-              )}
+              value={computed([this.colorRgb], ([rgb]) => rgb.b)}
               onChange={(value: number) =>
                 this.setStrokeChannel("b", String(value))
               }
