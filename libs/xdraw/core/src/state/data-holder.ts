@@ -67,7 +67,6 @@ export class XDrawDataHolder {
     insertedElements: XDrawElement[] = [];
     // Elementler json array olacak
     activeLayerSnapshotBeforeErase: XDrawElement[] | null = null;
-    deltas: ContentBufferDelta[] = [];
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -468,9 +467,9 @@ export class XDrawDataHolder {
         }
         const removalResult = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
         activeLayer.elements = removalResult.elements;
-        this.deltas.push(...removalResult.removedPoints);
+        // this.deltas.push(...removalResult.removedPoints);
         if (removalResult.hasChanges) {
-            this.rasterizer.updateProjectDataLocally(this.xdrawData, removalResult.removedPoints);
+            this.rasterizer.updateProjectDataLocally(this.xdrawData);
         }
 
         return removalResult.hasChanges;
@@ -525,7 +524,7 @@ export class XDrawDataHolder {
                 this.rasterizer.setProjectData(this.xdrawData);
             }
         }, true, false);
-        this.deltas = [];
+        // this.deltas = [];
         this.activeLayerSnapshotBeforeErase = null;
     }
 
