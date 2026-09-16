@@ -453,15 +453,20 @@ export class ProjectDataRasterizer {
                 const { source, buffer } = contentFrame;
                 const scaleRatio = scale / buffer.scale;
                 context.setTransform(1, 0, 0, 1, 0, 0);
-                context.drawImage(
-                    source,
-                    (buffer.originX - camX) * scale,
-                    (buffer.originY - camY) * scale,
-                    buffer.width * scaleRatio,
-                    buffer.height * scaleRatio,
-                );
-                if (this.oldyFrame != contentFrame)
-                    this.oldyFrame = contentFrame;
+                try {
+                    context.drawImage(
+                        source,
+                        (buffer.originX - camX) * scale,
+                        (buffer.originY - camY) * scale,
+                        buffer.width * scaleRatio,
+                        buffer.height * scaleRatio,
+                    );
+                    if (this.oldyFrame != contentFrame)
+                        this.oldyFrame = contentFrame;
+                } catch (error: unknown) {
+                    console.error("Content frame cizilirken hata olustu.", error);
+                }
+
             }
             // Aktif (henuz finalize olmamis) stroke, buffer'da olmadigi icin her karede
             // ayrica dunya donusumuyle ustte cizilir.
