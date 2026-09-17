@@ -34,6 +34,12 @@ export interface IAppNativeController {
     openFileRequest(mimeType: string): File | Promise<File | null>;
 
     /**
+     * Aktif proje artik onceki acilan/kaydedilen dosyayla iliskili degilse
+     * platformun tuttugu dosya hedefini temizler.
+     */
+    clearActiveFileTarget?(): void;
+
+    /**
      * Verilen veriyi paylaşma menüsü (share sheet) üzerinden paylaşır.
      * Desteklenmeyen platformlarda tanımsız (undefined) bırakılabilir.
      */

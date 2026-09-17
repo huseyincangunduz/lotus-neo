@@ -538,6 +538,7 @@ export class CanvasDraw extends NeolitComponent {
           activeLayerId: "base",
         });
         this.undoRedoHelper.reset();
+        this.appController.clearActiveFileTarget?.();
       },
     );
   }
