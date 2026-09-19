@@ -243,6 +243,19 @@ export class ProjectDataRasterizer {
         this.requestRender();
     }
 
+    applyLayerOpacityDelta(layerId: string, opacity: number): void {
+        this.dataRevision++;
+        this.contentBufferBackend.applySnapshotDelta(this.dataRevision, {
+            operation: "set-layer-opacity",
+            layerId,
+            layerOpacity: opacity,
+            elementId: "",
+            type: "draw",
+            dataRevision: this.dataRevision,
+        });
+        this.requestRender();
+    }
+
     updateProjectDataLocally(projectData: XDrawData, deltas?: ContentBufferDelta[]) {
         this.projectData = projectData;
         this.dataRevision++;
@@ -461,8 +474,13 @@ export class ProjectDataRasterizer {
                         buffer.width * scaleRatio,
                         buffer.height * scaleRatio,
                     );
-                    if (this.oldyFrame != contentFrame)
+                    if (this.oldyFrame != contentFrame){
+                        const invaliadatedFrame = this.oldyFrame;
                         this.oldyFrame = contentFrame;
+                        if (invaliadatedFrame?.source instanceof ImageBitmap) {
+                            invaliadatedFrame.source.close();
+                        }
+                    }
                 } catch (error: unknown) {
                     console.error("Content frame cizilirken hata olustu.", error);
                 }

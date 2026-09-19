@@ -42,11 +42,8 @@ export class WorkerContentBufferBackend implements ContentBufferBackend {
     setSnapshot(data: XDrawData, dataRevision: number): void {
         this.dataRevision = dataRevision;
         this.invalidated = true;
-        this.closeCurrentBitmap();
         this.postMessage({ type: "set-snapshot", data, dataRevision });
     }
-
-    setUseLocalRendering(_enabled: boolean): void { }
 
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void {
         this.viewport = viewport;
@@ -196,6 +193,8 @@ export class WorkerContentBufferBackend implements ContentBufferBackend {
     }
 
     applySnapshotDelta(dataRevision: number, ...deltas: ContentBufferDelta[]): void {
+        this.dataRevision = dataRevision;
+        this.invalidated = true;
         this.postMessage({
             type: "apply-snapshot-delta",
             deltas,

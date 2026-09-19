@@ -3,6 +3,7 @@ import {
   NeolitComponent,
   state,
   type NeolitNode,
+  type StateOrPlain,
 } from "@ubs-platform/neolit/core";
 
 import { Button, type ButtonVariant } from "@libs/ui/button";
@@ -34,7 +35,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
     onExportImage: (_options: {
       area: "screen" | "content";
       background: "white" | "transparent" | "grid";
-      scale: 1 | 2;
+      scale: number;
       format: "png" | "webp" | "jpg";
     }) => {},
     flushAutosave: () => {},
@@ -50,6 +51,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
       subscribeIncomingWhenSetState: true,
     }),
   };
+  activeLayerOpacity = state<number>(1);
   showColorPickerDialog = state(false);
   showPencilSettingsDialog = state(false);
   showTextSettingsDialog = state(false);
@@ -94,7 +96,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
     recentColors.slice(0, 3),
   );
   private colorDialogLastCommittedColor: string | null = null;
-  // Opacity slider surukleme basindaki gercek deger; onChangeEnd'de tek undo adimi icin kullanilir.
   private opacityDragBeforeValue: number | null = null;
 
   private readonly colorPresets = [
@@ -213,9 +214,21 @@ export class CanvasDrawSidebar extends NeolitComponent {
     this.properties.xdrawDataHolder.subscribe((holder) => {
       this.xdrawHolder = holder;
       this.layersState.set(holder?.layersState || []);
+      this.activeLayerOpacity.set(holder?.getActiveLayerOpacity() || 1);
     });
     this.xdrawHolder = this.properties.xdrawDataHolder.get();
     this.layersState.set(this.xdrawHolder?.layersState || []);
+    this.activeLayerOpacity.set(this.xdrawHolder?.getActiveLayerOpacity() || 1);
+    // this.activeLayerOpacity.subscribe((value) => {
+    //   if (!this.xdrawHolder?.getActiveLayerId()) {
+    //     return;
+    //   }
+    //   this.xdrawHolder?.setLayerOpacityLive(
+    //     this.xdrawHolder?.getActiveLayerId(),
+    //     value,
+    //   );
+    //   // Handle active layer opacity changes if needed
+    // });
   }
 
   onDestroy(): void {
@@ -834,7 +847,6 @@ export class CanvasDrawSidebar extends NeolitComponent {
                 width: "100%",
                 display: "flex",
                 justifyContent: "center",
-
               }}
             >
               <Trackbar
@@ -931,7 +943,9 @@ export class CanvasDrawSidebar extends NeolitComponent {
           placement="right"
           width="280px"
           maxHeight="70dvh"
-          onClose={() => this.layerSettingsDialog.set(false)}
+          onClose={() => {
+            this.layerSettingsDialog.set(false);
+          }}
           displayHeader={false}
           displayCloseButton={false}
         >
@@ -947,6 +961,10 @@ export class CanvasDrawSidebar extends NeolitComponent {
                         this.properties.xdrawDataHolder
                           .get()
                           .setActiveLayer(layer.id);
+
+                        this.activeLayerOpacity.set(layer.opacity, {
+                          emitEvent: false,
+                        });
                       }}
                       variant={computed<ButtonVariant>(
                         [this.xdrawHolder!.activeLayerId],
@@ -1007,33 +1025,24 @@ export class CanvasDrawSidebar extends NeolitComponent {
             min={0}
             max={1}
             step={0.01}
-            value={this.properties.xdrawDataHolder
-              .get()
-              .getActiveLayerOpacity()}
+            value={this.activeLayerOpacity}
             onChange={(value: number) => {
-              const activeLayerId = this.properties.xdrawDataHolder
-                .get()
-                .getActiveLayerId();
+              const holder = this.properties.xdrawDataHolder.get();
               if (this.opacityDragBeforeValue === null) {
-                this.opacityDragBeforeValue = this.properties.xdrawDataHolder
-                  .get()
-                  .getActiveLayerOpacity() as number;
+                this.opacityDragBeforeValue =
+                  holder.getActiveLayerOpacity() as number;
               }
-              // Surukleme sirasinda undo yigina hicbir sey eklenmez, sadece canli onizleme.
-              this.properties.xdrawDataHolder
-                .get()
-                .setLayerOpacityLive(activeLayerId, value);
+              holder.setLayerOpacityLive(holder.getActiveLayerId(), value);
             }}
             onChangeEnd={(value: number) => {
-              const activeLayerId = this.properties.xdrawDataHolder
-                .get()
-                .getActiveLayerId();
+              const holder = this.properties.xdrawDataHolder.get();
               const beforeValue = this.opacityDragBeforeValue ?? value;
               this.opacityDragBeforeValue = null;
-              // Tek undo adimi: surukleme basindaki deger -> son deger.
-              this.properties.xdrawDataHolder
-                .get()
-                .setLayerOpacity(activeLayerId, value, beforeValue);
+              holder.setLayerOpacity(
+                holder.getActiveLayerId(),
+                value,
+                beforeValue,
+              );
               this.flushAutosave();
             }}
           ></Trackbar>

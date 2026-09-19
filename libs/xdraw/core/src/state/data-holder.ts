@@ -17,7 +17,6 @@ import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 import { ColorUtils } from "../utils/color-utils";
 import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "../utils/xdraw-binary-codec";
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
-import type { ContentBufferDelta } from "../rendering/content-buffer-backend";
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "../model/xdraw-data";
 
 export interface CursorPosition {
@@ -156,7 +155,15 @@ export class XDrawDataHolder {
     // Boylece slider surukleme tek bir undo adimi yerine yuzlerce adima bolunmuyor.
     setLayerOpacityLive(layerId: string, opacity: number): void {
         this.layerManager.setLayerOpacity(layerId, opacity);
-        this.syncLayersState();
+        this.layersState.set(this.layerManager.listLayers());
+        this.rasterizer.updateProjectDataLocally(
+            this.xdrawData,
+            [{
+                operation: "set-layer-opacity",
+                layerId,
+                layerOpacity: opacity,
+            }]
+        );
     }
 
     // Surukleme bittiginde (onChangeEnd) tek seferlik commit. previousOpacity verilmezse
@@ -493,9 +500,7 @@ export class XDrawDataHolder {
 
     private syncLayersState(): void {
         this.layersState.set(this.layerManager.listLayers());
-        // Katman yapisi (olusturma/silme/gorunurluk/opaklik) degisti; buffer artik gecersiz.
-        this.rasterizer.invalidateContentBuffer();
-        this.rasterizer.requestRender();
+        this.rasterizer.updateProjectDataLocally(this.xdrawData);
     }
 
     addUndoRedoForEraseWithSnapshot(activeLayerId: string) {
@@ -504,7 +509,7 @@ export class XDrawDataHolder {
         }
         let beforeEraseSnapshot = cloneObjectDeep(this.activeLayerSnapshotBeforeErase);
         let currentSnapshotAfterRemoval = cloneObjectDeep(this.layerManager.getLayer(activeLayerId)!.elements);
-        let mode : "apply" | "revert" = "apply";
+        let mode: "apply" | "revert" = "apply";
         this.undoRedoHelper.pushOperationQueue({
             apply: async () => {
                 // Do nothing, changes are already applied

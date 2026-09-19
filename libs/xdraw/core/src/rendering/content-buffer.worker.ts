@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 
-import type { XDrawData, XDrawDrawElement } from "../model/xdraw-data";
+import type { XDrawData } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
 import type { ContentBufferDelta, ContentBufferViewport } from "./content-buffer-backend";
 import { ContentBufferRenderer } from "./content-buffer-renderer";
 import type { ContentBufferWorkerRequest, ContentBufferWorkerResponse } from "./content-buffer-worker-messages";
+import { applyContentBufferDeltas } from "./apply-content-buffer-deltas";
 
 const workerScope = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -49,48 +50,20 @@ async function handleMessage(message: ContentBufferWorkerRequest): Promise<void>
             return;
         case "apply-snapshot-delta":
             // Handle applying snapshot delta if needed
-            await applySnapshotDelta(message.delta);
+            await applySnapshotDelta(message.deltas);
             return;
         case "render":
             await renderBuffer(message.dataRevision, message.renderRevision);
     }
 }
 
-async function applySnapshotDelta(delta: ContentBufferDelta): Promise<void> {
+async function applySnapshotDelta(...deltas: ContentBufferDelta[]): Promise<void> {
     if (!data) {
         return;
     }
 
-    for (const activeLayer of data.layers) {
-        if (activeLayer.elements.length === 0 || !activeLayer.visible) {
-            continue;
-        }
-        if (delta.operation === "upsert-element" && delta.upsertData) {
-            const index = activeLayer.elements.findIndex(e => e.id === delta.elementId);
-            if (index !== -1) {
-                activeLayer.elements[index] = delta.upsertData;
-            } else {
-                activeLayer.elements.push(delta.upsertData);
-            }
-
-        }
-        const alreadyExistElement = activeLayer.elements.find(e => e.id === delta.elementId);
-
-        if (delta.operation === "remove-element") {
-            activeLayer.elements = activeLayer.elements.filter(e => e.id !== delta.elementId);
-        } else if (delta.operation === "insert-points" && delta.points) {
-            if (alreadyExistElement && alreadyExistElement.type === "draw") {
-                let alreadyExistDrawELement = alreadyExistElement as XDrawDrawElement
-                alreadyExistDrawELement.points.push(...delta.points);
-            }
-        } else if (delta.operation === "remove-points" && delta.points) {
-            let alreadyExistDrawELement = alreadyExistElement as XDrawDrawElement
-
-            if (alreadyExistElement && alreadyExistElement.type === "draw" && alreadyExistDrawELement.points) {
-                alreadyExistDrawELement.points = alreadyExistDrawELement.points.filter(p => !delta.points!.some(dp => dp.x === p.x && dp.y === p.y));
-            }
-        }
-    }   
+    applyContentBufferDeltas(data, deltas);
+    renderer?.invalidate();
 }
 
 async function renderBuffer(dataRevision: number, renderRevision: number): Promise<void> {

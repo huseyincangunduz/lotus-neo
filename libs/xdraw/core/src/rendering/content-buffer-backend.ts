@@ -17,17 +17,19 @@ export interface ContentBufferFrame {
 }
 
 export interface ContentBufferDelta {
-    operation: "upsert-element" | "remove-element" | "insert-points" | "remove-points";
-    elementId: string;
+    operation: "upsert-element" | "remove-element" | "insert-points" | "remove-points" | "set-layer-opacity";
+    elementId?: string;
     // layerId: string;
-    type: "draw" | "fill" | "text";
+    type?: "draw" | "fill" | "text";
     upsertData?: XDrawElement;
     /**
      * Eğer draw elementi ise points, ancak fill ise ringler olacak...
      */
     points?: Array<XDrawElementPosition>;
     rings?: XDrawPoint[][]
-    dataRevision: number;
+    dataRevision?: number;
+    layerOpacity?: number;
+    layerId?: string;
 }
 
 export type ContentBufferReadyListener = (frame: ContentBufferFrame) => void;
@@ -35,7 +37,6 @@ export type ContentBufferReadyListener = (frame: ContentBufferFrame) => void;
 export interface ContentBufferBackend {
     setSnapshot(data: XDrawData, dataRevision: number): void;
     applySnapshotDelta( dataRevision: number, ...delta: ContentBufferDelta[]): void;
-    setUseLocalRendering(enabled: boolean): void;
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void;
     invalidate(): void;
     requestBuffer(): Promise<void>;

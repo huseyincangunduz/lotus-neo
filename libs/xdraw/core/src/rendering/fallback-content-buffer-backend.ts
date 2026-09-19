@@ -110,6 +110,6 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
 
     applySnapshotDelta(dataRevision: number, ...deltas: ContentBufferDelta[]): void {
         this.primaryBackend.applySnapshotDelta(dataRevision, ...deltas);
-
+        this.fallbackBackend.applySnapshotDelta(dataRevision, ...deltas);
     }
 }
