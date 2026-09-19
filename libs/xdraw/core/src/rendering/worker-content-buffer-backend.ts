@@ -1,7 +1,6 @@
-import type { XDrawData } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawData } from "../model/xdraw-data";
 import type {
     ContentBufferBackend,
-    ContentBufferDelta,
     ContentBufferFrame,
     ContentBufferReadyListener,
     ContentBufferViewport,

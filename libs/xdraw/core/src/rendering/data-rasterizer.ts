@@ -1,9 +1,9 @@
 import { toastService } from "@libs/ui/alert-toast";
 import { tr } from "@libs/ui/i18n";
 import { ColorUtils } from "../utils/color-utils";
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
-import type { ContentBufferBackend, ContentBufferDelta, ContentBufferFrame } from "./content-buffer-backend";
+import type { ContentBufferBackend, ContentBufferFrame } from "./content-buffer-backend";
 import { ContentBufferRenderer, type ContentBufferInfo, type ContentBufferRendererOptions } from "./content-buffer-renderer";
 import { FallbackContentBufferBackend } from "./fallback-content-buffer-backend";
 import { FillMaskRenderer } from "./fill-mask-renderer";

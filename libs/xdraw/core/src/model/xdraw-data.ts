@@ -106,3 +106,19 @@ export interface XDrawData {
     layers: XDrawLayer[];
 }
 
+// Content buffer'a (render onbellegine) veya ana veriye uygulanacak kucuk, artimli degisiklik.
+export interface ContentBufferDelta {
+    operation: "upsert-element" | "remove-element" | "insert-points" | "remove-points" | "set-layer-opacity";
+    elementId?: string;
+    type?: "draw" | "fill" | "text";
+    upsertData?: XDrawElement;
+    /**
+     * Eğer draw elementi ise points, ancak fill ise ringler olacak...
+     */
+    points?: Array<XDrawElementPosition>;
+    rings?: XDrawPoint[][]
+    dataRevision?: number;
+    layerOpacity?: number;
+    layerId?: string;
+}
+

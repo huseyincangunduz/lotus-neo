@@ -1,8 +1,7 @@
 import { toastService } from "@libs/ui/alert-toast";
-import type { XDrawData, XDrawDrawElement } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawData } from "../model/xdraw-data";
 import type {
     ContentBufferBackend,
-    ContentBufferDelta,
     ContentBufferFrame,
     ContentBufferReadyListener,
     ContentBufferViewport,

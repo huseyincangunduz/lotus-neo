@@ -1,5 +1,5 @@
-import type { XDrawData } from "../model/xdraw-data";
-import type { ContentBufferDelta, ContentBufferViewport } from "./content-buffer-backend";
+import type { ContentBufferDelta, XDrawData } from "../model/xdraw-data";
+import type { ContentBufferViewport } from "./content-buffer-backend";
 import type { ContentBufferInfo, ContentBufferRendererOptions } from "./content-buffer-renderer";
 
 export interface ContentBufferWorkerInitializeMessage {

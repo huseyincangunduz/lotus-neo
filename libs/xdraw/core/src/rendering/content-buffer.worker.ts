@@ -1,11 +1,11 @@
 /// <reference lib="webworker" />
 
-import type { XDrawData } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawData } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
-import type { ContentBufferDelta, ContentBufferViewport } from "./content-buffer-backend";
+import type { ContentBufferViewport } from "./content-buffer-backend";
 import { ContentBufferRenderer } from "./content-buffer-renderer";
 import type { ContentBufferWorkerRequest, ContentBufferWorkerResponse } from "./content-buffer-worker-messages";
-import { applyContentBufferDeltas } from "./apply-content-buffer-deltas";
+import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 
 const workerScope = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -49,8 +49,7 @@ async function handleMessage(message: ContentBufferWorkerRequest): Promise<void>
             renderer?.invalidate();
             return;
         case "apply-snapshot-delta":
-            // Handle applying snapshot delta if needed
-            await applySnapshotDelta(message.deltas);
+            await applySnapshotDelta(...message.deltas);
             return;
         case "render":
             await renderBuffer(message.dataRevision, message.renderRevision);
@@ -62,7 +61,7 @@ async function applySnapshotDelta(...deltas: ContentBufferDelta[]): Promise<void
         return;
     }
 
-    applyContentBufferDeltas(data, deltas);
+    XdrawDataUtils.applyContentBufferDeltas(data, deltas);
     renderer?.invalidate();
 }
 

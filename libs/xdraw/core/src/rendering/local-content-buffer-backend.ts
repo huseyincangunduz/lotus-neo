@@ -1,13 +1,12 @@
-import type { XDrawData } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawData } from "../model/xdraw-data";
 import type {
     ContentBufferBackend,
-    ContentBufferDelta,
     ContentBufferFrame,
     ContentBufferReadyListener,
     ContentBufferViewport,
 } from "./content-buffer-backend";
 import { ContentBufferRenderer } from "./content-buffer-renderer";
-import { applyContentBufferDeltas } from "./apply-content-buffer-deltas";
+import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 
 export class LocalContentBufferBackend implements ContentBufferBackend {
     private data?: XDrawData;
@@ -87,7 +86,7 @@ export class LocalContentBufferBackend implements ContentBufferBackend {
             return;
         }
 
-        applyContentBufferDeltas(this.data, deltas);
+        XdrawDataUtils.applyContentBufferDeltas(this.data, deltas);
         this.dataRevision = dataRevision;
         this.currentFrame = undefined;
         this.renderer.invalidate();

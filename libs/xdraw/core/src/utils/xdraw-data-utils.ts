@@ -1,7 +1,6 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawElementPosition, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawElementPosition, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 import { cloneObjectDeep } from "./clone-utils";
-import type { ContentBufferDelta } from "../rendering/content-buffer-backend";
 
 export interface XDrawElementCropData {
     layerId: string;
@@ -291,6 +290,47 @@ export class XdrawDataUtils {
 
     public static fillDye(activeLayer: XDrawLayer, mask: XDrawFillMask, x: number, y: number, color: string): boolean {
         return XdrawFillUtils.fillDye(activeLayer, mask, x, y, color);
+    }
+
+    // Content buffer'a veya ana XDrawData'ya artimli delta listesini uygular (in-place).
+    public static applyContentBufferDeltas(data: XDrawData, deltas: ContentBufferDelta[]): void {
+        for (const activeLayer of data.layers) {
+            for (const delta of deltas) {
+                if (delta.operation === "set-layer-opacity" && delta.layerId && typeof delta.layerOpacity === "number") {
+                    if (activeLayer.id === delta.layerId) {
+                        activeLayer.opacity = delta.layerOpacity;
+                    }
+                    continue;
+                }
+                if (activeLayer.elements.length === 0 || !activeLayer.visible) {
+                    continue;
+                }
+                if (delta.operation === "upsert-element" && delta.upsertData) {
+                    const index = activeLayer.elements.findIndex((element) => element.id === delta.elementId);
+                    if (index !== -1) {
+                        activeLayer.elements[index] = delta.upsertData;
+                    } else {
+                        activeLayer.elements.push(delta.upsertData);
+                    }
+                }
+
+                const existingElement = activeLayer.elements.find((element) => element.id === delta.elementId);
+                if (delta.operation === "remove-element") {
+                    activeLayer.elements = activeLayer.elements.filter((element) => element.id !== delta.elementId);
+                } else if (delta.operation === "insert-points" && delta.points) {
+                    if (existingElement?.type === "draw") {
+                        (existingElement as XDrawDrawElement).points.push(...delta.points);
+                    }
+                } else if (delta.operation === "remove-points" && delta.points) {
+                    if (existingElement?.type === "draw") {
+                        const drawElement = existingElement as XDrawDrawElement;
+                        drawElement.points = drawElement.points.filter(
+                            (point) => !delta.points!.some((deltaPoint) => deltaPoint.x === point.x && deltaPoint.y === point.y),
+                        );
+                    }
+                }
+            }
+        }
     }
 
 

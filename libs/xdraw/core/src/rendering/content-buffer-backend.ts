@@ -1,4 +1,4 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawElement, XDrawElementPosition, XDrawPoint } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData } from "../model/xdraw-data";
 import type { ContentBufferInfo } from "./content-buffer-renderer";
 
 export interface ContentBufferViewport {
@@ -14,22 +14,6 @@ export interface ContentBufferFrame {
     buffer: ContentBufferInfo;
     dataRevision: number;
     renderRevision: number;
-}
-
-export interface ContentBufferDelta {
-    operation: "upsert-element" | "remove-element" | "insert-points" | "remove-points" | "set-layer-opacity";
-    elementId?: string;
-    // layerId: string;
-    type?: "draw" | "fill" | "text";
-    upsertData?: XDrawElement;
-    /**
-     * Eğer draw elementi ise points, ancak fill ise ringler olacak...
-     */
-    points?: Array<XDrawElementPosition>;
-    rings?: XDrawPoint[][]
-    dataRevision?: number;
-    layerOpacity?: number;
-    layerId?: string;
 }
 
 export type ContentBufferReadyListener = (frame: ContentBufferFrame) => void;
