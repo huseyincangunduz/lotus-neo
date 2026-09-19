@@ -147,11 +147,12 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
     this.settings.recentColors.set(
       [
+        currentColor,
         previousColor,
         ...this.settings.recentColors
           .get()
           .filter((color) => color !== previousColor && color !== currentColor),
-      ].slice(0, 20),
+      ].slice(0, 30),
     );
 
     this.colorDialogLastCommittedColor = currentColor;
