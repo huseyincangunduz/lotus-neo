@@ -45,6 +45,7 @@ export class ProjectDataRasterizer {
     private activeDrawElementLayerOpacity = 1;
     private unsubscribeContentBuffer: () => void;
     oldyFrame?: ContentBufferFrame;
+    invalidatedBitmapFrames: ContentBufferFrame[] = [];
 
     constructor() {
         this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
@@ -289,7 +290,6 @@ export class ProjectDataRasterizer {
         const previouslyUsedLocalRendering = previousMode === "erase" || previousMode === "fill";
 
         if (usesLocalRendering && !previouslyUsedLocalRendering) {
-            this.contentBufferBackend.setUseLocalRendering(true);
             if (this.projectData) {
                 this.contentBufferBackend.invalidate();
                 this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
@@ -299,7 +299,6 @@ export class ProjectDataRasterizer {
         }
 
         if (previouslyUsedLocalRendering && !usesLocalRendering && this.projectData) {
-            this.contentBufferBackend.setUseLocalRendering(false);
             this.dataRevision++;
             this.contentBufferBackend.invalidate();
             this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
@@ -475,11 +474,12 @@ export class ProjectDataRasterizer {
                         buffer.height * scaleRatio,
                     );
                     if (this.oldyFrame != contentFrame){
-                        const invaliadatedFrame = this.oldyFrame;
-                        this.oldyFrame = contentFrame;
-                        if (invaliadatedFrame?.source instanceof ImageBitmap) {
-                            invaliadatedFrame.source.close();
+                        // const invaliadatedFrame = this.oldyFrame;
+                        if (this.oldyFrame) {
+                            this.invalidatedBitmapFrames.push(this.oldyFrame);
                         }
+                        this.oldyFrame = contentFrame;
+                      
                     }
                 } catch (error: unknown) {
                     console.error("Content frame cizilirken hata olustu.", error);
@@ -510,6 +510,12 @@ export class ProjectDataRasterizer {
             }
         }
         AnimationScheduler.singleton.add(showScreenFunc);
+        this.invalidatedBitmapFrames.forEach(frame => {
+            if (frame.source instanceof ImageBitmap) {
+                frame.source.close();
+            }
+        });
+        this.invalidatedBitmapFrames = [];
         // requestAnimationFrame(showScreenFunc);
     }
 

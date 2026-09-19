@@ -34,18 +34,6 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
         this.fallbackBackend.setSnapshot(data, dataRevision);
     }
 
-    setUseLocalRendering(enabled: boolean): void {
-        this.useLocalRendering = enabled;
-        if (enabled) {
-            this.activatePrimaryOnNextFrame = false;
-            this.activeBackend = this.fallbackBackend;
-            return;
-        }
-        if (!this.primaryFailed && this.activeBackend === this.fallbackBackend) {
-            this.activatePrimaryOnNextFrame = true;
-        }
-    }
-
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void {
         this.primaryBackend.setViewport(viewport, renderRevision);
         this.fallbackBackend.setViewport(viewport, renderRevision);
