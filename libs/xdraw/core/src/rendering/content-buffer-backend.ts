@@ -21,6 +21,7 @@ export type ContentBufferReadyListener = (frame: ContentBufferFrame) => void;
 export interface ContentBufferBackend {
     setSnapshot(data: XDrawData, dataRevision: number): void;
     applySnapshotDelta( dataRevision: number, ...delta: ContentBufferDelta[]): void;
+    setUseLocalRendering(enabled: boolean): void;
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void;
     invalidate(): void;
     requestBuffer(): Promise<void>;

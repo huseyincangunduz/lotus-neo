@@ -260,6 +260,7 @@ export class ProjectDataRasterizer {
     updateProjectDataLocally(projectData: XDrawData, deltas?: ContentBufferDelta[]) {
         this.projectData = projectData;
         this.dataRevision++;
+        this.contentBufferBackend.setUseLocalRendering(true);
         this.contentBufferBackend.invalidate();
         if (deltas) {
             this.contentBufferBackend.applySnapshotDelta(this.dataRevision, ...deltas);
