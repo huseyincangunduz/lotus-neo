@@ -60,7 +60,16 @@ if [[ "$mode" == "production" ]]; then
 		exit 1
 	fi
 
+	version_code="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+)[[:space:]]*$/\1/p' "$android_gradle_file")"
+	if [[ "$(printf '%s\n' "$version_code" | sed '/^$/d' | wc -l)" -ne 1 ]]; then
+		echo "Expected exactly one numeric versionCode in $android_gradle_file" >&2
+		exit 1
+	fi
+
+	next_version_code=$((version_code + 1))
 	sed -i -E "s/^([[:space:]]*versionName[[:space:]]+).*/\1\"$version\"/" "$android_gradle_file"
+	sed -i -E "s/^([[:space:]]*versionCode[[:space:]]+)[0-9]+[[:space:]]*$/\1$next_version_code/" "$android_gradle_file"
+	echo "Android versionCode: $version_code -> $next_version_code"
 fi
 
 echo "Building Android app '$app' in '$mode' mode"
