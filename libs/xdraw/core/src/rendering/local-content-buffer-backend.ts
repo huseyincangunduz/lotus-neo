@@ -27,6 +27,11 @@ export class LocalContentBufferBackend implements ContentBufferBackend {
 
     setUseLocalRendering(_enabled: boolean): void { }
 
+    setInvertLightness(enabled: boolean): void {
+        this.renderer.setInvertLightness(enabled);
+        this.currentFrame = undefined;
+    }
+
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void {
         this.viewport = viewport;
         this.renderRevision = renderRevision;

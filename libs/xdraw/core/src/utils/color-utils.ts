@@ -148,4 +148,14 @@ export class ColorUtils {
 
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
+
+  static invertLightness(color: string): string {
+    const hex = this.regularizeToHexColor(color);
+    const hsl = hex ? this.hexToHsl(hex) : null;
+    if (!hsl) {
+      return color;
+    }
+
+    return this.hslToHex(hsl.h, hsl.s, 100 - hsl.l);
+  }
 }

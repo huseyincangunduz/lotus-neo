@@ -23,6 +23,7 @@ export class ProjectDataRasterizer {
     private backgroundPattern?: CanvasBackgroundPatternOptions;
     private cam: XDrawCanvasCamera = { x: 0, y: 0, scale: 1 };
     private activeCanvas?: HTMLCanvasElement;
+    private invertLightness = false;
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
     private renderScheduled = false;
@@ -94,6 +95,7 @@ export class ProjectDataRasterizer {
                 new WorkerContentBufferBackend(worker, this.contentBufferOptions),
                 fallbackBackend,
             );
+            this.contentBufferBackend.setInvertLightness(this.invertLightness);
             // toastService.info("Content buffer: Web Worker kullaniliyor.", 3500);
             this.unsubscribeContentBuffer = this.contentBufferBackend.onBufferReady(() => this.requestRender());
             if (this.projectData) {
@@ -183,11 +185,11 @@ export class ProjectDataRasterizer {
             context.globalAlpha = layer.opacity ?? 1;
             for (const element of layer.elements) {
                 if (element.type === "draw") {
-                    this.elementPainter.drawDrawElement(context, element as XDrawDrawElement, this.cam.scale);
+                    this.elementPainter.drawDrawElement(context, element as XDrawDrawElement, this.cam.scale, undefined, 0, undefined, this.invertLightness);
                 } else if (element.type === "fill") {
-                    this.elementPainter.drawFillElement(context, element as XDrawFillElement);
+                    this.elementPainter.drawFillElement(context, element as XDrawFillElement, undefined, this.invertLightness);
                 } else if (element.type === "text") {
-                    this.elementPainter.drawTextElement(context, element as XDrawTextElement);
+                    this.elementPainter.drawTextElement(context, element as XDrawTextElement, this.invertLightness);
                 }
             }
         }
@@ -366,6 +368,16 @@ export class ProjectDataRasterizer {
         this.requestRender();
     }
 
+    setInvertLightness(enabled: boolean): void {
+        if (this.invertLightness === enabled) {
+            return;
+        }
+        this.invertLightness = enabled;
+        this.contentBufferBackend.setInvertLightness(enabled);
+        this.contentBufferBackend.invalidate();
+        this.requestRender();
+    }
+
     private drawCursor(context: CanvasRenderingContext2D) {
         if (!this.cursorPosition) {
             return;
@@ -495,7 +507,7 @@ export class ProjectDataRasterizer {
                 context.lineCap = "round";
                 context.lineJoin = "round";
                 context.globalAlpha = this.activeDrawElementLayerOpacity;
-                this.elementPainter.drawDrawElement(context, activeElement, this.cam.scale);
+                this.elementPainter.drawDrawElement(context, activeElement, this.cam.scale, undefined, 0, undefined, this.invertLightness);
                 context.globalAlpha = 1;
             }
 

@@ -33,6 +33,11 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
         this.fallbackBackend.setSnapshot(data, dataRevision);
     }
 
+    setInvertLightness(enabled: boolean): void {
+        this.primaryBackend.setInvertLightness(enabled);
+        this.fallbackBackend.setInvertLightness(enabled);
+    }
+
     setUseLocalRendering(enabled: boolean): void {
         this.useLocalRendering = enabled;
         if (enabled) {

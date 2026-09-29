@@ -29,6 +29,7 @@ export class CanvasElementPainter {
         colorOverride?: string,
         minLineWidth = 0,
         range?: DrawPointRange,
+        invertLightness = false,
     ) {
         if (draw.points.length === 0) {
             return;
@@ -38,7 +39,10 @@ export class CanvasElementPainter {
         if (startIndex < 0 || endIndex < startIndex || endIndex >= draw.points.length) {
             return;
         }
-        const color = colorOverride ?? ColorUtils.regularizeToHexColor(draw.color);
+        const sourceColor = colorOverride ?? ColorUtils.regularizeToHexColor(draw.color);
+        const color = sourceColor && invertLightness && !colorOverride
+            ? ColorUtils.invertLightness(sourceColor)
+            : sourceColor;
         if (!color) {
             return;
         }
@@ -56,11 +60,14 @@ export class CanvasElementPainter {
         }
     }
 
-    drawFillElement(context: XDrawRenderingContext, fill: XDrawFillElement, colorOverride?: string) {
+    drawFillElement(context: XDrawRenderingContext, fill: XDrawFillElement, colorOverride?: string, invertLightness = false) {
         if (fill.rings.length === 0) {
             return;
         }
-        const color = colorOverride ?? ColorUtils.regularizeToHexColor(fill.color);
+        const sourceColor = colorOverride ?? ColorUtils.regularizeToHexColor(fill.color);
+        const color = sourceColor && invertLightness && !colorOverride
+            ? ColorUtils.invertLightness(sourceColor)
+            : sourceColor;
         if (!color) {
             return;
         }
@@ -85,8 +92,9 @@ export class CanvasElementPainter {
         context.fill(path, "evenodd");
     }
 
-    drawTextElement(context: XDrawRenderingContext, textElement: XDrawTextElement) {
-        const color = ColorUtils.regularizeToHexColor(textElement.color) || textElement.color;
+    drawTextElement(context: XDrawRenderingContext, textElement: XDrawTextElement, invertLightness = false) {
+        const sourceColor = ColorUtils.regularizeToHexColor(textElement.color) || textElement.color;
+        const color = invertLightness ? ColorUtils.invertLightness(sourceColor) : sourceColor;
         context.fillStyle = color;
         context.lineWidth = 1;
         context.font = `${textElement.fontWeight || "normal"} ${textElement.fontSize}px ${textElement.fontFamily || "sans-serif"}`;

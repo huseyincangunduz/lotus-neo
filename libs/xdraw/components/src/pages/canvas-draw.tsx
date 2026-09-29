@@ -563,6 +563,10 @@ export class CanvasDraw extends NeolitComponent {
     this.settings.appTheme.subscribe((theme) => {
       document.body.setAttribute("theme", theme);
     });
+    this.svgHolder.setInvertLightness(this.settings.invertLightness.get());
+    this.settings.invertLightness.subscribe((enabled) => {
+      this.svgHolder.setInvertLightness(enabled);
+    });
     document.body.setAttribute("theme", this.settings.appTheme.get());
     this.viewPort.subscribe((wp) => {
       this.svgHolder.setViewCamera(wp);

@@ -10,6 +10,7 @@ import { Button, type ButtonVariant } from "@libs/ui/button";
 import { WebDialog } from "@libs/ui/webdialog";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
 import { Checkbox } from "@libs/ui/checkbox";
+import { WebdialogOverlayService } from "@libs/ui/webdialog";
 import { Trackbar } from "@libs/ui/trackbar";
 import { fromState } from "@ubs-platform/neolit/structural";
 import { inject } from "@ubs-platform/neolit/injectables";
@@ -65,6 +66,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
   layerSettingsDialog = state(false);
   zoomFactor = state(1);
   settings = inject(XDrawSettingsConfig);
+  wdService = inject(WebdialogOverlayService);
   colorRgb = computed(
     [this.settings.strokeColor],
     ([strokeColor]) => ColorUtils.hexToRgb(strokeColor) ?? { r: 0, g: 0, b: 0 },
@@ -176,6 +178,30 @@ export class CanvasDrawSidebar extends NeolitComponent {
   private saveAndShareProject(): void {
     this.properties.onSaveAndShareProject();
     this.menuDialog.set(false);
+  }
+
+  private toggleTheme(): void {
+    const nextTheme = this.settings.appTheme.get() === "light" ? "dark" : "light";
+    const invertLightness = this.settings.invertLightness.get();
+    const shouldAskAboutInvertLightness =
+      (nextTheme === "dark" && !invertLightness) ||
+      (nextTheme === "light" && invertLightness);
+
+    if (!shouldAskAboutInvertLightness) {
+      this.settings.appTheme.set(nextTheme);
+      return;
+    }
+
+    this.wdService.showApproveDialog(
+      tr("general.confirm"),
+      tr(`xdraw.invert-lightness-on-${nextTheme}-confirm`),
+      (confirmed) => {
+        this.settings.appTheme.set(nextTheme);
+        if (confirmed) {
+          this.settings.invertLightness.set(nextTheme === "dark");
+        }
+      },
+    );
   }
 
   private exportImage(): void {
@@ -520,9 +546,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
               <Button
                 padding={1}
                 onClick={() => {
-                  this.settings.appTheme.update((currentTheme) =>
-                    currentTheme === "light" ? "dark" : "light",
-                  );
+                  this.toggleTheme();
                 }}
                 // label={
                 //   computed([this.settings.appTheme], ([appTheme]) =>
@@ -701,6 +725,10 @@ export class CanvasDrawSidebar extends NeolitComponent {
           <Checkbox
             label={tr("xdraw.draw.scale-tool-sizes-with-zoom")}
             checked={this.settings.scaleToolSizesWithZoom}
+          ></Checkbox>
+          <Checkbox
+            label={tr("xdraw.draw.invert-lightness")}
+            checked={this.settings.invertLightness}
           ></Checkbox>
           <Trackbar
             label={tr("xdraw.draw.pen-pressure-smoothing")}

@@ -44,6 +44,11 @@ export class WorkerContentBufferBackend implements ContentBufferBackend {
         this.postMessage({ type: "set-snapshot", data, dataRevision });
     }
 
+    setInvertLightness(enabled: boolean): void {
+        this.invalidated = true;
+        this.postMessage({ type: "set-invert-lightness", enabled });
+    }
+
     setUseLocalRendering(_enabled: boolean): void { }
 
     setViewport(viewport: ContentBufferViewport, renderRevision: number): void {

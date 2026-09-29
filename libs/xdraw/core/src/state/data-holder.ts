@@ -91,6 +91,10 @@ export class XDrawDataHolder {
         // TODO: Arka plan deseni render'i eklenecek.
     }
 
+    setInvertLightness(enabled: boolean): void {
+        this.rasterizer.setInvertLightness(enabled);
+    }
+
     createLayer(layerId?: string, options?: { opacity?: number; visible?: boolean; insertBeforeLayerId?: string; }): XDrawLayer {
         let createdLayer: XDrawLayer | undefined = this.layerManager.createLayer(layerId, options);
         this.undoRedoHelper.pushOperationQueue({

@@ -42,6 +42,9 @@ async function handleMessage(message: ContentBufferWorkerRequest): Promise<void>
         case "set-snapshot":
             data = message.data;
             return;
+        case "set-invert-lightness":
+            renderer?.setInvertLightness(message.enabled);
+            return;
         case "set-viewport":
             viewport = message.viewport;
             return;

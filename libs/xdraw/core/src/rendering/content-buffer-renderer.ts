@@ -24,6 +24,7 @@ export class ContentBufferRenderer {
     private canvas?: ContentBufferCanvas;
     private buffer?: ContentBufferInfo;
     private valid = false;
+    private invertLightness = false;
 
     constructor(
         private readonly elementPainter: CanvasElementPainter,
@@ -41,6 +42,14 @@ export class ContentBufferRenderer {
 
     invalidate() {
         this.valid = false;
+    }
+
+    setInvertLightness(enabled: boolean): void {
+        if (this.invertLightness === enabled) {
+            return;
+        }
+        this.invertLightness = enabled;
+        this.invalidate();
     }
 
     isCurrent(camera: XDrawCanvasCamera, viewportWidth: number, viewportHeight: number): boolean {
@@ -108,11 +117,12 @@ export class ContentBufferRenderer {
                             startIndex: found.pointStartIndex ?? 0,
                             endIndex: found.pointEndIndex ?? Math.max(0, (found.points?.length ?? 1) - 1),
                         },
+                        this.invertLightness,
                     );
                 } else if (element.type === "fill") {
-                    this.elementPainter.drawFillElement(context, element as XDrawFillElement);
+                    this.elementPainter.drawFillElement(context, element as XDrawFillElement, undefined, this.invertLightness);
                 } else if (element.type === "text") {
-                    this.elementPainter.drawTextElement(context, element as XDrawTextElement);
+                    this.elementPainter.drawTextElement(context, element as XDrawTextElement, this.invertLightness);
                 }
             },
         );

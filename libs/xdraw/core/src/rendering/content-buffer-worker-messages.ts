@@ -13,6 +13,11 @@ export interface ContentBufferWorkerSetSnapshotMessage {
     dataRevision: number;
 }
 
+export interface ContentBufferWorkerSetInvertLightnessMessage {
+    type: "set-invert-lightness";
+    enabled: boolean;
+}
+
 export interface ContentBufferWorkerSetViewportMessage {
     type: "set-viewport";
     viewport: ContentBufferViewport;
@@ -38,6 +43,7 @@ export interface ContentBufferWorkerApplySnapshotDeltaMessage {
 export type ContentBufferWorkerRequest =
     | ContentBufferWorkerInitializeMessage
     | ContentBufferWorkerSetSnapshotMessage
+    | ContentBufferWorkerSetInvertLightnessMessage
     | ContentBufferWorkerSetViewportMessage
     | ContentBufferWorkerInvalidateMessage
     | ContentBufferWorkerRenderMessage

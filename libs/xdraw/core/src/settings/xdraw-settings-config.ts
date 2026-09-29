@@ -3,6 +3,7 @@ import { Injectable, rootInjector } from "@ubs-platform/neolit/injectables";
 
 export const XDRAW_SETTING_KEYS = {
   appTheme: "xdraw.settings.appTheme",
+  invertLightness: "xdraw.settings.invertLightness",
   mode: "xdraw.settings.mode",
   drawType: "xdraw.settings.drawType",
   strokeColor: "xdraw.settings.strokeColor",
@@ -32,6 +33,7 @@ type BackgroundPatternMode = 0 | 1 | 2;
 
 interface XDrawSettingsState {
   appTheme: StateOrPlain<Theme>;
+  invertLightness: StateOrPlain<boolean>;
   mode: StateOrPlain<Mode>;
   drawType: StateOrPlain<DrawType>;
   strokeColor: StateOrPlain<string>;
@@ -80,6 +82,7 @@ const persist = (key: string, value: unknown) => {
 // })
 export class XDrawSettingsConfig implements XDrawSettingsState {
   appTheme = state<Theme>(read(XDRAW_SETTING_KEYS.appTheme) === "dark" ? "dark" : "light");
+  invertLightness = state<boolean>(readBoolean(XDRAW_SETTING_KEYS.invertLightness) ?? false);
   mode = state<Mode>(read(XDRAW_SETTING_KEYS.mode) === "draw" ? "draw" : read(XDRAW_SETTING_KEYS.mode) === "text" ? "text" : "pointer");
   drawType = state<DrawType>(read(XDRAW_SETTING_KEYS.drawType) as any || "pencil");
   strokeColor = state<string>(read(XDRAW_SETTING_KEYS.strokeColor) || "#000000");
@@ -101,6 +104,7 @@ export class XDrawSettingsConfig implements XDrawSettingsState {
 
   constructor(params: XDrawSettingsConfigParams) {
     this.appTheme.subscribe((value) => persist(XDRAW_SETTING_KEYS.appTheme, value));
+    this.invertLightness.subscribe((value) => persist(XDRAW_SETTING_KEYS.invertLightness, value));
     this.mode.subscribe((value) => persist(XDRAW_SETTING_KEYS.mode, value));
     this.drawType.subscribe((value) => persist(XDRAW_SETTING_KEYS.drawType, value));
     this.strokeColor.subscribe((value) => persist(XDRAW_SETTING_KEYS.strokeColor, value));
