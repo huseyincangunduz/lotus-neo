@@ -3,6 +3,7 @@ import { state, type State, type StateOrPlain } from "@ubs-platform/neolit/core"
 import { LayerManager } from "./layer-manager";
 import { ProjectDataRasterizer, type XDrawImageExportOptions } from "../rendering/data-rasterizer";
 import type {
+    ContentBufferDelta,
     InteractionMode,
     RenderStats,
     XDrawCanvasCamera,
@@ -382,7 +383,7 @@ export class XDrawDataHolder {
         if (finalizedChunk) {
             this.rasterizer.setProjectData(this.xdrawData, this.insertedElements.map(
                 a => {
-                    return { operation: "upsert-element", elementId: a.id, type: a.type as any, dataRevision: null as any, };
+                    return { operation: "upsert-element", elementId: a.id, type: a.type as any, points: (a as XDrawDrawElement).points, };
                 }
             ));
         } else {
@@ -478,9 +479,8 @@ export class XDrawDataHolder {
         }
         const removalResult = XdrawDataUtils.removePointsAt(activeLayer.elements, x, y, radius);
         activeLayer.elements = removalResult.elements;
-        // this.deltas.push(...removalResult.removedPoints);
         if (removalResult.hasChanges) {
-            this.rasterizer.updateProjectDataLocally(this.xdrawData);
+            this.rasterizer.setProjectData(this.xdrawData, removalResult.removedPoints);
         }
 
         return removalResult.hasChanges;
@@ -513,16 +513,16 @@ export class XDrawDataHolder {
         }
         let beforeEraseSnapshot = cloneObjectDeep(this.activeLayerSnapshotBeforeErase);
         let currentSnapshotAfterRemoval = cloneObjectDeep(this.layerManager.getLayer(activeLayerId)!.elements);
-        let mode: "apply" | "revert" = "apply";
+        // let mode: "apply" | "revert" = "apply";
         this.undoRedoHelper.pushOperationQueue({
             apply: async () => {
                 // Do nothing, changes are already applied
                 this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(currentSnapshotAfterRemoval);
-                mode = "apply";
+                // mode = "apply";
             },
             revert: async () => {
                 this.layerManager.getLayer(activeLayerId)!.elements = cloneObjectDeep(beforeEraseSnapshot);
-                mode = "revert";
+                // mode = "revert";
             },
             dispose: () => {
                 beforeEraseSnapshot = undefined as any;
@@ -533,7 +533,6 @@ export class XDrawDataHolder {
                 this.rasterizer.setProjectData(this.xdrawData);
             }
         }, true, false);
-        // this.deltas = [];
         this.activeLayerSnapshotBeforeErase = null;
     }
 
