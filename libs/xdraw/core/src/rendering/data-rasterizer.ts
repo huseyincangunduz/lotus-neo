@@ -31,6 +31,7 @@ export class ProjectDataRasterizer {
     private dataRevision = 0;
     private renderRevision = 0;
     private interactionMode: InteractionMode = "idle";
+    private localRenderingForLayerUpdate = false;
     private elementPainter = new CanvasElementPainter();
     private fillMaskRenderer = new FillMaskRenderer(this.elementPainter, () => document.createElement("canvas"));
     private readonly contentBufferOptions: ContentBufferRendererOptions = {
@@ -262,7 +263,10 @@ export class ProjectDataRasterizer {
     updateProjectDataLocally(projectData: XDrawData, deltas?: ContentBufferDelta[]) {
         this.projectData = projectData;
         this.dataRevision++;
+        // Katman degisikligi gecikmesiz gorunsun diye anlik olarak ana thread'de cizilir;
+        // bir sonraki kamera hareketinde worker'a geri donulur.
         this.contentBufferBackend.setUseLocalRendering(true);
+        this.localRenderingForLayerUpdate = true;
         this.contentBufferBackend.invalidate();
         if (deltas) {
             this.contentBufferBackend.applySnapshotDelta(this.dataRevision, ...deltas);
@@ -275,6 +279,10 @@ export class ProjectDataRasterizer {
 
     setViewCamera(camera: XDrawCanvasCamera) {
         this.cam = camera;
+        if (this.localRenderingForLayerUpdate && !this.isLocalRenderingMode(this.interactionMode)) {
+            this.localRenderingForLayerUpdate = false;
+            this.contentBufferBackend.setUseLocalRendering(false);
+        }
         if (this.activeCanvas) {
             this.renderRevision++;
             this.contentBufferBackend.setViewport(
@@ -285,14 +293,19 @@ export class ProjectDataRasterizer {
         this.requestRender();
     }
 
+    private isLocalRenderingMode(mode: InteractionMode): boolean {
+        return mode === "erase" || mode === "fill";
+    }
+
     setInteractionMode(_mode: InteractionMode) {
         const previousMode = this.interactionMode;
         this.interactionMode = _mode;
 
-        const usesLocalRendering = _mode === "erase" || _mode === "fill";
-        const previouslyUsedLocalRendering = previousMode === "erase" || previousMode === "fill";
+        const usesLocalRendering = this.isLocalRenderingMode(_mode);
+        const previouslyUsedLocalRendering = this.isLocalRenderingMode(previousMode);
 
         if (usesLocalRendering && !previouslyUsedLocalRendering) {
+            this.contentBufferBackend.setUseLocalRendering(true);
             if (this.projectData) {
                 this.contentBufferBackend.invalidate();
                 this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
@@ -301,11 +314,15 @@ export class ProjectDataRasterizer {
             return;
         }
 
-        if (previouslyUsedLocalRendering && !usesLocalRendering && this.projectData) {
-            this.dataRevision++;
-            this.contentBufferBackend.invalidate();
-            this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
-            this.requestRender();
+        if (previouslyUsedLocalRendering && !usesLocalRendering) {
+            this.localRenderingForLayerUpdate = false;
+            this.contentBufferBackend.setUseLocalRendering(false);
+            if (this.projectData) {
+                this.dataRevision++;
+                this.contentBufferBackend.invalidate();
+                this.contentBufferBackend.setSnapshot(this.projectData, this.dataRevision);
+                this.requestRender();
+            }
         }
     }
 
@@ -461,19 +478,25 @@ export class ProjectDataRasterizer {
             { camera: this.cam, width: canvas.width, height: canvas.height },
             this.renderRevision,
         );
+
         void this.contentBufferBackend.requestBuffer().catch((error: unknown) => {
             console.error("Content buffer olusturulamadi.", error);
         });
         const { x: camX, y: camY, scale } = this.cam;
+        let contentFrame: ContentBufferFrame | undefined;
+        let contentFramePainted = false;
         const showScreenFunc = () => {
             this.renderScheduled = false;
             this.startContext2d(context);
             context.setTransform(1, 0, 0, 1, 0, 0);
             context.clearRect(0, 0, canvas.width, canvas.height);
-            let contentFrame = this.contentBufferBackend.getCurrentFrame();
+
+
+            contentFrame = this.contentBufferBackend.getCurrentFrame();
             if (contentFrame == null) {
                 contentFrame = this.oldyFrame;
             }
+
             if (contentFrame && contentFrame.buffer) { // contentFrame?.dataRevision === this.dataRevision
                 const { source, buffer } = contentFrame;
                 const scaleRatio = scale / buffer.scale;
@@ -486,14 +509,8 @@ export class ProjectDataRasterizer {
                         buffer.width * scaleRatio,
                         buffer.height * scaleRatio,
                     );
-                    if (this.oldyFrame != contentFrame){
-                        // const invaliadatedFrame = this.oldyFrame;
-                        if (this.oldyFrame) {
-                            this.invalidatedBitmapFrames.push(this.oldyFrame);
-                        }
-                        this.oldyFrame = contentFrame;
-                      
-                    }
+                    contentFramePainted = true;
+
                 } catch (error: unknown) {
                     console.error("Content frame cizilirken hata olustu.", error);
                 }
@@ -519,10 +536,21 @@ export class ProjectDataRasterizer {
             this.endContext2d(context);
             if (this.renderRequestedWhileScheduled) {
                 this.renderRequestedWhileScheduled = false;
-                this.requestRender();
+                this.throttledRender();
             }
         }
         AnimationScheduler.singleton.add(showScreenFunc);
+        // Post operasyon, eski frameleri invalidatedBitmapFrames listesine ekle ve kapat.
+        if (contentFrame && !contentFramePainted) {
+            if (this.oldyFrame != contentFrame) {
+                const invaliadatedFrame = this.oldyFrame;
+                if (invaliadatedFrame) {
+                    this.invalidatedBitmapFrames.push(invaliadatedFrame);
+                }
+                this.oldyFrame = contentFrame;
+            }
+            return;
+        }
         this.invalidatedBitmapFrames.forEach(frame => {
             if (frame.source instanceof ImageBitmap) {
                 frame.source.close();

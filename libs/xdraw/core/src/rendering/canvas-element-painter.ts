@@ -18,10 +18,27 @@ interface DrawPathCacheEntry {
     segments: DrawPathSegment[];
 }
 
+export interface PathBuildStats {
+    buildMs: number;
+    buildCount: number;
+    cacheHits: number;
+    maxBuildMs: number;
+}
+
 export class CanvasElementPainter {
     private fillPathCache = new WeakMap<XDrawPoint[][], Path2D>();
     private drawPathCache = new WeakMap<XDrawDrawElement["points"], DrawPathCacheEntry>();
+    private pathBuildStats: PathBuildStats = { buildMs: 0, buildCount: 0, cacheHits: 0, maxBuildMs: 0 };
 
+    resetPathBuildStats() {
+        this.pathBuildStats = { buildMs: 0, buildCount: 0, cacheHits: 0, maxBuildMs: 0 };
+    }
+
+    getPathBuildStats(): PathBuildStats {
+        return { ...this.pathBuildStats };
+    }
+
+    // TODO: Daha sonra drawDrawElement ismini paintDrawElement yapmak daha iyi olacak. Garip duruyor...
     drawDrawElement(
         context: XDrawRenderingContext,
         draw: XDrawDrawElement,
@@ -114,19 +131,38 @@ export class CanvasElementPainter {
     private getDrawPrebuilts(draw: XDrawDrawElement, cameraScale: number, minLineWidth: number, startIndex: number, endIndex: number): DrawPathCacheEntry {
         const usesFullRange = startIndex === 0 && endIndex === draw.points.length - 1;
         if (minLineWidth > 0 || !usesFullRange) {
-            return { segments: this.buildDrawSegments(draw, cameraScale, minLineWidth, startIndex, endIndex).segments };
+            return { segments: this.measuredBuildDrawSegments(draw, cameraScale, minLineWidth, startIndex, endIndex).segments };
         }
 
         const cached = this.drawPathCache.get(draw.points);
         if (cached) {
+            this.pathBuildStats.cacheHits++;
             return cached;
         }
 
-        const built = this.buildDrawSegments(draw, cameraScale, minLineWidth, startIndex, endIndex);
+        const built = this.measuredBuildDrawSegments(draw, cameraScale, minLineWidth, startIndex, endIndex);
         if (built.cacheable) {
             const cacheEntry = { segments: built.segments };
             this.drawPathCache.set(draw.points, cacheEntry);
             return cacheEntry;
+        }
+        return built;
+    }
+
+    private measuredBuildDrawSegments(
+        draw: XDrawDrawElement,
+        cameraScale: number,
+        minLineWidth: number,
+        startIndex: number,
+        endIndex: number,
+    ): { segments: DrawPathSegment[]; cacheable: boolean } {
+        const start = performance.now();
+        const built = this.buildDrawSegments(draw, cameraScale, minLineWidth, startIndex, endIndex);
+        const elapsed = performance.now() - start;
+        this.pathBuildStats.buildMs += elapsed;
+        this.pathBuildStats.buildCount++;
+        if (elapsed > this.pathBuildStats.maxBuildMs) {
+            this.pathBuildStats.maxBuildMs = elapsed;
         }
         return built;
     }

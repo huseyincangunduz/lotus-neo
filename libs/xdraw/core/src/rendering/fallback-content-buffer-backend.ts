@@ -12,6 +12,8 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     private primaryFailed = false;
     private useLocalRendering = false;
     private activatePrimaryOnNextFrame = false;
+    private latestSnapshot?: { data: XDrawData; dataRevision: number };
+    private primaryNeedsSnapshot = false;
     private listeners = new Set<ContentBufferReadyListener>();
     private unsubscribePrimary: () => void;
     private unsubscribeFallback: () => void;
@@ -27,7 +29,10 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     }
 
     setSnapshot(data: XDrawData, dataRevision: number): void {
-        if (!this.useLocalRendering) {
+        this.latestSnapshot = { data, dataRevision };
+        if (this.useLocalRendering) {
+            this.primaryNeedsSnapshot = true;
+        } else {
             this.primaryBackend.setSnapshot(data, dataRevision);
         }
         this.fallbackBackend.setSnapshot(data, dataRevision);
@@ -39,13 +44,25 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     }
 
     setUseLocalRendering(enabled: boolean): void {
+        if (this.useLocalRendering === enabled) {
+            return;
+        }
         this.useLocalRendering = enabled;
         if (enabled) {
             this.activatePrimaryOnNextFrame = false;
             this.activeBackend = this.fallbackBackend;
             return;
         }
-        if (!this.primaryFailed && this.activeBackend === this.fallbackBackend) {
+        if (this.primaryFailed) {
+            return;
+        }
+        // Local moddayken atlanan snapshot/invalidate'ler worker'a iletilmedi; geri donerken senkronla.
+        if (this.primaryNeedsSnapshot && this.latestSnapshot) {
+            this.primaryBackend.setSnapshot(this.latestSnapshot.data, this.latestSnapshot.dataRevision);
+        }
+        this.primaryNeedsSnapshot = false;
+        this.primaryBackend.invalidate();
+        if (this.activeBackend === this.fallbackBackend) {
             this.activatePrimaryOnNextFrame = true;
         }
     }
@@ -113,6 +130,9 @@ export class FallbackContentBufferBackend implements ContentBufferBackend {
     }
 
     applySnapshotDelta(dataRevision: number, ...deltas: ContentBufferDelta[]): void {
+        if (this.latestSnapshot) {
+            this.latestSnapshot.dataRevision = dataRevision;
+        }
         this.primaryBackend.applySnapshotDelta(dataRevision, ...deltas);
         this.fallbackBackend.applySnapshotDelta(dataRevision, ...deltas);
     }

@@ -91,6 +91,9 @@ export class ContentBufferRenderer {
         context.lineCap = "round";
         context.lineJoin = "round";
 
+        let paintMs = 0;
+        this.elementPainter.resetPathBuildStats();
+        const cropStart = performance.now();
         XdrawDataUtils.cropXDrawData(
             data,
             { x: originX, y: originY, scale: bufferScale },
@@ -102,30 +105,37 @@ export class ContentBufferRenderer {
                     return;
                 }
 
-                const layerOpacity = found.layerOpacity ?? 1;
-                if (context.globalAlpha !== layerOpacity) {
-                    context.globalAlpha = layerOpacity;
-                }
-                if (element.type === "draw") {
-                    this.elementPainter.drawDrawElement(
-                        context,
-                        element as XDrawDrawElement,
-                        cameraScale,
-                        undefined,
-                        0,
-                        {
-                            startIndex: found.pointStartIndex ?? 0,
-                            endIndex: found.pointEndIndex ?? Math.max(0, (found.points?.length ?? 1) - 1),
-                        },
-                        this.invertLightness,
-                    );
-                } else if (element.type === "fill") {
-                    this.elementPainter.drawFillElement(context, element as XDrawFillElement, undefined, this.invertLightness);
-                } else if (element.type === "text") {
-                    this.elementPainter.drawTextElement(context, element as XDrawTextElement, this.invertLightness);
+                const paintStart = performance.now();
+                try {
+                    const layerOpacity = found.layerOpacity ?? 1;
+                    if (context.globalAlpha !== layerOpacity) {
+                        context.globalAlpha = layerOpacity;
+                    }
+                    if (element.type === "draw") {
+                        this.elementPainter.drawDrawElement(
+                            context,
+                            element as XDrawDrawElement,
+                            cameraScale,
+                            undefined,
+                            0,
+                            {
+                                startIndex: found.pointStartIndex ?? 0,
+                                endIndex: found.pointEndIndex ?? Math.max(0, (found.points?.length ?? 1) - 1),
+                            },
+                            this.invertLightness,
+                        );
+                    } else if (element.type === "fill") {
+                        this.elementPainter.drawFillElement(context, element as XDrawFillElement, undefined, this.invertLightness);
+                    } else if (element.type === "text") {
+                        this.elementPainter.drawTextElement(context, element as XDrawTextElement, this.invertLightness);
+                    }
+                } finally {
+                    paintMs += performance.now() - paintStart;
                 }
             },
         );
+        const cropAndPaintMs = performance.now() - cropStart;
+        const cropMs = cropAndPaintMs - paintMs;
 
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.globalAlpha = 1;
@@ -133,6 +143,19 @@ export class ContentBufferRenderer {
         this.valid = true;
 
         const rebuildMs = performance.now() - rebuildStart;
+        if (cropMs > 8) {
+            console.warn(`[xdraw-perf] cropXDrawData ${cropMs.toFixed(1)}ms (width=${width} height=${height})`);
+        }
+        if (paintMs > 8) {
+            console.warn(`[xdraw-perf] paintContentBuffer ${paintMs.toFixed(1)}ms (width=${width} height=${height})`);
+        }
+        const pathStats = this.elementPainter.getPathBuildStats();
+        if (pathStats.buildMs > 4) {
+            console.warn(
+                `[xdraw-perf] buildPath2D ${pathStats.buildMs.toFixed(1)}ms ` +
+                `(built=${pathStats.buildCount} cacheHits=${pathStats.cacheHits} maxSingle=${pathStats.maxBuildMs.toFixed(1)}ms)`,
+            );
+        }
         if (rebuildMs > 16) {
             console.warn(`[xdraw-perf] rebuildContentBuffer ${rebuildMs.toFixed(1)}ms (width=${width} height=${height})`);
         }

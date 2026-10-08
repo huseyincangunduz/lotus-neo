@@ -20,6 +20,29 @@
   display: block;
 }
 
+.xdraw-controls {
+  transition: opacity 250ms ease;
+}
+
+.xdraw-controls-dimmed {
+  opacity: 0.5;
+}
+
+.xdraw-controls-dimmed:hover,
+.xdraw-controls-dimmed:focus-within {
+  opacity: 1;
+}
+
+.xdraw-jumping-buttons {
+  transition: opacity 250ms ease, visibility 0s linear 250ms;
+}
+
+.xdraw-jumping-buttons-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .xdraw-grid-off {
   background-image: none;
 }

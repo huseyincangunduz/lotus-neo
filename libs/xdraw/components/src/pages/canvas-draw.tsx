@@ -69,6 +69,15 @@ export class CanvasDraw extends NeolitComponent {
     [this.worldX, this.worldY, this.zoomFactor],
     ([x, y, scale]) => ({ x, y, scale }),
   );
+  private menusDimmed = state(false);
+  private menusOpacityClass = computed(
+    [this.menusDimmed],
+    ([dimmed]) => dimmed ? "xdraw-controls-dimmed" : "",
+  );
+  private jumpingButtonsVisibilityClass = computed(
+    [this.menusDimmed],
+    ([dimmed]) => dimmed ? "xdraw-jumping-buttons-hidden" : "",
+  );
 
   gridStyle = computed(
     [this.settings.backgroundPatternMode, this.worldX, this.worldY, this.zoomFactor],
@@ -152,6 +161,8 @@ export class CanvasDraw extends NeolitComponent {
   // stroke baslarsa ayni undo adimina devam eder ve agir JSON islemleri hic calismaz.
   private gestureFinalizeTimerId: number | null = null;
   private static readonly GESTURE_FINALIZE_DELAY_MS = 500;
+  private controlsFadeTimerId: number | null = null;
+  private static readonly CONTROLS_FADE_DELAY_MS = 5000;
   private autosaveTimerId: number | null = null;
   private autosaveDirty = false;
   private autosaveWritePromise: Promise<void> | null = null;
@@ -167,6 +178,25 @@ export class CanvasDraw extends NeolitComponent {
     this.flushPendingGestureHistory();
     void this.flushAutosave();
   };
+
+  private revealControls(): void {
+    this.menusDimmed.set(false);
+    if (this.controlsFadeTimerId !== null) {
+      window.clearTimeout(this.controlsFadeTimerId);
+    }
+    this.controlsFadeTimerId = window.setTimeout(() => {
+      this.menusDimmed.set(true);
+      this.controlsFadeTimerId = null;
+    }, CanvasDraw.CONTROLS_FADE_DELAY_MS);
+  }
+
+  private dimControls(): void {
+    this.menusDimmed.set(true);
+    if (this.controlsFadeTimerId !== null) {
+      window.clearTimeout(this.controlsFadeTimerId);
+      this.controlsFadeTimerId = null;
+    }
+  }
 
   private buildExportPayload(optimize = false) {
     const snapshot = this.svgHolder.captureDrawingSnapshot();
@@ -545,6 +575,7 @@ export class CanvasDraw extends NeolitComponent {
 
   onInit(): void {
     // this.restoreSettings();
+    this.revealControls();
     this.startAutosaveLoop();
     // updateAbilities() fires on every push/undo/redo, not just on canUndo transitions;
     // action-based undo (draw/erase/layer ops in data-holder) never calls scheduleAutosave
@@ -601,6 +632,10 @@ export class CanvasDraw extends NeolitComponent {
 
   onDestroy(): void {
     this.stopAutosaveLoop();
+    if (this.controlsFadeTimerId !== null) {
+      window.clearTimeout(this.controlsFadeTimerId);
+      this.controlsFadeTimerId = null;
+    }
     this.flushPendingGestureHistory();
     void this.flushAutosave();
     window.removeEventListener("resize", this.handleWindowResize);
@@ -658,6 +693,17 @@ export class CanvasDraw extends NeolitComponent {
     this.zoomFactor.set(1);
     this.worldX.set(0);
     this.worldY.set(0);
+  }
+
+  teleportNearestElement(rotation: number): void {
+    const pointHasLive = this.svgHolder.findNearestPointHasElement(rotation);
+    if (!pointHasLive) {
+      return;
+    }
+
+    const scale = this.zoomFactor.get();
+    this.worldX.set(pointHasLive.x - this.canvasWidth.get() / scale / 2);
+    this.worldY.set(pointHasLive.y - this.canvasHeight.get() / scale / 2);
   }
 
   private getPinchDistance(): number {
@@ -759,6 +805,11 @@ export class CanvasDraw extends NeolitComponent {
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 
     if (this.activePointers.size === 1) {
+      if (this.drawTools.shouldPanWithPointer(event.pointerType)) {
+        this.revealControls();
+      } else {
+        this.dimControls();
+      }
       this.isPointerDragging = true;
       this.activePointerId = event.pointerId;
       this.smoothedPressure =
@@ -776,6 +827,7 @@ export class CanvasDraw extends NeolitComponent {
     }
 
     if (this.activePointers.size === 2) {
+      this.revealControls();
       this.isPointerDragging = false;
       this.activePointerId = null;
       this.lastPinchDistance = this.getPinchDistance();
@@ -784,6 +836,7 @@ export class CanvasDraw extends NeolitComponent {
 
   onMouseWheel(event: WheelEvent): void {
     event.preventDefault();
+    this.revealControls();
     const zoomIntensity = 0.1;
     const wheelUp = event.deltaY < 0;
     const zoomIn = this.settings.zoomDirection.get() === 1 ? wheelUp : !wheelUp;
@@ -807,6 +860,7 @@ export class CanvasDraw extends NeolitComponent {
     this.updatePointerPosition(event);
 
     if (this.activePointers.size === 2) {
+      this.revealControls();
       const pinchDistance = this.getPinchDistance();
       const { x, y } = this.getPinchCenter();
       listenPinch({
@@ -832,25 +886,15 @@ export class CanvasDraw extends NeolitComponent {
     const scale = this.zoomFactor.get();
 
     if (this.drawTools.shouldPanWithPointer(event.pointerType)) {
+      this.revealControls();
       this.worldX.update((currentX) => currentX - deltaX / scale);
       this.worldY.update((currentY) => currentY - deltaY / scale);
       this.clickedCameraX.set(pointer.x);
       this.clickedCameraY.set(pointer.y);
     } else {
+      this.dimControls();
       this.drawTools.handleToolMove(event, pointer.x, pointer.y);
     }
-  }
-
-  teleportNearestElement(rotation: number): void {
-    const pointHasLive = this.svgHolder.findNearestPointHasElement(rotation);
-
-    if (!pointHasLive) {
-      return;
-    }
-
-    const scale = this.zoomFactor.get();
-    this.worldX.set(pointHasLive.x - this.canvasWidth.get() / scale / 2);
-    this.worldY.set(pointHasLive.y - this.canvasHeight.get() / scale / 2);
   }
 
   private updateCursor(
@@ -966,6 +1010,7 @@ export class CanvasDraw extends NeolitComponent {
         this.applyZoomAtCanvasPoint(zoom, centerX, centerY);
       },
       onResetZoom: () => {
+        this.revealControls();
         this.resetZoom();
       },
     });
@@ -1048,7 +1093,11 @@ export class CanvasDraw extends NeolitComponent {
   render(): NeolitNode {
     return (
       <div className="gap-2 h-[100dvh] w-[100dvw] overflow-hidden box-border position-relative">
-        <div className="absolute z-[1] left-3 top-3 bottom-3 flex flex-col gap-2 justify-center items-center">
+        <div
+          className={["absolute z-[1] left-3 top-3 bottom-3 flex flex-col gap-2 justify-center items-center xdraw-controls", this.menusOpacityClass]}
+          onPointerDown={this.revealControls.bind(this)}
+          onPointerEnter={this.revealControls.bind(this)}
+        >
           <div className="border border-solid border-gray-500 p-1 bg-(--color-surface-2) rounded-xl max-height-[90dvh] overflow-auto">
             <CanvasDrawSidebar
               onDownloadProject={this.downloadProject.bind(this)}
@@ -1084,16 +1133,20 @@ export class CanvasDraw extends NeolitComponent {
         >
           {this.divBetweenButtonsAndBottom}
         </div>
-        <div className="p-2 rounded-xl bg-(--color-surface-2) border border-solid border-gray-500 absolute right-3 top-3 flex flex-col gap-2 justify-center items-center">
+        <div
+          className={["p-2 rounded-xl bg-(--color-surface-2) border border-solid border-gray-500 absolute right-3 top-3 flex flex-col gap-2 justify-center items-center xdraw-controls", this.menusOpacityClass]}
+          onPointerEnter={this.revealControls.bind(this)}
+        >
           X: {this.worldXUI}
           <br />
           Y: {this.worldYUI}
           <br />
           Zoom : {this.zoomFactorUI}
         </div>
-
-        <div className="p-2 rounded-xl border border-solid border-gray-500 bg-(--color-surface-2) absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center">
-          {/* TODO: Aşağı yukarı sağ sol butonları ile uzaktaki elemente doğru ışınlama */}
+        <div
+          className={["p-2 rounded-xl border border-solid border-gray-500 bg-(--color-surface-2) absolute right-3 bottom-3 flex flex-col gap-2 justify-center items-center xdraw-jumping-buttons", this.jumpingButtonsVisibilityClass]}
+          onPointerEnter={this.revealControls.bind(this)}
+        >
           <div className="flex flex-row gap-2 justify-center items-center">
             <Button
               icon={materialSymbolsOutlined("keyboard_double_arrow_left")}
@@ -1106,7 +1159,10 @@ export class CanvasDraw extends NeolitComponent {
               ></Button>
               <Button
                 icon={materialSymbolsOutlined("circle")}
-                onClick={this.resetZoom.bind(this)}
+                onClick={() => {
+                  this.revealControls();
+                  this.resetZoom();
+                }}
               ></Button>
               <Button
                 icon={materialSymbolsOutlined("keyboard_double_arrow_down")}
