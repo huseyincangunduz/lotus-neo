@@ -32,6 +32,11 @@ export class ProjectDataRasterizer {
     private renderRevision = 0;
     private interactionMode: InteractionMode = "idle";
     private localRenderingForLayerUpdate = false;
+    private static readonly ZOOM_SETTLE_MS = 120;
+    private static readonly ZOOM_DEFER_MIN_RATIO = 0.25;
+    private static readonly ZOOM_DEFER_MAX_RATIO = 4;
+    private zoomSettleUntil = 0;
+    private zoomSettleTimer?: ReturnType<typeof setTimeout>;
     private elementPainter = new CanvasElementPainter();
     private fillMaskRenderer = new FillMaskRenderer(this.elementPainter, () => document.createElement("canvas"));
     private readonly contentBufferOptions: ContentBufferRendererOptions = {
@@ -116,6 +121,10 @@ export class ProjectDataRasterizer {
     }
 
     dispose() {
+        if (this.zoomSettleTimer !== undefined) {
+            clearTimeout(this.zoomSettleTimer);
+            this.zoomSettleTimer = undefined;
+        }
         this.unsubscribeContentBuffer();
         this.contentBufferBackend.dispose();
     }
@@ -278,6 +287,9 @@ export class ProjectDataRasterizer {
     }
 
     setViewCamera(camera: XDrawCanvasCamera) {
+        if (camera.scale !== this.cam.scale) {
+            this.markZoomActivity();
+        }
         this.cam = camera;
         if (this.localRenderingForLayerUpdate && !this.isLocalRenderingMode(this.interactionMode)) {
             this.localRenderingForLayerUpdate = false;
@@ -295,6 +307,33 @@ export class ProjectDataRasterizer {
 
     private isLocalRenderingMode(mode: InteractionMode): boolean {
         return mode === "erase" || mode === "fill";
+    }
+
+    // Zoom surerken her olcek degisiminde buffer'i bastan cizmek yerine eldeki frame
+    // olceklenerek gosterilir; zoom durunca tek bir keskin rebuild yapilir.
+    private markZoomActivity() {
+        this.zoomSettleUntil = performance.now() + ProjectDataRasterizer.ZOOM_SETTLE_MS;
+        if (this.zoomSettleTimer !== undefined) {
+            clearTimeout(this.zoomSettleTimer);
+        }
+        this.zoomSettleTimer = setTimeout(() => {
+            this.zoomSettleTimer = undefined;
+            this.zoomSettleUntil = 0;
+            this.requestRender();
+        }, ProjectDataRasterizer.ZOOM_SETTLE_MS);
+    }
+
+    private shouldDeferBufferRebuild(): boolean {
+        if (performance.now() >= this.zoomSettleUntil) {
+            return false;
+        }
+        const frame = this.contentBufferBackend.getCurrentFrame() ?? this.oldyFrame;
+        if (!frame?.buffer) {
+            return false;
+        }
+        // Olcek cok fazla saparsa (bos kenar veya asiri piksellesme) beklemeden yeniden ciz.
+        const ratio = this.cam.scale / frame.buffer.scale;
+        return ratio >= ProjectDataRasterizer.ZOOM_DEFER_MIN_RATIO && ratio <= ProjectDataRasterizer.ZOOM_DEFER_MAX_RATIO;
     }
 
     setInteractionMode(_mode: InteractionMode) {
@@ -479,9 +518,11 @@ export class ProjectDataRasterizer {
             this.renderRevision,
         );
 
-        void this.contentBufferBackend.requestBuffer().catch((error: unknown) => {
-            console.error("Content buffer olusturulamadi.", error);
-        });
+        if (!this.shouldDeferBufferRebuild()) {
+            void this.contentBufferBackend.requestBuffer().catch((error: unknown) => {
+                console.error("Content buffer olusturulamadi.", error);
+            });
+        }
         const { x: camX, y: camY, scale } = this.cam;
         let contentFrame: ContentBufferFrame | undefined;
         let contentFramePainted = false;

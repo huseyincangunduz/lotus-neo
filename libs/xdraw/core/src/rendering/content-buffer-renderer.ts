@@ -100,11 +100,11 @@ export class ContentBufferRenderer {
             width,
             height,
             (found) => {
+                
                 const element = found.element;
                 if (!element || (element.type === "draw" && (element as XDrawDrawElement).finalized === false)) {
                     return;
                 }
-
                 const paintStart = performance.now();
                 try {
                     const layerOpacity = found.layerOpacity ?? 1;
@@ -131,6 +131,11 @@ export class ContentBufferRenderer {
                     }
                 } finally {
                     paintMs += performance.now() - paintStart;
+                    const paintElementTime = performance.now() - paintStart;
+                    console.debug(`[xdraw-perf] paint element ${paintElementTime}ms`);
+                    if (paintElementTime > 3) {
+                        console.warn(`[xdraw-perf] slow paint element ${paintElementTime}ms, element id ${element.id}`);
+                    }
                 }
             },
         );
