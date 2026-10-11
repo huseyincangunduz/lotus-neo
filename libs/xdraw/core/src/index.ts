@@ -8,6 +8,7 @@ export * from "./utils/xdraw-data-utils";
 export * from "./utils/xdraw-binary-codec";
 export * from "./utils/clone-utils";
 export * from "./utils/data-delta-utils";
+export * from "./utils/xdraw-shape-utils";
 
 // Project state (layers, undo/redo, active document)
 export * from "./state/layer-manager";

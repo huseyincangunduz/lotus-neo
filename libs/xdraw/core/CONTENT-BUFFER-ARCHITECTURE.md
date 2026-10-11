@@ -56,6 +56,31 @@ flowchart LR
 
 `CanvasElementPainter` is shared by worker rendering, local rendering, export, and fill-mask generation. Flood-fill masking remains synchronous on the main thread.
 
+## Shape Flow
+
+Rectangle and ellipse elements store world-space bounds, stroke style, optional fill
+color, and an optional embedded label. Select a shape tool and drag to size it.
+The active shape is painted separately on the main thread; moving the pointer
+does not update the content buffer. Pointer release includes the release position
+and commits one undoable element. Both dimensions must span at least three screen
+pixels. Escape, pointer cancellation, lost pointer capture, or a second pointer
+discards the preview.
+
+In pointer mode, double-click inside a shape to add or edit its label. The topmost
+shape in visible, nonzero-opacity layers wins. Labels are centered, wrapped, and
+clipped to the interior; clearing the prompt removes the label. Panning remains
+available in pointer mode.
+
+Crop uses stroke-padded bounds intersection, including shapes surrounding the
+viewport. The eraser removes a whole shape and its label when touching its outline
+or filled interior, and sends a remove-element delta. An unfilled interior alone
+is not an eraser target. Shape outlines also participate in flood-fill masks.
+Local rendering, worker rendering, and export share the same painter.
+History and persistence retain shapes using the binary codec's cloned raw elements.
+
+Run the focused regression suite from the repository root with
+`node --test libs/xdraw/core/tests/shapes.test.mjs` (uses the existing Vite dependency).
+
 ## Active Stroke Flow
 
 ```mermaid

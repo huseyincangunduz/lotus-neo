@@ -1,4 +1,4 @@
-import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawTextElement } from "../model/xdraw-data";
+import type { XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawTextElement, XDrawShapeElement } from "../model/xdraw-data";
 import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 import { CanvasElementPainter, type XDrawRenderingContext } from "./canvas-element-painter";
 import { isContentBufferCurrent } from "./content-buffer-utils";
@@ -128,6 +128,8 @@ export class ContentBufferRenderer {
                         this.elementPainter.drawFillElement(context, element as XDrawFillElement, undefined, this.invertLightness);
                     } else if (element.type === "text") {
                         this.elementPainter.drawTextElement(context, element as XDrawTextElement, this.invertLightness);
+                    } else if (element.type === "shape") {
+                        this.elementPainter.drawShapeElement(context, element as XDrawShapeElement, this.invertLightness);
                     }
                 } finally {
                     paintMs += performance.now() - paintStart;

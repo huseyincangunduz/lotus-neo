@@ -479,6 +479,7 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   private resetPointerInteraction(): void {
+    this.drawTools.cancelShapeInteraction();
     this.activePointers.clear();
     this.isPointerDragging = false;
     this.activePointerId = null;
@@ -786,6 +787,33 @@ export class CanvasDraw extends NeolitComponent {
     );
   }
 
+  onDoubleClick(event: MouseEvent): void {
+    if (this.settings.mode.get() !== "pointer") return;
+    this.svgHolder.finishPendingStroke();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const point = this.getCanvasPointInViewBox(event.clientX - rect.left, event.clientY - rect.top);
+    const shape = this.svgHolder.findShapeAtPoint(point.x, point.y);
+    if (!shape) return;
+    event.preventDefault();
+    this.wdService.showTextPrompt(
+      tr("xdraw.enter-text"),
+      tr("xdraw.enter-text-prompt"),
+      shape.label?.text ?? "",
+      (value) => {
+        if (typeof value !== "string") return;
+        const before = this.captureHistorySnapshot();
+        const changed = this.svgHolder.updateShapeLabel(shape.id, value ? {
+          text: value,
+          color: shape.label?.color ?? this.settings.strokeColor.get(),
+          fontFamily: shape.label?.fontFamily ?? this.settings.textFontFamily.get(),
+          fontSize: shape.label?.fontSize ?? this.settings.textFontSize.get(),
+          fontWeight: shape.label?.fontWeight ?? (this.settings.textBold.get() ? "bold" : "normal"),
+        } : undefined);
+        if (changed) this.pushHistorySnapshotOperation(before, this.captureHistorySnapshot());
+      },
+    );
+  }
+
   onPointerDown(event: PointerEvent): void {
     // SAMSUNG SPEN DESTEKLEMİYOR...
     // alert(event.pointerType + " " + event.button);
@@ -827,6 +855,7 @@ export class CanvasDraw extends NeolitComponent {
     }
 
     if (this.activePointers.size === 2) {
+      this.drawTools.cancelShapeInteraction();
       this.revealControls();
       this.isPointerDragging = false;
       this.activePointerId = null;
@@ -928,6 +957,11 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   onPointerUp(event: PointerEvent): void {
+    if (!this.activePointers.has(event.pointerId)) return;
+    const wasActivePointer = this.activePointerId === event.pointerId;
+    const end = this.getPointerOffsetFromEvent(event);
+    const cancelled = event.type !== "pointerup";
+    if (cancelled) this.drawTools.cancelShapeInteraction();
     this.activePointers.delete(event.pointerId);
     if (
       (event.currentTarget as HTMLElement).hasPointerCapture(event.pointerId)
@@ -964,14 +998,19 @@ export class CanvasDraw extends NeolitComponent {
     this.isPointerDragging = false;
     this.activePointerId = null;
 
-    this.drawTools.finishInteraction(event.pointerType);
+    this.drawTools.finishInteraction(event.pointerType, wasActivePointer ? end : undefined, cancelled);
   }
 
   onKeyDown(event: KeyboardEvent): void {
     const key = event.key.toLowerCase();
+    if (key === "escape") {
+      this.drawTools.cancelShapeInteraction();
+      return;
+    }
     const isMetaPressed = event.ctrlKey || event.metaKey;
     if (isMetaPressed && key === "z") {
       event.preventDefault();
+      this.drawTools.cancelShapeInteraction();
       this.flushPendingGestureHistory();
       if (event.shiftKey) {
         void this.undoRedoHelper
@@ -987,6 +1026,7 @@ export class CanvasDraw extends NeolitComponent {
 
     if (isMetaPressed && key === "y") {
       event.preventDefault();
+      this.drawTools.cancelShapeInteraction();
       this.flushPendingGestureHistory();
       void this.undoRedoHelper
         .redo()
@@ -1128,6 +1168,8 @@ export class CanvasDraw extends NeolitComponent {
           onPointerMove={this.onPointerMove.bind(this)}
           onPointerUp={this.onPointerUp.bind(this)}
           onPointerCancel={this.onPointerUp.bind(this)}
+          onLostPointerCapture={this.onPointerUp.bind(this)}
+          onDblClick={this.onDoubleClick.bind(this)}
           onWheel={this.onMouseWheel.bind(this)}
           onKeyDown={this.onKeyDown.bind(this)}
         >

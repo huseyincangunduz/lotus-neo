@@ -11,14 +11,14 @@ export class DataDeltaUtils {
                     }
                     continue;
                 }
-                if (activeLayer.elements.length === 0 || !activeLayer.visible) {
+                if (delta.layerId && activeLayer.id !== delta.layerId) {
                     continue;
                 }
                 if (delta.operation === "upsert-element" && delta.upsertData) {
                     const index = activeLayer.elements.findIndex((element) => element.id === delta.elementId);
                     if (index !== -1) {
                         activeLayer.elements[index] = delta.upsertData;
-                    } else {
+                    } else if (delta.layerId === activeLayer.id) {
                         activeLayer.elements.push(delta.upsertData);
                     }
                 }

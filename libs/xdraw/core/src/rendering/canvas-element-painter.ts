@@ -1,5 +1,5 @@
 import { ColorUtils } from "../utils/color-utils";
-import type { XDrawDrawElement, XDrawFillElement, XDrawPoint, XDrawTextElement } from "../model/xdraw-data";
+import type { XDrawDrawElement, XDrawFillElement, XDrawPoint, XDrawTextElement, XDrawShapeElement } from "../model/xdraw-data";
 
 export type XDrawRenderingContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -117,6 +117,75 @@ export class CanvasElementPainter {
         context.font = `${textElement.fontWeight || "normal"} ${textElement.fontSize}px ${textElement.fontFamily || "sans-serif"}`;
         context.textBaseline = "top";
         context.fillText(textElement.text, textElement.position.x, textElement.position.y);
+    }
+
+    drawShapeElement(context: XDrawRenderingContext, shape: XDrawShapeElement, invertLightness = false, colorOverride?: string, minLineWidth = 0) {
+        if (shape.width <= 0 || shape.height <= 0) return;
+        const color = (value: string) => {
+            const normalized = ColorUtils.regularizeToHexColor(value) || value;
+            return colorOverride ?? (invertLightness ? ColorUtils.invertLightness(normalized) : normalized);
+        };
+        const path = new Path2D();
+        if (shape.shape === "ellipse") {
+            path.ellipse(shape.x + shape.width / 2, shape.y + shape.height / 2, shape.width / 2, shape.height / 2, 0, 0, Math.PI * 2);
+        } else {
+            path.rect(shape.x, shape.y, shape.width, shape.height);
+        }
+        context.save();
+        try {
+            context.lineJoin = "round";
+            if (shape.fillColor) {
+                context.fillStyle = color(shape.fillColor);
+                context.fill(path);
+            }
+            context.strokeStyle = color(shape.color);
+            context.lineWidth = Math.max(shape.strokeWidth, minLineWidth);
+            context.stroke(path);
+            const label = shape.label;
+            if (!label?.text || colorOverride) return;
+            context.clip(path);
+            const factor = shape.shape === "ellipse" ? Math.SQRT1_2 : 1;
+            const padding = Math.max(4, shape.strokeWidth / 2 + 2);
+            const width = shape.width * factor - padding * 2;
+            const height = shape.height * factor - padding * 2;
+            if (width <= 0 || height <= 0) return;
+            const centerX = shape.x + shape.width / 2;
+            const centerY = shape.y + shape.height / 2;
+            context.beginPath();
+            context.rect(centerX - width / 2, centerY - height / 2, width, height);
+            context.clip();
+            context.font = `${label.fontWeight || "normal"} ${label.fontSize}px ${label.fontFamily}`;
+            context.fillStyle = color(label.color);
+            context.textAlign = "center";
+            context.textBaseline = "top";
+            const lines: string[] = [];
+            for (const paragraph of label.text.split("\n")) {
+                let line = "";
+                for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+                    const candidate = line ? `${line} ${word}` : word;
+                    if (context.measureText(candidate).width <= width) {
+                        line = candidate;
+                        continue;
+                    }
+                    if (line) lines.push(line);
+                    line = "";
+                    for (const character of word) {
+                        if (line && context.measureText(line + character).width > width) {
+                            lines.push(line);
+                            line = "";
+                        }
+                        line += character;
+                    }
+                }
+                lines.push(line);
+            }
+            const lineHeight = label.fontSize * 1.2;
+            const visibleLines = lines.slice(0, Math.max(1, Math.floor(height / lineHeight)));
+            const top = centerY - visibleLines.length * lineHeight / 2;
+            visibleLines.forEach((line, index) => context.fillText(line, centerX, top + index * lineHeight));
+        } finally {
+            context.restore();
+        }
     }
 
     invalidateDrawCache(element: XDrawDrawElement) {

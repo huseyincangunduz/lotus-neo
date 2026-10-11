@@ -1,5 +1,9 @@
 import type { XDrawDataHolder, XDrawHistorySnapshot } from "../state/data-holder";
 import type { XDrawSettingsConfig } from "../settings/xdraw-settings-config";
+import type { XDrawPoint, XDrawShapeElement } from "../model/xdraw-data";
+import { shapeBoundsFromPoints } from "../utils/xdraw-shape-utils";
+import { XdrawDataUtils } from "../utils/xdraw-data-utils";
+import { ColorUtils } from "../utils/color-utils";
 
 export interface CanvasDrawToolHost {
     svgHolder: XDrawDataHolder;
@@ -20,6 +24,10 @@ export interface CanvasDrawToolHost {
 }
 
 export class CanvasDrawTools {
+    private shapeStart: XDrawPoint | null = null;
+    private activeShape: XDrawShapeElement | null = null;
+    private shapeStartScreen: XDrawPoint | null = null;
+    private shapeEndScreen: XDrawPoint | null = null;
     constructor(private host: CanvasDrawToolHost) { }
 
     shouldPanWithPointer(pointerType: string): boolean {
@@ -45,7 +53,13 @@ export class CanvasDrawTools {
     isMarkingPointer(pointerType: string): boolean {
         return this.host.settings.drawType.get() !== "erase" &&
             this.host.settings.drawType.get() !== "fill" &&
+            !this.isShapePointer(pointerType) &&
             this.isDrawingPointer(pointerType);
+    }
+
+    isShapePointer(pointerType: string): boolean {
+        const type = this.host.settings.drawType.get();
+        return (type === "rectangle" || type === "ellipse") && this.isDrawingPointer(pointerType);
     }
 
     isFillingPointer(pointerType: string): boolean {
@@ -62,6 +76,25 @@ export class CanvasDrawTools {
         }
         if (this.shouldPanWithPointer(pointerType)) {
             this.host.svgHolder.setInteractionMode("pan");
+            return;
+        }
+
+        if (this.isShapePointer(pointerType)) {
+            this.host.svgHolder.finishPendingStroke();
+            this.host.svgHolder.setInteractionMode("shape");
+            this.shapeStart = this.host.getCanvasPointInViewBox(offsetX, offsetY);
+            this.shapeStartScreen = { x: offsetX, y: offsetY };
+            this.shapeEndScreen = this.shapeStartScreen;
+            const scale = this.host.zoomFactor.get();
+            this.activeShape = {
+                id: XdrawDataUtils.generateUniqueId(),
+                type: "shape",
+                shape: this.host.settings.drawType.get() === "ellipse" ? "ellipse" : "rectangle",
+                ...shapeBoundsFromPoints(this.shapeStart, this.shapeStart),
+                color: ColorUtils.setColorWithAlpha(this.host.settings.strokeColor.get(), this.host.settings.strokeAlpha.get()),
+                strokeWidth: this.host.settings.baseStrokeWidth.get() / scale,
+            };
+            this.host.svgHolder.setShapePreview(this.activeShape);
             return;
         }
 
@@ -110,6 +143,12 @@ export class CanvasDrawTools {
     }
 
     handleToolMove(event: PointerEvent, offsetX: number, offsetY: number): void {
+        if (this.activeShape && this.shapeStart) {
+            this.shapeEndScreen = { x: offsetX, y: offsetY };
+            Object.assign(this.activeShape, shapeBoundsFromPoints(this.shapeStart, this.host.getCanvasPointInViewBox(offsetX, offsetY)));
+            this.host.svgHolder.setShapePreview(this.activeShape);
+            return;
+        }
         if (this.shouldPanWithPointer(event.pointerType)) {
             return;
         }
@@ -139,7 +178,32 @@ export class CanvasDrawTools {
         this.host.lastDrawPoint = point;
     }
 
-    finishInteraction(pointerType: string): void {
+    cancelShapeInteraction(): void {
+        if (!this.activeShape && !this.shapeStart) return;
+        this.activeShape = null;
+        this.shapeStart = null;
+        this.shapeStartScreen = null;
+        this.shapeEndScreen = null;
+        this.host.svgHolder.setShapePreview(null);
+        this.host.svgHolder.setInteractionMode("idle");
+    }
+
+    finishInteraction(pointerType: string, end?: XDrawPoint, cancelled = false): void {
+        if (this.activeShape && this.shapeStart) {
+            if (end) {
+                this.shapeEndScreen = end;
+                Object.assign(this.activeShape, shapeBoundsFromPoints(this.shapeStart, this.host.getCanvasPointInViewBox(end.x, end.y)));
+            }
+            const screenBounds = this.shapeStartScreen && this.shapeEndScreen
+                ? shapeBoundsFromPoints(this.shapeStartScreen, this.shapeEndScreen)
+                : null;
+            if (!cancelled && screenBounds && screenBounds.width >= 3 && screenBounds.height >= 3) {
+                const before = this.host.captureHistorySnapshot();
+                this.host.svgHolder.insertShape(this.activeShape);
+                this.host.pushHistorySnapshotOperation(before, this.host.captureHistorySnapshot());
+            }
+            this.cancelShapeInteraction();
+        }
         const isErasing = this.isErasingPointer(pointerType);
         const isMarking = this.isMarkingPointer(pointerType);
 

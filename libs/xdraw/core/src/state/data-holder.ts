@@ -12,10 +12,12 @@ import type {
     XDrawElement,
     XDrawLayer,
     XDrawTextElement,
+    XDrawShapeElement,
 } from "../model/xdraw-data";
 import { XDRAW_MAX_POINTS_PER_ELEMENT } from "../model/xdraw-data";
 import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 import { ColorUtils } from "../utils/color-utils";
+import { shapeContainsPoint } from "../utils/xdraw-shape-utils";
 import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "../utils/xdraw-binary-codec";
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "../model/xdraw-data";
@@ -245,6 +247,10 @@ export class XDrawDataHolder {
                     const text = element as XDrawTextElement;
                     includePoint(text.position.x, text.position.y);
                     includePoint(text.position.x + text.fontSize * text.text.length, text.position.y + text.fontSize);
+                } else if (element.type === "shape") {
+                    const shape = element as XDrawShapeElement;
+                    includePoint(shape.x, shape.y, shape.strokeWidth / 2);
+                    includePoint(shape.x + shape.width, shape.y + shape.height, shape.strokeWidth / 2);
                 }
             }
         }
@@ -312,6 +318,7 @@ export class XDrawDataHolder {
         this.activeDrawElement = null;
         this.syncLayersState();
         this.rasterizer.setActiveDrawElement(null);
+        this.rasterizer.setActiveShapeElement(null);
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
     }
@@ -399,6 +406,14 @@ export class XDrawDataHolder {
         this.stopStrokeTimeout = setTimeout(() => {
             this.stopStrokeImmediately();
         }, 500);
+    }
+
+    finishPendingStroke(): void {
+        if (this.stopStrokeTimeout !== undefined) {
+            clearTimeout(this.stopStrokeTimeout);
+            this.stopStrokeTimeout = undefined;
+        }
+        if (this.activeDrawElement) this.stopStrokeImmediately();
     }
 
     private stopStrokeImmediately() {
@@ -534,6 +549,52 @@ export class XDrawDataHolder {
             }
         }, true, false);
         this.activeLayerSnapshotBeforeErase = null;
+    }
+
+    setShapePreview(shape: XDrawShapeElement | null): void {
+        const layer = this.layerManager.getActiveLayer();
+        this.rasterizer.setActiveShapeElement(shape, layer.visible === false ? 0 : layer.opacity ?? 1);
+    }
+
+    insertShape(shape: XDrawShapeElement): void {
+        const element = cloneObjectDeep(shape);
+        this.layerManager.getActiveLayer().elements.push(element);
+        this.rasterizer.setProjectData(this.xdrawData, [{
+            operation: "upsert-element",
+            layerId: this.getActiveLayerId(),
+            elementId: shape.id,
+            type: "shape",
+            upsertData: element,
+        }]);
+    }
+
+    findShapeAtPoint(x: number, y: number): XDrawShapeElement | null {
+        for (let layerIndex = this.xdrawData.layers.length - 1; layerIndex >= 0; layerIndex--) {
+            const layer = this.xdrawData.layers[layerIndex];
+            if (layer.visible === false || layer.opacity === 0) continue;
+            for (let index = layer.elements.length - 1; index >= 0; index--) {
+                const element = layer.elements[index];
+                if (element.type === "shape" && shapeContainsPoint(element as XDrawShapeElement, x, y)) {
+                    return element as XDrawShapeElement;
+                }
+            }
+        }
+        return null;
+    }
+
+    updateShapeLabel(id: string, label: XDrawShapeElement["label"]): boolean {
+        for (const layer of this.xdrawData.layers) {
+            const index = layer.elements.findIndex(element => element.id === id && element.type === "shape");
+            if (index < 0) continue;
+            const shape: XDrawShapeElement = { ...layer.elements[index] as XDrawShapeElement, label };
+            layer.elements[index] = shape;
+            this.rasterizer.setProjectData(this.xdrawData, [{
+                operation: "upsert-element", layerId: layer.id, elementId: id, type: "shape", upsertData: shape,
+            }]);
+            return true;
+        }
+        console.warn("Metni duzenlenecek shape bulunamadi:", id);
+        return false;
     }
 
     insertTextAtCanvasPoint(

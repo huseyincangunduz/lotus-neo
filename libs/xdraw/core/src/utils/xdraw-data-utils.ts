@@ -1,4 +1,5 @@
-import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawElementPosition, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawElementPosition, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement, XDrawShapeElement } from "../model/xdraw-data";
+import { shapeIntersectsRect, shapeTouchesCircle } from "./xdraw-shape-utils";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 import { cloneObjectDeep } from "./clone-utils";
 import { DataDeltaUtils } from "./data-delta-utils";
@@ -93,7 +94,7 @@ export class XdrawDataUtils {
     // Dünyanın en mal şeysi.... ben malım. bu sefer hesaplamaktan çok cachelemek performansı düşürdü aw
     // public static readonly pointCropPathMap: Map<string, boolean> = new Map();
 
-    public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number, initialFoundElement: Partial<XDrawElementCropData>, onFound?: OnFoundCallback): void {
+    public static cropXDrawDataElements(elements: XDrawElement[], left: number, top: number, right: number, bottom: number, initialFoundElement: Pick<XDrawElementCropData, "layerId"> & Partial<XDrawElementCropData>, onFound?: OnFoundCallback): void {
         const cropCondition = (point: { x: number; y: number }) => {
             const status = point.x >= left && point.x <= right &&
                 point.y >= top && point.y <= bottom;
@@ -101,6 +102,20 @@ export class XdrawDataUtils {
         };
         for (let i = 0; i < elements.length; i++) {
             const element = elements[i];
+            if (element.type === "shape") {
+                const shape = element as XDrawShapeElement;
+                if (shapeIntersectsRect(shape, left, top, right, bottom) && onFound) {
+                    onFound({
+                        layerId: initialFoundElement.layerId,
+                        layerOpacity: initialFoundElement.layerOpacity ?? 1,
+                        elementId: shape.id,
+                        elementType: shape.type,
+                        element: shape,
+                        partial: false,
+                    });
+                }
+                continue;
+            }
             if (element.type === "text") {
                 const textElement = element as XDrawTextElement;
                 const textLeft = textElement.position.x;
@@ -214,6 +229,14 @@ export class XdrawDataUtils {
         let hasChanges = false;
         for (const element of elements) {
             switch (element.type) {
+                case "shape":
+                    if (shapeTouchesCircle(element as XDrawShapeElement, x, y, radius)) {
+                        hasChanges = true;
+                        deltasByElementId.set(element.id, { operation: "remove-element", elementId: element.id, type: "shape" });
+                    } else {
+                        newElements.push(element);
+                    }
+                    break;
                 case "draw":
                     const drawElement = element as XDrawDrawElement;
                     const filteredPoints: XDrawDrawElement["points"] = [];
@@ -268,6 +291,9 @@ export class XdrawDataUtils {
                         hasChanges = true;
                     }
                     break;
+                default:
+                    newElements.push(element);
+                    break;
             }
         }
         return { elements: newElements, removedPoints: Array.from(deltasByElementId.values()) as ContentBufferDelta[], hasChanges };
@@ -315,6 +341,13 @@ export class XdrawDataUtils {
                     if (point.x > maxX) maxX = point.x;
                     if (point.y > maxY) maxY = point.y;
                 }
+            } else if (element.type === "shape") {
+                const shape = element as XDrawShapeElement;
+                const padding = shape.strokeWidth / 2;
+                minX = Math.min(minX, shape.x - padding);
+                minY = Math.min(minY, shape.y - padding);
+                maxX = Math.max(maxX, shape.x + shape.width + padding);
+                maxY = Math.max(maxY, shape.y + shape.height + padding);
             } else if (element.type === "fill") {
                 const fillElement = element as XDrawFillElement;
                 for (const ring of fillElement.rings) {
@@ -372,6 +405,9 @@ export class XdrawDataUtils {
                     for (const point of (element as XDrawDrawElement).points) {
                         considerPoint(point, element);
                     }
+                } else if (element.type === "shape") {
+                    const shape = element as XDrawShapeElement;
+                    considerPoint({ x: shape.x + shape.width / 2, y: shape.y + shape.height / 2 }, element);
                 } else if (element.type === "fill") {
                     for (const ring of (element as XDrawFillElement).rings) {
                         for (const point of ring) {

@@ -27,7 +27,7 @@ export const XDRAW_SETTING_KEYS = {
 
 type Theme = "light" | "dark";
 type Mode = "pointer" | "draw" | "text";
-type DrawType = "pencil" | "line" | "rectangle" | "erase" | "fill";
+type DrawType = "pencil" | "line" | "rectangle" | "ellipse" | "erase" | "fill";
 type ZoomDirection = 1 | -1;
 type BackgroundPatternMode = 0 | 1 | 2;
 

@@ -1,7 +1,7 @@
 import { toastService } from "@libs/ui/alert-toast";
 import { tr } from "@libs/ui/i18n";
 import { ColorUtils } from "../utils/color-utils";
-import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement } from "../model/xdraw-data";
+import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawFillElement, XDrawFillMask, InteractionMode, CanvasBackgroundPatternOptions, XDrawTextElement, XDrawShapeElement } from "../model/xdraw-data";
 import { CanvasElementPainter } from "./canvas-element-painter";
 import type { ContentBufferBackend, ContentBufferFrame } from "./content-buffer-backend";
 import { ContentBufferRenderer, type ContentBufferInfo, type ContentBufferRendererOptions } from "./content-buffer-renderer";
@@ -50,6 +50,8 @@ export class ProjectDataRasterizer {
     // Su an cizilmekte olan (henuz finalize olmamis) stroke; buffer'a girmez, her karede ustte cizilir.
     private activeDrawElement: XDrawDrawElement | null = null;
     private activeDrawElementLayerOpacity = 1;
+    private activeShapeElement: XDrawShapeElement | null = null;
+    private activeShapeLayerOpacity = 1;
     private unsubscribeContentBuffer: () => void;
     oldyFrame?: ContentBufferFrame;
     invalidatedBitmapFrames: ContentBufferFrame[] = [];
@@ -136,6 +138,11 @@ export class ProjectDataRasterizer {
         this.activeDrawElementLayerOpacity = layerOpacity;
     }
 
+    setActiveShapeElement(element: XDrawShapeElement | null, layerOpacity = 1) {
+        this.activeShapeElement = element;
+        this.activeShapeLayerOpacity = layerOpacity;
+        this.requestRender();
+    }
 
     setActiveCanvas(canvas: HTMLCanvasElement) {
         this.activeCanvas = canvas;
@@ -200,6 +207,8 @@ export class ProjectDataRasterizer {
                     this.elementPainter.drawFillElement(context, element as XDrawFillElement, undefined, this.invertLightness);
                 } else if (element.type === "text") {
                     this.elementPainter.drawTextElement(context, element as XDrawTextElement, this.invertLightness);
+                } else if (element.type === "shape") {
+                    this.elementPainter.drawShapeElement(context, element as XDrawShapeElement, this.invertLightness);
                 }
             }
         }
@@ -566,6 +575,13 @@ export class ProjectDataRasterizer {
                 context.lineJoin = "round";
                 context.globalAlpha = this.activeDrawElementLayerOpacity;
                 this.elementPainter.drawDrawElement(context, activeElement, this.cam.scale, undefined, 0, undefined, this.invertLightness);
+                context.globalAlpha = 1;
+            }
+
+            if (this.activeShapeElement) {
+                context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+                context.globalAlpha = this.activeShapeLayerOpacity;
+                this.elementPainter.drawShapeElement(context, this.activeShapeElement, this.invertLightness);
                 context.globalAlpha = 1;
             }
 

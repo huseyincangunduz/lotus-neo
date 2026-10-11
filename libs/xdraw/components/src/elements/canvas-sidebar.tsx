@@ -307,6 +307,23 @@ export class CanvasDrawSidebar extends NeolitComponent {
           }}
           icon={materialSymbolsOutlined("edit")}
         ></Button>
+        {(["rectangle", "ellipse"] as const).map((shape) => (
+          <Button
+            variant={computed<ButtonVariant>(
+              [this.settings.mode, this.settings.drawType],
+              ([mode, drawType]) => mode === "draw" && drawType === shape ? "filled-primary" : "ghost",
+            )}
+            onClick={() => {
+              if (this.settings.mode.get() === "draw" && this.settings.drawType.get() === shape) {
+                this.showPencilSettingsDialog.set(true);
+                return;
+              }
+              this.settings.mode.set("draw");
+              this.settings.drawType.set(shape);
+            }}
+            icon={materialSymbolsOutlined(shape === "rectangle" ? "rectangle" : "circle")}
+          ></Button>
+        ))}
         <Button
           variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
             mode === "text" ? "filled-primary" : "ghost",

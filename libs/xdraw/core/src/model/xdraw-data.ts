@@ -13,7 +13,7 @@ export interface XDrawCanvasCamera {
     scale: number;
 }
 
-export type InteractionMode = "idle" | "draw" | "erase" | "fill" | "pan" | "text";
+export type InteractionMode = "idle" | "draw" | "erase" | "fill" | "pan" | "text" | "shape";
 
 // Flood fill icin uretilen, sadece aktif katmanin cizgilerini iceren offscreen raster.
 // Maske piksel -> dunya donusumu: world = origin + pixel / scale
@@ -64,6 +64,7 @@ export interface XDrawDrawElement extends XDrawElement {
     finalized?: boolean;
 }
 
+
 export interface XDrawTextElement extends XDrawElement {
     type: "text";
     text: string;
@@ -78,6 +79,25 @@ export interface XDrawTextElement extends XDrawElement {
 export interface XDrawPoint {
     x: number;
     y: number;
+}
+
+export interface XDrawShapeElement extends XDrawElement {
+    type: "shape";
+    shape: "rectangle" | "ellipse";
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color: string;
+    strokeWidth: number;
+    fillColor?: string;
+    label?: {
+        text: string;
+        color: string;
+        fontSize: number;
+        fontFamily: string;
+        fontWeight?: "normal" | "bold";
+    };
 }
 
 // Ilk ring dis sinir, sonraki ring'ler delik (evenodd kurali ile doldurulur).
@@ -110,7 +130,7 @@ export interface XDrawData {
 export interface ContentBufferDelta {
     operation: "upsert-element" | "remove-element" | "insert-points" | "remove-points" | "set-layer-opacity";
     elementId?: string;
-    type?: "draw" | "fill" | "text";
+    type?: "draw" | "fill" | "text" | "shape";
     upsertData?: XDrawElement;
     /**
      * Eğer draw elementi ise points, ancak fill ise ringler olacak...
@@ -121,4 +141,3 @@ export interface ContentBufferDelta {
     layerOpacity?: number;
     layerId?: string;
 }
-

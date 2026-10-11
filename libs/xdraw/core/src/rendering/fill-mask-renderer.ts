@@ -1,4 +1,5 @@
-import type { XDrawCanvasCamera, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement } from "../model/xdraw-data";
+import type { XDrawCanvasCamera, XDrawDrawElement, XDrawElement, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement, XDrawShapeElement } from "../model/xdraw-data";
+import { shapeIntersectsRect } from "../utils/xdraw-shape-utils";
 import { CanvasElementPainter, type XDrawRenderingContext } from "./canvas-element-painter";
 
 type RasterCanvas = HTMLCanvasElement | OffscreenCanvas;
@@ -86,11 +87,14 @@ export class FillMaskRenderer {
                 this.elementPainter.drawFillElement(context, element as XDrawFillElement, "#000000");
             } else if (element.type === "draw") {
                 this.elementPainter.drawDrawElement(context, element as XDrawDrawElement, maskScale, "#000000", minWorldLineWidth);
+            } else if (element.type === "shape") {
+                this.elementPainter.drawShapeElement(context, element as XDrawShapeElement, false, "#000000", minWorldLineWidth);
             }
         }
     }
 
     private elementIntersectsRect(element: XDrawElement, left: number, top: number, right: number, bottom: number): boolean {
+        if (element.type === "shape") return shapeIntersectsRect(element as XDrawShapeElement, left, top, right, bottom);
         let minX = Infinity;
         let minY = Infinity;
         let maxX = -Infinity;

@@ -7,6 +7,7 @@ import type {
     XDrawLayer,
     XDrawPoint,
 } from "../model/xdraw-data";
+import { cloneObjectDeep } from "./clone-utils";
 
 // Undo/redo yigininin en agir kismi points/rings dizileridir. Bunlari JSON metni
 // yerine dogrudan Float32Array'e yaziyoruz: stringify/parse'daki sayi<->metin
@@ -143,7 +144,7 @@ export function encodeXDrawDataToBuffer(data: XDrawData): { skeleton: XDrawSkele
                 };
             }
             // Bilinmeyen tip: oldugu gibi JSON'a gomulur, buffer'dan hicbir pay almaz.
-            return { kind: "raw", element };
+            return { kind: "raw", element: cloneObjectDeep(element) };
         }),
     }));
 
@@ -203,7 +204,7 @@ export function decodeXDrawDataFromBuffer(skeleton: XDrawSkeleton, buffer: Float
                 return fill;
             }
             // "raw" tip encode sirasinda oldugu gibi saklanmisti, dogrudan geri dondurulur.
-            return skElement.element;
+            return cloneObjectDeep(skElement.element);
         });
 
         const resultLayer: XDrawLayer = { id: skLayer.id, type: "layer", elements };
