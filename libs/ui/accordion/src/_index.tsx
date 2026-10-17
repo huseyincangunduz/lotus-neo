@@ -10,7 +10,7 @@ import {
 } from "@ubs-platform/neolit/core";
 
 export interface AccordionProps {
-  title: StateOrPlain<NeolitNode | string>;
+  title: StateOrPlain<string> | State<NeolitNode>;
   children: NeolitNode | NeolitNode[];
   open?: StateOrPlain<boolean>;
   defaultOpen?: StateOrPlain<boolean>;

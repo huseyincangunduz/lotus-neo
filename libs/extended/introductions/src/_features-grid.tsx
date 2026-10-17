@@ -1,15 +1,19 @@
-import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
+import {
+  NeolitComponent,
+  type NeolitNode,
+  type StateOrPlain,
+} from "@ubs-platform/neolit/core";
 import { Icon, type IconProperties } from "@libs/ui/icon";
 
 export interface FeatureItem {
   icon: IconProperties;
-  itemHead: string;
-  itemDesc: string;
+  itemHead: StateOrPlain<string>;
+  itemDesc: StateOrPlain<string>;
 }
 
 export interface FeaturesGridProperties {
   id?: string;
-  heading?: string;
+  heading?: StateOrPlain<string>;
   items?: FeatureItem[];
 }
 

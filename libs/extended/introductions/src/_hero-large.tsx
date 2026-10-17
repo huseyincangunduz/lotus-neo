@@ -3,7 +3,7 @@ import { Button } from "@libs/ui/button";
 import type { BackgroundViewProperties } from "./common";
 
 export interface ActionItem {
-  label: string;
+  label: StateOrPlain<string>;
   href?: string;
   onClick?: () => void;
 }

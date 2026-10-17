@@ -1,13 +1,17 @@
-import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
+import {
+  NeolitComponent,
+  type NeolitNode,
+  type StateOrPlain,
+} from "@ubs-platform/neolit/core";
 import { Icon, type IconProperties } from "@libs/ui/icon";
 
 export interface FooterLink {
-  label: string;
-  href: string;
+  label: StateOrPlain<string>;
+  href: StateOrPlain<string>;
 }
 
 export interface FooterLinkGroup {
-  title: string;
+  title: StateOrPlain<string>;
   links: FooterLink[];
 }
 
@@ -19,7 +23,7 @@ export interface SocialLink {
 
 export interface FooterProperties {
   id?: string;
-  copyright?: string;
+  copyright?: StateOrPlain<string>;
   linkGroups?: FooterLinkGroup[];
   socialLinks?: SocialLink[];
   appCompanyLogo?: NeolitNode;

@@ -1,4 +1,8 @@
-import { NeolitComponent, type NeolitNode } from "@ubs-platform/neolit/core";
+import {
+  NeolitComponent,
+  type NeolitNode,
+  type StateOrPlain,
+} from "@ubs-platform/neolit/core";
 
 export interface HeroFeatureActionItem {
   label: string;
@@ -8,8 +12,8 @@ export interface HeroFeatureActionItem {
 
 export interface HeroFeatureProperties {
   id?: string;
-  header?: string;
-  text?: string | NeolitNode;
+  header?: StateOrPlain<string>;
+  text?: StateOrPlain<string> | NeolitNode;
   actions?: HeroFeatureActionItem[];
   image?: string | NeolitNode;
   imageAlt?: string;

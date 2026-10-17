@@ -2,6 +2,7 @@ import {
   NeolitComponent,
   state,
   type NeolitNode,
+  type StateOrPlain,
 } from "@ubs-platform/neolit/core";
 import { WebDialog } from "@libs/ui/webdialog";
 import { Accordion } from "@libs/ui/accordion";
@@ -10,7 +11,7 @@ import { Router } from "@ubs-platform/neolit/routing";
 import { inject } from "@ubs-platform/neolit/injectables";
 
 export interface NavLink {
-  label: string;
+  label: StateOrPlain<string>;
   href?: string;
   target?: string;
   children?: NavLink[];
@@ -23,6 +24,9 @@ export interface NavbarProperties {
   logoHref?: string;
   links?: NavLink[];
   router: Router;
+  menuTitle?: StateOrPlain<string>;
+  openMenuLabel?: StateOrPlain<string>;
+  closeMenuLabel?: StateOrPlain<string>;
 }
 
 export class IntroNavbar extends NeolitComponent<NavbarProperties> {
@@ -36,7 +40,15 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
   };
 
   render(): NeolitNode {
-    const { id, logo, logoHref, links } = this.properties;
+    const {
+      id,
+      logo,
+      logoHref,
+      links,
+      menuTitle,
+      openMenuLabel,
+      closeMenuLabel,
+    } = this.properties;
 
     return (
       <nav
@@ -100,7 +112,7 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
           <button
             className="inline-flex items-center justify-center rounded-(--radius-sm) p-2 text-(--color-primary-text-on-bg) hover:bg-(--color-primary-hover) md:hidden"
             onClick={() => this.mobileMenuOpen.set(true)}
-            aria-label="Menüyü aç"
+            aria-label={openMenuLabel ?? "Open menu"}
           >
             <i
               class="material-symbols-outlined"
@@ -124,12 +136,12 @@ export class IntroNavbar extends NeolitComponent<NavbarProperties> {
           <div className="flex flex-col gap-2 p-4">
             <div className="mb-1 flex items-center justify-between border-b border-(--color-border) pb-3">
               <span className="text-base font-semibold text-(--color-fg)">
-                Menü
+                {menuTitle ?? "Menu"}
               </span>
               <button
                 className="inline-flex items-center justify-center rounded-(--radius-sm) p-1 text-(--color-fg) hover:bg-(--color-surface-1) cursor-pointer"
                 onClick={() => this.mobileMenuOpen.set(false)}
-                aria-label="Menüyü kapat"
+                aria-label={closeMenuLabel ?? "Close menu"}
               >
                 <i class="material-symbols-outlined">close</i>
               </button>
