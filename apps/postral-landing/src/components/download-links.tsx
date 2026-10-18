@@ -42,11 +42,11 @@ export class DownloadLinks extends NeolitComponent {
       osGroup: "MacOS",
       downloads: [
         {
-          processorArchitecture: "x64",
+          processorArchitecture: "x86, arm64",
           terminalCommand:
             "curl -fsSL https://raw.githubusercontent.com/ubs-platform/postral-core/master/install.sh | bash",
           title:
-            "2019 model Mac cihazlarda ve Güncel MacOS çalışacak bash komutu ile kurulum. (Apple Silicon işlemcilerinde Rosetta ile çalıştırılabilir.)",
+            "Modern Mac cihazlarda ve Güncel MacOS çalışacak bash komutu ile kurulum.",
         },
       ],
     },
