@@ -18,6 +18,14 @@ import { XDRAW_MAX_POINTS_PER_ELEMENT } from "../model/xdraw-data";
 import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 import { ColorUtils } from "../utils/color-utils";
 import { shapeContainsPoint } from "../utils/xdraw-shape-utils";
+import {
+    cloneXDrawElementsAtPoint,
+    getXDrawElementBounds,
+    xdrawElementBoundsIntersectsRect,
+    translateXDrawElement,
+    xdrawElementContainsPoint,
+    type XDrawElementBounds,
+} from "../utils/xdraw-selection-utils";
 import { decodeXDrawDataFromBuffer, encodeXDrawDataToBuffer, type XDrawSkeleton } from "../utils/xdraw-binary-codec";
 import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
 export type { InteractionMode, RenderStats, XDrawCanvasCamera } from "../model/xdraw-data";
@@ -69,6 +77,10 @@ export class XDrawDataHolder {
     insertedElements: XDrawElement[] = [];
     // Elementler json array olacak
     activeLayerSnapshotBeforeErase: XDrawElement[] | null = null;
+    private selectedElementIds: string[] = [];
+    readonly selectedElementCount = state(0);
+    readonly clipboardAvailable = state(false);
+    private clipboardElements: XDrawElement[] = [];
 
     constructor() {
         this.layerManager = new LayerManager(this.xdrawData, "base");
@@ -171,6 +183,7 @@ export class XDrawDataHolder {
                 layerOpacity: opacity,
             }]
         );
+        this.refreshSelectionBounds();
     }
 
     // Surukleme bittiginde (onChangeEnd) tek seferlik commit. previousOpacity verilmezse
@@ -321,6 +334,7 @@ export class XDrawDataHolder {
         this.rasterizer.setActiveShapeElement(null);
         this.rasterizer.invalidateContentBuffer();
         this.rasterizer.setProjectData(this.xdrawData);
+        this.refreshSelectionBounds();
     }
 
     // Yeni bir stroke baslatir. width ekran pikseli cinsinden firca genisligidir.
@@ -496,6 +510,7 @@ export class XDrawDataHolder {
         activeLayer.elements = removalResult.elements;
         if (removalResult.hasChanges) {
             this.rasterizer.setProjectData(this.xdrawData, removalResult.removedPoints);
+            this.refreshSelectionBounds();
         }
 
         return removalResult.hasChanges;
@@ -520,6 +535,7 @@ export class XDrawDataHolder {
     private syncLayersState(): void {
         this.layersState.set(this.layerManager.listLayers());
         this.rasterizer.updateProjectDataLocally(this.xdrawData);
+        this.refreshSelectionBounds();
     }
 
     addUndoRedoForEraseWithSnapshot(activeLayerId: string) {
@@ -580,6 +596,132 @@ export class XDrawDataHolder {
             }
         }
         return null;
+    }
+
+    findElementAtPoint(x: number, y: number, tolerance: number): XDrawElement | null {
+        for (let layerIndex = this.xdrawData.layers.length - 1; layerIndex >= 0; layerIndex--) {
+            const layer = this.xdrawData.layers[layerIndex];
+            if (layer.visible === false || layer.opacity === 0) continue;
+            for (let index = layer.elements.length - 1; index >= 0; index--) {
+                const element = layer.elements[index];
+                if (xdrawElementContainsPoint(element, x, y, tolerance)) return element;
+            }
+        }
+        return null;
+    }
+
+    findElementsIntersectingRect(rect: XDrawElementBounds): XDrawElement[] {
+        const found: XDrawElement[] = [];
+        for (const layer of this.xdrawData.layers) {
+            if (layer.visible === false || layer.opacity === 0) continue;
+            for (const element of layer.elements) {
+                const bounds = getXDrawElementBounds(element);
+                if (bounds && xdrawElementBoundsIntersectsRect(bounds, rect)) found.push(element);
+            }
+        }
+        return found;
+    }
+
+    getSelectedElementIds(): string[] {
+        return [...this.selectedElementIds];
+    }
+
+    copySelectedElements(): boolean {
+        const ids = new Set(this.selectedElementIds);
+        const elements = this.xdrawData.layers.flatMap((layer) =>
+            layer.elements.filter((element) => ids.has(element.id)));
+        if (elements.length === 0) {
+            console.warn("No selected elements to copy.");
+            return false;
+        }
+        this.clipboardElements = cloneObjectDeep(elements);
+        this.clipboardAvailable.set(true);
+        return true;
+    }
+
+    cutSelectedElements(): boolean {
+        if (!this.copySelectedElements()) return false;
+        const ids = new Set(this.selectedElementIds);
+        const deltas: ContentBufferDelta[] = [];
+        for (const layer of this.xdrawData.layers) {
+            for (const element of layer.elements) {
+                if (ids.has(element.id)) {
+                    deltas.push({ operation: "remove-element", layerId: layer.id, elementId: element.id });
+                }
+            }
+            layer.elements = layer.elements.filter((element) => !ids.has(element.id));
+        }
+        this.rasterizer.setProjectData(this.xdrawData, deltas);
+        this.setSelectedElements([]);
+        return true;
+    }
+
+    pasteClipboardAtPoint(x: number, y: number): boolean {
+        if (this.clipboardElements.length === 0) {
+            console.warn("No elements in the XDraw clipboard.");
+            return false;
+        }
+        const elements = cloneXDrawElementsAtPoint(
+            this.clipboardElements, x, y, () => XdrawDataUtils.generateUniqueId(),
+        );
+        const layer = this.layerManager.getActiveLayer();
+        layer.elements.push(...elements);
+        this.rasterizer.setProjectData(this.xdrawData, elements.map((element) => ({
+            operation: "upsert-element", layerId: layer.id, elementId: element.id, upsertData: element,
+        })));
+        this.setSelectedElements(elements.map((element) => element.id));
+        return true;
+    }
+
+    setSelectionMarquee(bounds: XDrawElementBounds | undefined): void {
+        this.rasterizer.setSelectionMarquee(bounds);
+    }
+
+    setSelectedElements(ids: string[]): void {
+        const visibleIds = new Set(
+            this.xdrawData.layers
+                .filter((layer) => layer.visible !== false && layer.opacity !== 0)
+                .flatMap((layer) => layer.elements.map((element) => element.id)),
+        );
+        this.selectedElementIds = [...new Set(ids)].filter((id) => visibleIds.has(id));
+        this.refreshSelectionBounds();
+    }
+
+    moveElementsBy(ids: string[], deltaX: number, deltaY: number): boolean {
+        const selectedIds = new Set(ids);
+        const deltas: ContentBufferDelta[] = [];
+        for (const layer of this.xdrawData.layers) {
+            for (const element of layer.elements) {
+                if (!selectedIds.has(element.id) || !translateXDrawElement(element, deltaX, deltaY)) continue;
+                deltas.push({
+                    operation: "upsert-element",
+                    layerId: layer.id,
+                    elementId: element.id,
+                    type: element.type as "draw" | "fill" | "text" | "shape",
+                    upsertData: element,
+                });
+            }
+        }
+        if (deltas.length === 0) return false;
+        this.rasterizer.setProjectData(this.xdrawData, deltas);
+        this.refreshSelectionBounds();
+        return true;
+    }
+
+    private refreshSelectionBounds(): void {
+        const elementsById = new Map(
+            this.xdrawData.layers
+                .filter((layer) => layer.visible !== false && layer.opacity !== 0)
+                .flatMap((layer) => layer.elements.map((element) => [element.id, element] as const)),
+        );
+        this.selectedElementIds = this.selectedElementIds.filter((id) => elementsById.has(id));
+        this.selectedElementCount.set(this.selectedElementIds.length);
+        const bounds = this.selectedElementIds
+            .map((id) => elementsById.get(id))
+            .filter((element): element is XDrawElement => element !== undefined)
+            .map(getXDrawElementBounds)
+            .filter((elementBounds): elementBounds is XDrawElementBounds => elementBounds !== null);
+        this.rasterizer.setSelectionBounds(bounds);
     }
 
     updateShapeLabel(id: string, label: XDrawShapeElement["label"]): boolean {

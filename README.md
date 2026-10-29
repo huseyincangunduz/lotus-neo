@@ -122,6 +122,21 @@ git push
 
 The main repository tracks only a specific xdraw commit. Updating `lotus-neo` therefore does not automatically move xdraw to its latest commit.
 
+## XDraw Selection and Movement
+
+In XDraw, **Select** supports clicking a single element or dragging a selection
+rectangle. Elements are selected whenever their bounding boxes overlap or touch
+the selection rectangle; full enclosure is not required. Use the separate
+**Move** tool to drag the selected elements together.
+
+After selecting elements, use the top popover to **Copy** or **Cut** them.
+In navigation, selection, or movement mode, hold a point for 550 ms without
+dragging to open **Paste**. Pasting places the copied group's top-left bounding
+corner at that world position, preserving relative spacing, and inserts it into
+the active layer. Cut and paste support undo/redo. The clipboard is internal to
+the current canvas session (not the system clipboard).
+Switching to drawing mode clears the selection.
+
 ## Using Neolit
 
 [Neolit](https://github.com/ubs-platform/neolit) is the UI framework this monorepo is built on. Components extend `NeolitComponent` and return JSX from a `render()` method.

@@ -2,6 +2,7 @@ import type { XDrawDataHolder, XDrawHistorySnapshot } from "../state/data-holder
 import type { XDrawSettingsConfig } from "../settings/xdraw-settings-config";
 import type { XDrawPoint, XDrawShapeElement } from "../model/xdraw-data";
 import { shapeBoundsFromPoints } from "../utils/xdraw-shape-utils";
+import type { XDrawElementBounds } from "../utils/xdraw-selection-utils";
 import { XdrawDataUtils } from "../utils/xdraw-data-utils";
 import { ColorUtils } from "../utils/color-utils";
 
@@ -19,6 +20,7 @@ export interface CanvasDrawToolHost {
     pushHistorySnapshotOperation(before: XDrawHistorySnapshot, after: XDrawHistorySnapshot): void;
     beginGestureHistoryCapture(): void;
     finishGestureHistoryCapture(): void;
+    restoreHistorySnapshot(snapshot: XDrawHistorySnapshot): Promise<void>;
     // UI concern (dialog/prompt) belongs to the host, not to this generic tool.
     promptForTextAt(offsetX: number, offsetY: number): void;
 }
@@ -28,6 +30,14 @@ export class CanvasDrawTools {
     private activeShape: XDrawShapeElement | null = null;
     private shapeStartScreen: XDrawPoint | null = null;
     private shapeEndScreen: XDrawPoint | null = null;
+    private selectionGesture: "select" | "move" | null = null;
+    private selectionStartScreen: XDrawPoint | null = null;
+    private selectionStartPoint: XDrawPoint | null = null;
+    private selectionLastPoint: XDrawPoint | null = null;
+    private selectedElementIds: string[] = [];
+    private selectionMoveEnabled = false;
+    private selectionBeforeSnapshot: XDrawHistorySnapshot | null = null;
+    private selectionMoved = false;
     constructor(private host: CanvasDrawToolHost) { }
 
     shouldPanWithPointer(pointerType: string): boolean {
@@ -50,6 +60,14 @@ export class CanvasDrawTools {
         return this.host.settings.mode.get() === "text";
     }
 
+    isSelectionPointer(): boolean {
+        return this.host.settings.mode.get() === "selection";
+    }
+
+    isMovePointer(): boolean {
+        return this.host.settings.mode.get() === "move";
+    }
+
     isMarkingPointer(pointerType: string): boolean {
         return this.host.settings.drawType.get() !== "erase" &&
             this.host.settings.drawType.get() !== "fill" &&
@@ -70,6 +88,36 @@ export class CanvasDrawTools {
         this.host.clickedCameraX.set(offsetX);
         this.host.clickedCameraY.set(offsetY);
         this.host.svgHolder.setInteractionMode("idle");
+        if (this.isSelectionPointer()) {
+            this.host.svgHolder.finishPendingStroke();
+            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
+            this.selectionGesture = "select";
+            this.selectionStartScreen = { x: offsetX, y: offsetY };
+            this.selectionStartPoint = point;
+            this.selectionLastPoint = point;
+            this.host.svgHolder.setSelectionMarquee(undefined);
+            this.host.svgHolder.setInteractionMode("selection");
+            return;
+        }
+        if (this.isMovePointer()) {
+            this.host.svgHolder.finishPendingStroke();
+            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
+            this.selectedElementIds = this.host.svgHolder.getSelectedElementIds();
+            const hit = this.host.svgHolder.findElementAtPoint(
+                point.x,
+                point.y,
+                8 / (this.host.zoomFactor.get() || 1),
+            );
+            this.selectionGesture = "move";
+            this.selectionLastPoint = point;
+            this.selectionBeforeSnapshot = null;
+            this.selectionMoved = false;
+            this.selectionMoveEnabled = Boolean(hit && this.selectedElementIds.includes(hit.id));
+            if (this.selectionMoveEnabled) {
+                this.host.svgHolder.setInteractionMode("move");
+            }
+            return;
+        }
         if (this.isTextPointer()) {
             this.host.promptForTextAt(offsetX, offsetY);
             return;
@@ -143,6 +191,14 @@ export class CanvasDrawTools {
     }
 
     handleToolMove(event: PointerEvent, offsetX: number, offsetY: number): void {
+        if (this.selectionGesture === "select") {
+            this.updateSelectionMarquee(offsetX, offsetY);
+            return;
+        }
+        if (this.selectionGesture === "move") {
+            this.moveSelectedElements(offsetX, offsetY);
+            return;
+        }
         if (this.activeShape && this.shapeStart) {
             this.shapeEndScreen = { x: offsetX, y: offsetY };
             Object.assign(this.activeShape, shapeBoundsFromPoints(this.shapeStart, this.host.getCanvasPointInViewBox(offsetX, offsetY)));
@@ -189,6 +245,58 @@ export class CanvasDrawTools {
     }
 
     finishInteraction(pointerType: string, end?: XDrawPoint, cancelled = false): void {
+        if (this.selectionGesture === "select") {
+            if (end) this.updateSelectionMarquee(end.x, end.y);
+            if (!cancelled && end && this.selectionStartScreen && this.selectionStartPoint) {
+                const isMarquee = Math.hypot(
+                    end.x - this.selectionStartScreen.x,
+                    end.y - this.selectionStartScreen.y,
+                ) >= 4;
+                if (isMarquee) {
+                    const current = this.host.getCanvasPointInViewBox(end.x, end.y);
+                    const bounds = shapeBoundsFromPoints(this.selectionStartPoint, current);
+                    this.host.svgHolder.setSelectedElements(
+                        this.host.svgHolder.findElementsIntersectingRect(bounds).map((element) => element.id),
+                    );
+                } else {
+                    const point = this.host.getCanvasPointInViewBox(end.x, end.y);
+                    const hit = this.host.svgHolder.findElementAtPoint(
+                        point.x,
+                        point.y,
+                        8 / (this.host.zoomFactor.get() || 1),
+                    );
+                    this.host.svgHolder.setSelectedElements(hit ? [hit.id] : []);
+                }
+            }
+            this.host.svgHolder.setSelectionMarquee(undefined);
+            this.selectionStartScreen = null;
+            this.selectionStartPoint = null;
+            this.selectionGesture = null;
+            this.selectionLastPoint = null;
+            this.host.svgHolder.setInteractionMode("idle");
+            return;
+        }
+        if (this.selectionGesture === "move") {
+            if (end && !cancelled) this.moveSelectedElements(end.x, end.y);
+            if (cancelled && this.selectionBeforeSnapshot) {
+                void this.host.restoreHistorySnapshot(this.selectionBeforeSnapshot)
+                    .catch((error) => console.error("Cancelled move could not be restored:", error));
+            } else if (this.selectionMoved && this.selectionBeforeSnapshot) {
+                this.host.pushHistorySnapshotOperation(
+                    this.selectionBeforeSnapshot,
+                    this.host.captureHistorySnapshot(),
+                );
+            }
+            this.selectionLastPoint = null;
+            this.selectionBeforeSnapshot = null;
+            this.selectionMoved = false;
+            this.selectionGesture = null;
+            this.selectedElementIds = [];
+            this.selectionMoveEnabled = false;
+            this.host.smoothedPressure = null;
+            this.host.svgHolder.setInteractionMode("idle");
+            return;
+        }
         if (this.activeShape && this.shapeStart) {
             if (end) {
                 this.shapeEndScreen = end;
@@ -221,6 +329,39 @@ export class CanvasDrawTools {
         this.host.lastDrawPoint = null;
         this.host.lastErasePoint = null;
         this.host.svgHolder.setInteractionMode("idle");
+    }
+
+    clearSelection(): void {
+        this.cancelSelectionInteraction();
+        this.selectedElementIds = [];
+        this.host.svgHolder.setSelectedElements([]);
+    }
+
+    cancelSelectionInteraction(): void {
+        if (this.selectionGesture) this.finishInteraction("", undefined, true);
+    }
+
+    private updateSelectionMarquee(offsetX: number, offsetY: number): void {
+        if (!this.selectionStartScreen || !this.selectionStartPoint) return;
+        if (Math.hypot(offsetX - this.selectionStartScreen.x, offsetY - this.selectionStartScreen.y) < 4) {
+            this.host.svgHolder.setSelectionMarquee(undefined);
+            return;
+        }
+        this.host.svgHolder.setSelectionMarquee(shapeBoundsFromPoints(
+            this.selectionStartPoint,
+            this.host.getCanvasPointInViewBox(offsetX, offsetY),
+        ));
+    }
+
+    private moveSelectedElements(offsetX: number, offsetY: number): void {
+        if (!this.selectionMoveEnabled || this.selectedElementIds.length === 0 || !this.selectionLastPoint) return;
+        const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
+        const deltaX = point.x - this.selectionLastPoint.x;
+        const deltaY = point.y - this.selectionLastPoint.y;
+        this.selectionLastPoint = point;
+        if (deltaX === 0 && deltaY === 0) return;
+        this.selectionBeforeSnapshot ??= this.host.captureHistorySnapshot();
+        this.selectionMoved = this.host.svgHolder.moveElementsBy(this.selectedElementIds, deltaX, deltaY) || this.selectionMoved;
     }
 
     getStrokeWidthFromPressure(event: PointerEvent): number {

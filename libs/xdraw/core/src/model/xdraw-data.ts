@@ -13,7 +13,7 @@ export interface XDrawCanvasCamera {
     scale: number;
 }
 
-export type InteractionMode = "idle" | "draw" | "erase" | "fill" | "pan" | "text" | "shape";
+export type InteractionMode = "idle" | "draw" | "erase" | "fill" | "pan" | "text" | "shape" | "selection" | "move";
 
 // Flood fill icin uretilen, sadece aktif katmanin cizgilerini iceren offscreen raster.
 // Maske piksel -> dunya donusumu: world = origin + pixel / scale

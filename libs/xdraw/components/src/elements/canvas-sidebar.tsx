@@ -275,6 +275,26 @@ export class CanvasDrawSidebar extends NeolitComponent {
         <div className="border-t border-(--color-border)"></div>
         <Button
           variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
+            mode === "selection" ? "filled-primary" : "ghost",
+          )}
+          label={tr("xdraw.select")}
+          onClick={() => {
+            this.settings.mode.set("selection");
+          }}
+          icon={materialSymbolsOutlined("arrow_selector_tool")}
+        ></Button>
+        <Button
+          variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
+            mode === "move" ? "filled-primary" : "ghost",
+          )}
+          label={tr("xdraw.move")}
+          onClick={() => {
+            this.settings.mode.set("move");
+          }}
+          icon={materialSymbolsOutlined("open_with")}
+        ></Button>
+        <Button
+          variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
             mode === "pointer" ? "filled-primary" : "ghost",
           )}
           onClick={() => {
@@ -284,7 +304,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             }
             this.settings.mode.set("pointer");
           }}
-          icon={materialSymbolsOutlined("arrow_selector_tool")}
+          icon={materialSymbolsOutlined("pan_tool")}
         ></Button>
         <Button
           variant={computed<ButtonVariant>(

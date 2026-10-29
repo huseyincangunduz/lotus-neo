@@ -14,6 +14,7 @@ const server = await createServer({
 after(() => server.close());
 const load = (path) => server.ssrLoadModule(`/libs/xdraw/core/src/${path}.ts`);
 const geometry = await load("utils/xdraw-shape-utils");
+const selection = await load("utils/xdraw-selection-utils");
 const { XdrawDataUtils } = await load("utils/xdraw-data-utils");
 const { DataDeltaUtils } = await load("utils/data-delta-utils");
 const codec = await load("utils/xdraw-binary-codec");
@@ -58,6 +59,70 @@ test("selection respects ellipse geometry rather than its bounding rectangle", (
     assert.equal(geometry.shapeContainsPoint(ellipse, 60, 60), true);
     assert.equal(geometry.shapeContainsPoint(ellipse, 10, 20), false);
     assert.equal(geometry.shapeContainsPoint(shape({ width: 0 }), 10, 20), false);
+});
+
+test("selection hit testing and bounds cover strokes, text, and fills", () => {
+    const stroke = {
+        id: "stroke", type: "draw", color: "#000000",
+        points: [{ x: 10, y: 10, size: 4 }, { x: 30, y: 10, size: 8 }],
+    };
+    const text = {
+        id: "text", type: "text", text: "hi", position: { x: 40, y: 10 },
+        fontSize: 12, fontFamily: "sans-serif", color: "#000000",
+    };
+    const fill = {
+        id: "fill", type: "fill", color: "#000000",
+        rings: [[{ x: 60, y: 10 }, { x: 80, y: 10 }, { x: 80, y: 30 }, { x: 60, y: 30 }]],
+    };
+    assert.equal(selection.xdrawElementContainsPoint(stroke, 20, 12, 1), true);
+    assert.deepEqual(selection.getXDrawElementBounds(stroke), { x: 6, y: 6, width: 28, height: 8 });
+    assert.equal(selection.xdrawElementContainsPoint(text, 45, 15, 0), true);
+    assert.equal(selection.xdrawElementContainsPoint(fill, 70, 20, 0), true);
+    assert.equal(selection.xdrawElementContainsPoint(fill, 90, 20, 0), false);
+    assert.deepEqual(selection.getXDrawElementBounds(fill), { x: 60, y: 10, width: 20, height: 20 });
+});
+
+test("moving an element translates all its geometry and stroke breaks remain intact", () => {
+    const stroke = {
+        id: "stroke", type: "draw", color: "#000000",
+        points: [{ x: 10, y: 20, size: 4 }, { x: 30, y: 40, size: 6, breakBefore: true }],
+    };
+    assert.equal(selection.translateXDrawElement(stroke, -5, 3), true);
+    assert.deepEqual(stroke.points, [
+        { x: 5, y: 23, size: 4 },
+        { x: 25, y: 43, size: 6, breakBefore: true },
+    ]);
+});
+
+test("clipboard copies every geometry type to the target, preserving spacing and independent data", () => {
+    const elements = [
+        shape({ x: 10, y: 20, strokeWidth: 0, label: { text: "original" } }),
+        { id: "stroke", type: "draw", color: "#123456", finalized: true,
+            points: [{ x: 20, y: 30, size: 2, breakBefore: true }] },
+        { id: "text", type: "text", text: "hello", fontSize: 16,
+            fontFamily: "sans-serif", color: "#000000", position: { x: 30, y: 40 } },
+        { id: "fill", type: "fill", color: "#000000", seed: { x: 50, y: 60 },
+            rings: [[{ x: 40, y: 50 }, { x: 60, y: 50 }, { x: 50, y: 70 }]] },
+    ];
+    const original = structuredClone(elements);
+    let id = 0;
+    const generateId = () => `copy-${id++}`;
+    const copies = selection.cloneXDrawElementsAtPoint(elements, -100, 200, generateId);
+    assert.deepEqual(elements, original);
+    assert.deepEqual(copies.map(element => element.id), ["copy-0", "copy-1", "copy-2", "copy-3"]);
+    assert.deepEqual(selection.combineXDrawElementBounds(copies.map(selection.getXDrawElementBounds)),
+        { x: -100, y: 200, width: 100, height: 80 });
+    assert.deepEqual(copies[1].points, [{ x: -90, y: 210, size: 2, breakBefore: true }]);
+    assert.deepEqual(copies[2].position, { x: -80, y: 220 });
+    assert.deepEqual(copies[3].seed, { x: -60, y: 240 });
+    assert.deepEqual(copies[3].rings[0][0], { x: -70, y: 230 });
+    copies[0].label.text = "changed";
+    copies[1].points[0].x = 999;
+    const pastedAgain = selection.cloneXDrawElementsAtPoint(elements, -100, 200, generateId);
+    assert.equal(pastedAgain[0].label.text, "original");
+    assert.equal(pastedAgain[1].points[0].x, -90);
+    assert.equal(pastedAgain[0].id, "copy-4");
+    assert.deepEqual(elements, original);
 });
 
 test("eraser removes shape and label together, emits removal, and preserves other elements", () => {
@@ -143,6 +208,159 @@ test("fast drag uses pointer-up coordinates, zoom, camera, and one history opera
     assert.deepEqual(fixture.elements[0], shape({
         id: fixture.elements[0].id, x: -40, y: 50, width: 100, height: 80, strokeWidth: 3, color: "rgba(17, 34, 51, 1)",
     }));
+});
+
+test("selection tool drags the hit element and records one undo operation", () => {
+    const element = { id: "shape", type: "shape", x: 10, y: 20, width: 30, height: 40 };
+    const setting = value => ({ get: () => value });
+    const host = {
+        settings: { mode: setting("selection"), drawType: setting("pencil"), stylusModeEnabled: setting(false) },
+        zoomFactor: setting(2),
+        clickedCameraX: { set() {} },
+        clickedCameraY: { set() {} },
+        smoothedPressure: null,
+        lastDrawPoint: null,
+        lastErasePoint: null,
+        getCanvasPointInViewBox: (x, y) => ({ x: x / 2, y: y / 2 }),
+        svgHolder: {
+            finishPendingStroke() {},
+            setInteractionMode() {},
+            findElementAtPoint: () => element,
+            setSelectionMarquee() {},
+            setSelectedElements(ids) { this.selected = ids; },
+        },
+    };
+    const tools = new CanvasDrawTools(host);
+    tools.startInteraction(20, 40, "mouse", 1);
+    tools.finishInteraction("mouse", { x: 22, y: 42 });
+
+    assert.deepEqual({ x: element.x, y: element.y }, { x: 10, y: 20 });
+    assert.deepEqual(host.svgHolder.selected, ["shape"]);
+});
+
+test("marquee intersection includes partial overlap, enclosure, and touching edges", () => {
+    const rect = { x: -10, y: -20, width: 40, height: 50 };
+    for (const bounds of [
+        { x: -15, y: 0, width: 10, height: 10 },
+        { x: 25, y: 0, width: 10, height: 10 },
+        { x: 0, y: -25, width: 10, height: 10 },
+        { x: 0, y: 25, width: 10, height: 10 },
+        { x: -100, y: -100, width: 200, height: 200 },
+        { x: 0, y: 0, width: 5, height: 5 },
+        { x: 30, y: 30, width: 5, height: 5 },
+    ]) {
+        assert.equal(selection.xdrawElementBoundsIntersectsRect(bounds, rect), true);
+    }
+    for (const bounds of [
+        { x: -21, y: 0, width: 10, height: 10 },
+        { x: 31, y: 0, width: 10, height: 10 },
+        { x: 0, y: -31, width: 10, height: 10 },
+        { x: 0, y: 31, width: 10, height: 10 },
+    ]) {
+        assert.equal(selection.xdrawElementBoundsIntersectsRect(bounds, rect), false);
+    }
+});
+
+test("selection drag includes partial overlaps and move mode translates the selection once", () => {
+    const first = { id: "first", type: "shape", x: 10, y: 10, width: 10, height: 10, strokeWidth: 0 };
+    const second = { id: "second", type: "shape", x: 30, y: 30, width: 10, height: 10, strokeWidth: 0 };
+    const partial = { id: "partial", type: "shape", x: 45, y: 45, width: 20, height: 20, strokeWidth: 0 };
+    const outside = { id: "outside", type: "shape", x: 70, y: 70, width: 20, height: 20, strokeWidth: 0 };
+    const elements = [first, second, partial, outside];
+    const selected = [];
+    const operations = [];
+    let marquee;
+    let interactionMode;
+    let hitElement = first;
+    const mode = { value: "selection", get() { return this.value; } };
+    const host = {
+        settings: { mode, drawType: { get: () => "pencil" }, stylusModeEnabled: { get: () => false } },
+        zoomFactor: { get: () => 2 },
+        clickedCameraX: { set() {} },
+        clickedCameraY: { set() {} },
+        smoothedPressure: null,
+        lastDrawPoint: null,
+        lastErasePoint: null,
+        getCanvasPointInViewBox: (x, y) => ({ x: x / 2, y: y / 2 }),
+        captureHistorySnapshot: () => elements.map(element => [element.id, element.x, element.y]),
+        pushHistorySnapshotOperation: (before, after) => operations.push({ before, after }),
+        restoreHistorySnapshot: async () => {},
+        svgHolder: {
+            finishPendingStroke() {},
+            setInteractionMode(value) { interactionMode = value; },
+            setSelectionMarquee(value) { marquee = value; },
+            setSelectedElements(ids) { selected.splice(0, selected.length, ...ids); },
+            getSelectedElementIds: () => [...selected],
+            findElementsIntersectingRect(rect) {
+                return elements.filter(element => selection.xdrawElementBoundsIntersectsRect(
+                    selection.getXDrawElementBounds(element), rect,
+                ));
+            },
+            findElementAtPoint: () => hitElement,
+            moveElementsBy(ids, dx, dy) {
+                for (const element of elements) {
+                    if (ids.includes(element.id)) {
+                        element.x += dx;
+                        element.y += dy;
+                    }
+                }
+                return true;
+            },
+        },
+    };
+    const tools = new CanvasDrawTools(host);
+    tools.startInteraction(0, 0, "mouse", 1);
+    tools.handleToolMove({ pointerType: "mouse" }, 100, 100);
+    assert.deepEqual(marquee, { x: 0, y: 0, width: 50, height: 50 });
+    tools.finishInteraction("mouse", { x: 100, y: 100 });
+    assert.deepEqual(selected, ["first", "second", "partial"]);
+    assert.equal(marquee, undefined);
+
+    mode.value = "move";
+    tools.startInteraction(20, 20, "mouse", 1);
+    assert.equal(interactionMode, "move");
+    tools.handleToolMove({ pointerType: "mouse" }, 40, 40);
+    tools.finishInteraction("mouse", { x: 40, y: 40 });
+    assert.deepEqual(elements.map(element => [element.x, element.y]), [[20, 20], [40, 40], [55, 55], [70, 70]]);
+    assert.equal(operations.length, 1);
+
+    hitElement = outside;
+    tools.startInteraction(100, 100, "mouse", 1);
+    tools.handleToolMove({ pointerType: "mouse" }, 120, 120);
+    tools.finishInteraction("mouse", { x: 120, y: 120 });
+    assert.deepEqual(elements.map(element => [element.x, element.y]), [[20, 20], [40, 40], [55, 55], [70, 70]]);
+    assert.equal(operations.length, 1);
+});
+
+test("cancelling selection for a long press preserves it; clearing it prevents pointer-up reselection", () => {
+    let selected = ["existing"];
+    let marquee;
+    const host = {
+        settings: {
+            mode: { get: () => "selection" },
+            drawType: { get: () => "pencil" },
+        },
+        clickedCameraX: { set() {} },
+        clickedCameraY: { set() {} },
+        getCanvasPointInViewBox: (x, y) => ({ x, y }),
+        svgHolder: {
+            finishPendingStroke() {},
+            setInteractionMode() {},
+            setSelectionMarquee(value) { marquee = value; },
+            setSelectedElements(ids) { selected = ids; },
+        },
+    };
+    const tools = new CanvasDrawTools(host);
+    tools.startInteraction(100, 100, "mouse", 1);
+    tools.handleToolMove({ pointerType: "mouse" }, 150, 150);
+    assert.ok(marquee);
+    tools.cancelSelectionInteraction();
+    assert.equal(marquee, undefined);
+    assert.deepEqual(selected, ["existing"]);
+    tools.startInteraction(100, 100, "mouse", 1);
+    tools.clearSelection();
+    tools.finishInteraction("mouse", { x: 150, y: 150 });
+    assert.deepEqual(selected, []);
 });
 
 test("preview updates without committing; cancellation and pinch discard it", () => {

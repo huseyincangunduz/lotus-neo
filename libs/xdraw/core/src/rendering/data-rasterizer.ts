@@ -11,6 +11,7 @@ import { LocalContentBufferBackend } from "./local-content-buffer-backend";
 import { WorkerContentBufferBackend } from "./worker-content-buffer-backend";
 import { XDRAW_SETTING_KEYS } from "../settings/xdraw-settings-config";
 import { AnimationScheduler } from "@ubs-platform/neolit/core";
+import type { XDrawElementBounds } from "../utils/xdraw-selection-utils";
 
 export interface XDrawImageExportOptions {
     bounds: { x: number; y: number; width: number; height: number };
@@ -26,6 +27,8 @@ export class ProjectDataRasterizer {
     private invertLightness = false;
     private projectData?: XDrawData;
     private cursorPosition?: { x: number; y: number; size: number; color: string; type: "filled" | "outlined" };
+    private selectionBounds: XDrawElementBounds[] = [];
+    private selectionMarquee?: XDrawElementBounds;
     private renderScheduled = false;
     private renderRequestedWhileScheduled = false;
     private dataRevision = 0;
@@ -250,6 +253,16 @@ export class ProjectDataRasterizer {
             this.cursorPosition.color = ColorUtils.regularizeToHexColor(this.cursorPosition.color) || this.cursorPosition.color;
         }
 
+        this.requestRender();
+    }
+
+    setSelectionBounds(bounds: XDrawElementBounds[]): void {
+        this.selectionBounds = bounds;
+        this.requestRender();
+    }
+
+    setSelectionMarquee(bounds: XDrawElementBounds | undefined): void {
+        this.selectionMarquee = bounds;
         this.requestRender();
     }
 
@@ -583,6 +596,22 @@ export class ProjectDataRasterizer {
                 context.globalAlpha = this.activeShapeLayerOpacity;
                 this.elementPainter.drawShapeElement(context, this.activeShapeElement, this.invertLightness);
                 context.globalAlpha = 1;
+            }
+
+            if (this.selectionBounds.length > 0 || this.selectionMarquee) {
+                context.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+                context.strokeStyle = "#2563eb";
+                context.lineWidth = 1 / scale;
+                context.setLineDash([4 / scale, 3 / scale]);
+                for (const bounds of this.selectionBounds) {
+                    context.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+                }
+                if (this.selectionMarquee) {
+                    context.strokeStyle = "#0f766e";
+                    const { x, y, width, height } = this.selectionMarquee;
+                    context.strokeRect(x, y, width, height);
+                }
+                context.setLineDash([]);
             }
 
             // Cursor (ozellikle silgi outline'i) aktif stroke olmadan da (hover/erase sirasinda) gorunmeli;

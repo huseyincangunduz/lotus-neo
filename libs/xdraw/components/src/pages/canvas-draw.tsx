@@ -27,7 +27,8 @@ import {
 } from "../app-native-controller";
 import { Button } from "@libs/ui/button";
 import { materialSymbolsOutlined } from "@libs/ui/icon";
-import { WebdialogOverlayService } from "@libs/ui/webdialog";
+import { WebDialog, WebdialogOverlayService } from "@libs/ui/webdialog";
+import { fromState } from "@ubs-platform/neolit/structural";
 import { tr } from "@libs/ui/i18n";
 import { IdbKeyValueStore } from "@libs/utils/idb-store";
 import "./canvas-draw.css";
@@ -156,6 +157,16 @@ export class CanvasDraw extends NeolitComponent {
   svgHolder = new XDrawDataHolder();
   private undoRedoHelper = this.svgHolder.undoRedoHelper;
   private drawTools = new CanvasDrawTools(this);
+  private pointerBusy = state(false);
+  private showPasteMenu = state(false);
+  private pasteMenuX = state(0);
+  private pasteMenuY = state(0);
+  private pasteWorldPoint: { x: number; y: number } | null = null;
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressStart: { x: number; y: number } | null = null;
+  private selectionActionsDismissed = state(false);
+  private showSelectionActions = state(false);
+  private stopSelectionSubscriptions = () => {};
 
   // Kalem kalkinca hemen commit etmek yerine bekletiyoruz; bu sure icinde yeni bir
   // stroke baslarsa ayni undo adimina devam eder ve agir JSON islemleri hic calismaz.
@@ -479,6 +490,10 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   private resetPointerInteraction(): void {
+    this.cancelLongPress();
+    this.showPasteMenu.set(false);
+    this.pointerBusy.set(false);
+    this.drawTools.cancelSelectionInteraction();
     this.drawTools.cancelShapeInteraction();
     this.activePointers.clear();
     this.isPointerDragging = false;
@@ -577,6 +592,31 @@ export class CanvasDraw extends NeolitComponent {
   onInit(): void {
     // this.restoreSettings();
     this.revealControls();
+    const onModeChange = () => {
+      const mode = this.settings.mode.get();
+      this.cancelLongPress();
+      this.showPasteMenu.set(false);
+      this.drawTools.cancelSelectionInteraction();
+      if (mode === "draw") this.drawTools.clearSelection();
+      this.updateSelectionActions();
+    };
+    const onSelectionChange = () => {
+      this.selectionActionsDismissed.set(false);
+      this.updateSelectionActions();
+    };
+    const onMenuChange = () => this.updateSelectionActions();
+    this.settings.mode.subscribe(onModeChange);
+    this.svgHolder.selectedElementCount.subscribe(onSelectionChange);
+    this.pointerBusy.subscribe(onMenuChange);
+    this.showPasteMenu.subscribe(onMenuChange);
+    this.selectionActionsDismissed.subscribe(onMenuChange);
+    this.stopSelectionSubscriptions = () => {
+      this.settings.mode.unsubscribe(onModeChange);
+      this.svgHolder.selectedElementCount.unsubscribe(onSelectionChange);
+      this.pointerBusy.unsubscribe(onMenuChange);
+      this.showPasteMenu.unsubscribe(onMenuChange);
+      this.selectionActionsDismissed.unsubscribe(onMenuChange);
+    };
     this.startAutosaveLoop();
     // updateAbilities() fires on every push/undo/redo, not just on canUndo transitions;
     // action-based undo (draw/erase/layer ops in data-holder) never calls scheduleAutosave
@@ -632,6 +672,8 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   onDestroy(): void {
+    this.cancelLongPress();
+    this.stopSelectionSubscriptions();
     this.stopAutosaveLoop();
     if (this.controlsFadeTimerId !== null) {
       window.clearTimeout(this.controlsFadeTimerId);
@@ -826,6 +868,9 @@ export class CanvasDraw extends NeolitComponent {
       return;
     }
 
+    this.showPasteMenu.set(false);
+    this.pointerBusy.set(true);
+    this.selectionActionsDismissed.set(false);
     const pointer = this.getPointerOffsetFromEvent(event);
     this.updateCursor(pointer.x, pointer.y);
 
@@ -851,10 +896,13 @@ export class CanvasDraw extends NeolitComponent {
         event.pointerType,
         strokeWidth,
       );
+      this.startLongPress(event, pointer);
       return;
     }
 
     if (this.activePointers.size === 2) {
+      this.cancelLongPress();
+      this.drawTools.cancelSelectionInteraction();
       this.drawTools.cancelShapeInteraction();
       this.revealControls();
       this.isPointerDragging = false;
@@ -864,6 +912,8 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   onMouseWheel(event: WheelEvent): void {
+    this.cancelLongPress();
+    this.showPasteMenu.set(false);
     event.preventDefault();
     this.revealControls();
     const zoomIntensity = 0.1;
@@ -876,6 +926,11 @@ export class CanvasDraw extends NeolitComponent {
 
   onPointerMove(event: PointerEvent): void {
     const pointer = this.getPointerOffsetFromEvent(event);
+    if (this.longPressStart && Math.hypot(
+      pointer.x - this.longPressStart.x, pointer.y - this.longPressStart.y,
+    ) >= 4) {
+      this.cancelLongPress();
+    }
     this.updateCursor(
       pointer.x,
       pointer.y,
@@ -941,6 +996,10 @@ export class CanvasDraw extends NeolitComponent {
       this.svgHolder.setCursorPosition(undefined);
       return;
     }
+    if (this.settings.mode.get() === "selection" || this.settings.mode.get() === "move") {
+      this.svgHolder.setCursorPosition(undefined);
+      return;
+    }
     if (!renderCursor) {
       return;
     }
@@ -958,6 +1017,7 @@ export class CanvasDraw extends NeolitComponent {
 
   onPointerUp(event: PointerEvent): void {
     if (!this.activePointers.has(event.pointerId)) return;
+    this.cancelLongPress();
     const wasActivePointer = this.activePointerId === event.pointerId;
     const end = this.getPointerOffsetFromEvent(event);
     const cancelled = event.type !== "pointerup";
@@ -999,12 +1059,79 @@ export class CanvasDraw extends NeolitComponent {
     this.activePointerId = null;
 
     this.drawTools.finishInteraction(event.pointerType, wasActivePointer ? end : undefined, cancelled);
+    this.pointerBusy.set(false);
+  }
+
+  private cancelLongPress(): void {
+    if (this.longPressTimer !== null) clearTimeout(this.longPressTimer);
+    this.longPressTimer = null;
+    this.longPressStart = null;
+  }
+
+  private updateSelectionActions(): void {
+    const mode = this.settings.mode.get();
+    const show =
+      this.svgHolder.selectedElementCount.get() > 0 &&
+      !this.pointerBusy.get() && !this.showPasteMenu.get() &&
+      mode !== "draw" && mode !== "text" && !this.selectionActionsDismissed.get();
+    if (this.showSelectionActions.get() !== show) this.showSelectionActions.set(show);
+  }
+
+  private startLongPress(event: PointerEvent, point: { x: number; y: number }): void {
+    this.cancelLongPress();
+    const mode = this.settings.mode.get();
+    if (mode !== "pointer" && mode !== "selection" && mode !== "move") return;
+    const pointerId = event.pointerId;
+    const clientX = event.clientX;
+    const clientY = event.clientY;
+    this.longPressStart = point;
+    this.longPressTimer = setTimeout(() => {
+      this.cancelLongPress();
+      if (this.activePointers.size !== 1 || this.activePointerId !== pointerId) return;
+      this.drawTools.cancelSelectionInteraction();
+      this.isPointerDragging = false;
+      this.activePointerId = null;
+      this.svgHolder.setInteractionMode("idle");
+      this.pasteWorldPoint = this.getCanvasPointInViewBox(point.x, point.y);
+      this.pasteMenuX.set(Math.max(8, Math.min(clientX, window.innerWidth - 200)));
+      this.pasteMenuY.set(Math.max(8, Math.min(clientY, window.innerHeight - 100)));
+      this.showPasteMenu.set(true);
+      this.revealControls();
+    }, 550);
+  }
+
+  private copySelection(): void {
+    this.svgHolder.finishPendingStroke();
+    if (this.svgHolder.copySelectedElements()) this.selectionActionsDismissed.set(true);
+  }
+
+  private cutSelection(): void {
+    this.svgHolder.finishPendingStroke();
+    const before = this.captureHistorySnapshot();
+    if (this.svgHolder.cutSelectedElements()) {
+      this.pushHistorySnapshotOperation(before, this.captureHistorySnapshot());
+    }
+  }
+
+  private pasteSelection(): void {
+    if (!this.pasteWorldPoint) throw new Error("Paste position is not available.");
+    this.svgHolder.finishPendingStroke();
+    const before = this.captureHistorySnapshot();
+    if (this.svgHolder.pasteClipboardAtPoint(this.pasteWorldPoint.x, this.pasteWorldPoint.y)) {
+      this.pushHistorySnapshotOperation(before, this.captureHistorySnapshot());
+      this.selectionActionsDismissed.set(false);
+    }
+    this.showPasteMenu.set(false);
+    this.pasteWorldPoint = null;
   }
 
   onKeyDown(event: KeyboardEvent): void {
     const key = event.key.toLowerCase();
     if (key === "escape") {
+      this.cancelLongPress();
+      this.showPasteMenu.set(false);
       this.drawTools.cancelShapeInteraction();
+      this.drawTools.clearSelection();
       return;
     }
     const isMetaPressed = event.ctrlKey || event.metaKey;
@@ -1058,6 +1185,10 @@ export class CanvasDraw extends NeolitComponent {
 
   captureHistorySnapshot(): XDrawHistorySnapshot {
     return this.svgHolder.captureUndoSnapshot();
+  }
+
+  async restoreHistorySnapshot(snapshot: XDrawHistorySnapshot): Promise<void> {
+    await this.svgHolder.restoreUndoSnapshot(snapshot);
   }
 
 
@@ -1133,6 +1264,43 @@ export class CanvasDraw extends NeolitComponent {
   render(): NeolitNode {
     return (
       <div className="gap-2 h-[100dvh] w-[100dvw] overflow-hidden box-border position-relative">
+        <div id="xdraw-selection-actions-anchor" className="xdraw-selection-actions-anchor"></div>
+        <div id="xdraw-paste-anchor" style={{
+          position: "fixed", width: "1px", height: "1px", pointerEvents: "none",
+          left: this.pasteMenuX.map((x) => `${x}px`),
+          top: this.pasteMenuY.map((y) => `${y}px`),
+        }}></div>
+        <div className="xdraw-selection-popovers">
+          <WebDialog
+            show={this.showSelectionActions}
+            mode="popover"
+            anchorSelector="#xdraw-selection-actions-anchor"
+            placement="bottom"
+            displayHeader={false}
+            displayCloseButton={false}
+            onClose={() => this.selectionActionsDismissed.set(true)}
+            children={[<div className="flex gap-2">
+              <Button label={tr("xdraw.copy")} icon={materialSymbolsOutlined("content_copy")}
+                onClick={() => this.copySelection()}></Button>
+              <Button label={tr("xdraw.cut")} icon={materialSymbolsOutlined("content_cut")}
+                onClick={() => this.cutSelection()}></Button>
+            </div>]}
+          ></WebDialog>
+          <WebDialog
+            show={this.showPasteMenu}
+            mode="popover"
+            anchorSelector="#xdraw-paste-anchor"
+            placement="bottom-start"
+            popoverOffset={0}
+            displayHeader={false}
+            displayCloseButton={false}
+            onClose={() => this.showPasteMenu.set(false)}
+            children={[<div>{fromState(this.svgHolder.clipboardAvailable).stateful((available) => available
+              ? <Button label={tr("xdraw.paste")} icon={materialSymbolsOutlined("content_paste")}
+                  onClick={() => this.pasteSelection()}></Button>
+              : <span>{tr("xdraw.clipboard-empty")}</span>)}</div>]}
+          ></WebDialog>
+        </div>
         <div
           className={["absolute z-[1] left-3 top-3 bottom-3 flex flex-col gap-2 justify-center items-center xdraw-controls", this.menusOpacityClass]}
           onPointerDown={this.revealControls.bind(this)}
@@ -1172,6 +1340,10 @@ export class CanvasDraw extends NeolitComponent {
           onDblClick={this.onDoubleClick.bind(this)}
           onWheel={this.onMouseWheel.bind(this)}
           onKeyDown={this.onKeyDown.bind(this)}
+          onContextMenu={(event: MouseEvent) => {
+            const mode = this.settings.mode.get();
+            if (mode === "pointer" || mode === "selection" || mode === "move") event.preventDefault();
+          }}
         >
           {this.divBetweenButtonsAndBottom}
         </div>

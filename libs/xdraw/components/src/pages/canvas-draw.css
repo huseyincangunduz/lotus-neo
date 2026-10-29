@@ -24,6 +24,23 @@
   transition: opacity 250ms ease;
 }
 
+.xdraw-selection-actions-anchor {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.xdraw-selection-popovers > [dialog-mode="popover"] {
+  pointer-events: none;
+}
+
+.xdraw-selection-popovers > [dialog-mode="popover"] > [dialog-mode="popover"] {
+  pointer-events: auto;
+}
+
 .xdraw-controls-dimmed {
   opacity: 0.5;
 }
