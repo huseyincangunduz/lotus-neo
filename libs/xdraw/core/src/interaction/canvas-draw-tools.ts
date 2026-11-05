@@ -1,44 +1,29 @@
-import type { XDrawDataHolder, XDrawHistorySnapshot } from "../state/data-holder";
-import type { XDrawSettingsConfig } from "../settings/xdraw-settings-config";
-import type { XDrawPoint, XDrawShapeElement } from "../model/xdraw-data";
-import { shapeBoundsFromPoints } from "../utils/xdraw-shape-utils";
-import type { XDrawElementBounds } from "../utils/xdraw-selection-utils";
-import { XdrawDataUtils } from "../utils/xdraw-data-utils";
-import { ColorUtils } from "../utils/color-utils";
+import type { XDrawPoint } from "../model/xdraw-data";
+import type { CanvasDrawToolHost } from "./tools/canvas-tool-host";
+import { EraserTool } from "./tools/eraser-tool";
+import { ShapeTool } from "./tools/shape-tool";
+import { PenTool } from "./tools/pen-tool";
+import { FillTool } from "./tools/fill-tool";
+import { SelectionTool } from "./tools/selection-tool";
+import { MoveTool } from "./tools/move-tool";
 
-export interface CanvasDrawToolHost {
-    svgHolder: XDrawDataHolder;
-    zoomFactor: { get(): number };
-    settings: XDrawSettingsConfig;
-    clickedCameraX: { get(): number; set(value: number): void };
-    clickedCameraY: { get(): number; set(value: number): void };
-    smoothedPressure: number | null;
-    lastDrawPoint: { x: number; y: number } | null;
-    lastErasePoint: { x: number; y: number } | null;
-    getCanvasPointInViewBox(offsetX: number, offsetY: number): { x: number; y: number };
-    captureHistorySnapshot(): XDrawHistorySnapshot;
-    pushHistorySnapshotOperation(before: XDrawHistorySnapshot, after: XDrawHistorySnapshot): void;
-    beginGestureHistoryCapture(): void;
-    finishGestureHistoryCapture(): void;
-    restoreHistorySnapshot(snapshot: XDrawHistorySnapshot): Promise<void>;
-    // UI concern (dialog/prompt) belongs to the host, not to this generic tool.
-    promptForTextAt(offsetX: number, offsetY: number): void;
-}
+export type { CanvasDrawToolHost } from "./tools/canvas-tool-host";
 
 export class CanvasDrawTools {
-    private shapeStart: XDrawPoint | null = null;
-    private activeShape: XDrawShapeElement | null = null;
-    private shapeStartScreen: XDrawPoint | null = null;
-    private shapeEndScreen: XDrawPoint | null = null;
-    private selectionGesture: "select" | "move" | null = null;
-    private selectionStartScreen: XDrawPoint | null = null;
-    private selectionStartPoint: XDrawPoint | null = null;
-    private selectionLastPoint: XDrawPoint | null = null;
-    private selectedElementIds: string[] = [];
-    private selectionMoveEnabled = false;
-    private selectionBeforeSnapshot: XDrawHistorySnapshot | null = null;
-    private selectionMoved = false;
-    constructor(private host: CanvasDrawToolHost) { }
+    private readonly eraser: EraserTool;
+    private readonly shape: ShapeTool;
+    private readonly pen: PenTool;
+    private readonly fill: FillTool;
+    private readonly selection: SelectionTool;
+    private readonly move: MoveTool;
+    constructor(private host: CanvasDrawToolHost) {
+        this.eraser = new EraserTool(host);
+        this.shape = new ShapeTool(host);
+        this.pen = new PenTool(host);
+        this.fill = new FillTool(host);
+        this.selection = new SelectionTool(host);
+        this.move = new MoveTool(host);
+    }
 
     shouldPanWithPointer(pointerType: string): boolean {
         return this.host.settings.mode.get() === "pointer" ||
@@ -89,33 +74,11 @@ export class CanvasDrawTools {
         this.host.clickedCameraY.set(offsetY);
         this.host.svgHolder.setInteractionMode("idle");
         if (this.isSelectionPointer()) {
-            this.host.svgHolder.finishPendingStroke();
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.selectionGesture = "select";
-            this.selectionStartScreen = { x: offsetX, y: offsetY };
-            this.selectionStartPoint = point;
-            this.selectionLastPoint = point;
-            this.host.svgHolder.setSelectionMarquee(undefined);
-            this.host.svgHolder.setInteractionMode("selection");
+            this.selection.start(offsetX, offsetY);
             return;
         }
         if (this.isMovePointer()) {
-            this.host.svgHolder.finishPendingStroke();
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.selectedElementIds = this.host.svgHolder.getSelectedElementIds();
-            const hit = this.host.svgHolder.findElementAtPoint(
-                point.x,
-                point.y,
-                8 / (this.host.zoomFactor.get() || 1),
-            );
-            this.selectionGesture = "move";
-            this.selectionLastPoint = point;
-            this.selectionBeforeSnapshot = null;
-            this.selectionMoved = false;
-            this.selectionMoveEnabled = Boolean(hit && this.selectedElementIds.includes(hit.id));
-            if (this.selectionMoveEnabled) {
-                this.host.svgHolder.setInteractionMode("move");
-            }
+            this.move.start(offsetX, offsetY);
             return;
         }
         if (this.isTextPointer()) {
@@ -128,81 +91,36 @@ export class CanvasDrawTools {
         }
 
         if (this.isShapePointer(pointerType)) {
-            this.host.svgHolder.finishPendingStroke();
-            this.host.svgHolder.setInteractionMode("shape");
-            this.shapeStart = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.shapeStartScreen = { x: offsetX, y: offsetY };
-            this.shapeEndScreen = this.shapeStartScreen;
-            const scale = this.host.zoomFactor.get();
-            this.activeShape = {
-                id: XdrawDataUtils.generateUniqueId(),
-                type: "shape",
-                shape: this.host.settings.drawType.get() === "ellipse" ? "ellipse" : "rectangle",
-                ...shapeBoundsFromPoints(this.shapeStart, this.shapeStart),
-                color: ColorUtils.setColorWithAlpha(this.host.settings.strokeColor.get(), this.host.settings.strokeAlpha.get()),
-                strokeWidth: this.host.settings.baseStrokeWidth.get() / scale,
-            };
-            this.host.svgHolder.setShapePreview(this.activeShape);
+            this.shape.start(offsetX, offsetY);
             return;
         }
 
         if (this.isFillingPointer(pointerType)) {
-            this.host.svgHolder.setInteractionMode("fill");
-            const beforeSnapshot = this.host.captureHistorySnapshot();
-            void this.host.svgHolder
-                .fillAtCanvasPoint(offsetX, offsetY, this.host.settings.strokeColor.get())
-                .then((changed) => {
-                    if (!changed) {
-                        return;
-                    }
-                    const afterSnapshot = this.host.captureHistorySnapshot();
-                    this.host.pushHistorySnapshotOperation(beforeSnapshot, afterSnapshot);
-                })
-                .catch((error) => console.error("Boya kovasi uygulanamadi:", error));
+            this.fill.start(offsetX, offsetY);
             return;
         }
 
         if (this.isErasingPointer(pointerType)) {
-            this.host.svgHolder.setInteractionMode("erase");
-            this.host.beginGestureHistoryCapture();
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.host.svgHolder.erasePathSegmentsAtPoint(
-                point.x,
-                point.y,
-                this.eraseRadiusInWorld(),
-            );
-            this.host.lastErasePoint = point;
+            this.eraser.start(offsetX, offsetY);
             return;
         }
 
-
         if (this.isMarkingPointer(pointerType)) {
-            this.host.svgHolder.setInteractionMode("draw");
-            this.host.beginGestureHistoryCapture();
-            this.host.svgHolder.beginStroke(
-                strokeWidth,
-                this.host.settings.strokeColor.get(),
-                this.host.settings.strokeAlpha.get(),
-            );
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.host.svgHolder.insertPoint(point.x, point.y);
-            this.host.lastDrawPoint = point;
+            this.pen.start(offsetX, offsetY, strokeWidth);
         }
     }
 
     handleToolMove(event: PointerEvent, offsetX: number, offsetY: number): void {
-        if (this.selectionGesture === "select") {
-            this.updateSelectionMarquee(offsetX, offsetY);
+        if (this.selection.isActive) {
+            this.selection.move(offsetX, offsetY);
             return;
         }
-        if (this.selectionGesture === "move") {
-            this.moveSelectedElements(offsetX, offsetY);
+        if (this.move.isActive) {
+            this.move.move(offsetX, offsetY);
             return;
         }
-        if (this.activeShape && this.shapeStart) {
-            this.shapeEndScreen = { x: offsetX, y: offsetY };
-            Object.assign(this.activeShape, shapeBoundsFromPoints(this.shapeStart, this.host.getCanvasPointInViewBox(offsetX, offsetY)));
-            this.host.svgHolder.setShapePreview(this.activeShape);
+        if (this.shape.isActive) {
+            this.shape.move(offsetX, offsetY);
             return;
         }
         if (this.shouldPanWithPointer(event.pointerType)) {
@@ -210,9 +128,7 @@ export class CanvasDrawTools {
         }
 
         if (this.isErasingPointer(event.pointerType)) {
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.eraseBetweenPoints(this.host.lastErasePoint || point, point);
-            this.host.lastErasePoint = point;
+            this.eraser.move(offsetX, offsetY);
             return;
         }
 
@@ -220,111 +136,37 @@ export class CanvasDrawTools {
             return;
         }
 
-        const strokeWidth = this.getStrokeWidthFromPressure(event);
-        const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-
-        // Kalinlik nokta bazinda tasiniyor; rasterizer size degisiminde zaten yeni alt-path aciyor.
-        this.host.svgHolder.setActiveStrokeWidth(strokeWidth);
-
-        if (this.isBelowMinSegmentLength(point)) {
-            return;
-        }
-
-        this.host.svgHolder.insertPoint(point.x, point.y);
-        this.host.lastDrawPoint = point;
+        this.pen.move(event, offsetX, offsetY);
     }
 
     cancelShapeInteraction(): void {
-        if (!this.activeShape && !this.shapeStart) return;
-        this.activeShape = null;
-        this.shapeStart = null;
-        this.shapeStartScreen = null;
-        this.shapeEndScreen = null;
-        this.host.svgHolder.setShapePreview(null);
-        this.host.svgHolder.setInteractionMode("idle");
+        this.shape.cancel();
     }
 
     finishInteraction(pointerType: string, end?: XDrawPoint, cancelled = false): void {
-        if (this.selectionGesture === "select") {
-            if (end) this.updateSelectionMarquee(end.x, end.y);
-            if (!cancelled && end && this.selectionStartScreen && this.selectionStartPoint) {
-                const isMarquee = Math.hypot(
-                    end.x - this.selectionStartScreen.x,
-                    end.y - this.selectionStartScreen.y,
-                ) >= 4;
-                if (isMarquee) {
-                    const current = this.host.getCanvasPointInViewBox(end.x, end.y);
-                    const bounds = shapeBoundsFromPoints(this.selectionStartPoint, current);
-                    this.host.svgHolder.setSelectedElements(
-                        this.host.svgHolder.findElementsIntersectingRect(bounds).map((element) => element.id),
-                    );
-                } else {
-                    const point = this.host.getCanvasPointInViewBox(end.x, end.y);
-                    const hit = this.host.svgHolder.findElementAtPoint(
-                        point.x,
-                        point.y,
-                        8 / (this.host.zoomFactor.get() || 1),
-                    );
-                    this.host.svgHolder.setSelectedElements(hit ? [hit.id] : []);
-                    // this.host.svgHolder.
-                }
-            }
-            this.host.svgHolder.setSelectionMarquee(undefined);
-            this.selectionStartScreen = null;
-            this.selectionStartPoint = null;
-            this.selectionGesture = null;
-            this.selectionLastPoint = null;
-            this.host.svgHolder.setInteractionMode("idle");
+        if (this.selection.isActive) {
+            this.selection.finish(end, cancelled);
             return;
         }
-        if (this.selectionGesture === "move") {
-            if (end && !cancelled) this.moveSelectedElements(end.x, end.y);
-            if (cancelled && this.selectionBeforeSnapshot) {
-                void this.host.restoreHistorySnapshot(this.selectionBeforeSnapshot)
-                    .catch((error) => console.error("Cancelled move could not be restored:", error));
-            } else if (this.selectionMoved && this.selectionBeforeSnapshot) {
-                this.host.pushHistorySnapshotOperation(
-                    this.selectionBeforeSnapshot,
-                    this.host.captureHistorySnapshot(),
-                );
-            }
-            this.selectionLastPoint = null;
-            this.selectionBeforeSnapshot = null;
-            this.selectionMoved = false;
-            this.selectionGesture = null;
-            this.selectedElementIds = [];
-            this.selectionMoveEnabled = false;
-            this.host.smoothedPressure = null;
-            this.host.svgHolder.setInteractionMode("idle");
+        if (this.move.isActive) {
+            this.move.finish(end, cancelled);
             return;
         }
-        if (this.activeShape && this.shapeStart) {
-            if (end) {
-                this.shapeEndScreen = end;
-                Object.assign(this.activeShape, shapeBoundsFromPoints(this.shapeStart, this.host.getCanvasPointInViewBox(end.x, end.y)));
-            }
-            const screenBounds = this.shapeStartScreen && this.shapeEndScreen
-                ? shapeBoundsFromPoints(this.shapeStartScreen, this.shapeEndScreen)
-                : null;
-            if (!cancelled && screenBounds && screenBounds.width >= 3 && screenBounds.height >= 3) {
-                const before = this.host.captureHistorySnapshot();
-                this.host.svgHolder.insertShape(this.activeShape);
-                this.host.pushHistorySnapshotOperation(before, this.host.captureHistorySnapshot());
-            }
-            this.cancelShapeInteraction();
+        if (this.shape.isActive) {
+            this.shape.finish(end, cancelled);
         }
         const isErasing = this.isErasingPointer(pointerType);
         const isMarking = this.isMarkingPointer(pointerType);
 
         if (this.isMarkingPointer(pointerType)) {
-            this.host.svgHolder.stopStroke();
+            this.pen.finish();
         }
 
         if (isErasing || isMarking) {
             this.host.finishGestureHistoryCapture();
         }
         if (isErasing) {
-            this.host.svgHolder.addUndoRedoForEraseWithSnapshot(this.host.svgHolder.getActiveLayerId());
+            this.eraser.finish();
         }
         this.host.smoothedPressure = null;
         this.host.lastDrawPoint = null;
@@ -334,94 +176,15 @@ export class CanvasDrawTools {
 
     clearSelection(): void {
         this.cancelSelectionInteraction();
-        this.selectedElementIds = [];
         this.host.svgHolder.setSelectedElements([]);
     }
 
     cancelSelectionInteraction(): void {
-        if (this.selectionGesture) this.finishInteraction("", undefined, true);
-    }
-
-    private updateSelectionMarquee(offsetX: number, offsetY: number): void {
-        if (!this.selectionStartScreen || !this.selectionStartPoint) return;
-        if (Math.hypot(offsetX - this.selectionStartScreen.x, offsetY - this.selectionStartScreen.y) < 4) {
-            this.host.svgHolder.setSelectionMarquee(undefined);
-            return;
-        }
-        this.host.svgHolder.setSelectionMarquee(shapeBoundsFromPoints(
-            this.selectionStartPoint,
-            this.host.getCanvasPointInViewBox(offsetX, offsetY),
-        ));
-    }
-
-    private moveSelectedElements(offsetX: number, offsetY: number): void {
-        if (!this.selectionMoveEnabled || this.selectedElementIds.length === 0 || !this.selectionLastPoint) return;
-        const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-        const deltaX = point.x - this.selectionLastPoint.x;
-        const deltaY = point.y - this.selectionLastPoint.y;
-        this.selectionLastPoint = point;
-        if (deltaX === 0 && deltaY === 0) return;
-        this.selectionBeforeSnapshot ??= this.host.captureHistorySnapshot();
-        this.selectionMoved = this.host.svgHolder.moveElementsBy(this.selectedElementIds, deltaX, deltaY) || this.selectionMoved;
+        if (this.selection.isActive) this.selection.finish(undefined, true);
+        else if (this.move.isActive) this.move.finish(undefined, true);
     }
 
     getStrokeWidthFromPressure(event: PointerEvent): number {
-        const baseWidth = this.host.settings.baseStrokeWidth.get();
-
-        if (!this.host.settings.pressureWidthEnabled.get() || event.pointerType !== "pen") {
-            this.host.smoothedPressure = null;
-            return baseWidth;
-        }
-
-        const pressure = Math.max(0, Math.min(1, event.pressure || 0));
-        const smoothing = Math.max(0, Math.min(1, this.host.settings.pressureSmoothing.get()));
-
-        if (this.host.smoothedPressure === null) {
-            this.host.smoothedPressure = pressure;
-        } else {
-            this.host.smoothedPressure =
-                this.host.smoothedPressure * (1 - smoothing) + pressure * smoothing;
-        }
-
-        const minWidth = Math.max(1, baseWidth * 0.25);
-        const maxWidth = baseWidth * 2;
-        const width = minWidth + (maxWidth - minWidth) * this.host.smoothedPressure;
-        // Yarim piksele yuvarlanir: rasterizer her size degisiminde yeni alt-path actigi icin
-        // yuvarlanmamis degerler nokta basina bir Path2D segmenti uretirdi.
-        return Math.round(width * 2) / 2;
-    }
-
-    private eraseRadiusInWorld(): number {
-        const scale = this.host.zoomFactor.get() || 1;
-        return this.host.settings.eraserSize.get() / 2 / scale;
-    }
-
-    private eraseBetweenPoints(start: { x: number; y: number }, end: { x: number; y: number }): void {
-        const radius = this.eraseRadiusInWorld();
-        const distance = Math.hypot(end.x - start.x, end.y - start.y);
-        const stepCount = Math.max(1, Math.ceil(distance / Math.max(1, radius)));
-
-        for (let step = 1; step <= stepCount; step++) {
-            const ratio = step / stepCount;
-            this.host.svgHolder.erasePathSegmentsAtPoint(
-                start.x + (end.x - start.x) * ratio,
-                start.y + (end.y - start.y) * ratio,
-                radius,
-            );
-        }
-    }
-
-    // minSegmentLength ekran pikseli cinsindendir; karsilastirma dunya mesafesi degil ekran mesafesi uzerinden yapilir.
-    private isBelowMinSegmentLength(nextPoint: { x: number; y: number }): boolean {
-        const lastPoint = this.host.lastDrawPoint;
-        if (!lastPoint) {
-            return false;
-        }
-
-        const scale = this.host.zoomFactor.get() || 1;
-        const dx = (nextPoint.x - lastPoint.x) * scale;
-        const dy = (nextPoint.y - lastPoint.y) * scale;
-        const minStep = this.host.settings.minSegmentLength.get();
-        return dx * dx + dy * dy < minStep * minStep;
+        return this.pen.getStrokeWidthFromPressure(event);
     }
 }
