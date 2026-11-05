@@ -264,15 +264,11 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
   render(): NeolitNode {
     return (
-      <div className="flex flex-col gap-2 flex-wrap" id="toolbar">
-        <Button
-          variant="ghost"
-          icon={materialSymbolsOutlined("menu")}
-          onClick={() => {
-            this.menuDialog.set(true);
-          }}
-        ></Button>
-        <div className="border-t border-(--color-border)"></div>
+      <div className="contents">
+        <div
+          id="tools-toolbar"
+          className="fixed top-3 left-1/2 -translate-x-1/2 z-[1] flex flex-row gap-1 items-center p-1 rounded-xl border border-solid border-gray-500 bg-(--color-surface-2) overflow-x-auto max-w-[calc(100dvw-12rem)]"
+        >
         <Button
           variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
             mode === "selection" ? "filled-primary" : "ghost",
@@ -395,6 +391,15 @@ export class CanvasDrawSidebar extends NeolitComponent {
           icon={materialSymbolsOutlined("format_color_fill")}
         ></Button>
         {/* )} */}
+        </div>
+      <div className="flex flex-col gap-2 flex-wrap" id="toolbar">
+        <Button
+          variant="ghost"
+          icon={materialSymbolsOutlined("menu")}
+          onClick={() => {
+            this.menuDialog.set(true);
+          }}
+        ></Button>
         <div className="border-t border-(--color-border)"></div>
 
         <Button
@@ -729,8 +734,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
         <WebDialog
           show={this.showPencilSettingsDialog}
           mode="popover"
-          anchorSelector="#toolbar"
-          placement="right"
+          anchorSelector="#tools-toolbar"
+          placement="bottom"
           width="280px"
           displayHeader={false}
           displayCloseButton={false}
@@ -794,8 +799,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
         <WebDialog
           show={this.showTextSettingsDialog}
           mode="popover"
-          anchorSelector="#toolbar"
-          placement="right"
+          anchorSelector="#tools-toolbar"
+          placement="bottom"
           width="280px"
           displayHeader={false}
           displayCloseButton={false}
@@ -1113,6 +1118,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             }}
           ></Trackbar>
         </WebDialog>
+      </div>
       </div>
     );
   }
