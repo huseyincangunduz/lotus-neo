@@ -25,6 +25,7 @@ import {
   type IAppNativeController,
 } from "../app-native-controller";
 import { asset } from "@libs/asset";
+import { RecentFilesDialog } from "./recent-files-dialog";
 
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDrawSidebar extends NeolitComponent {
@@ -33,6 +34,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
     onDownloadProject: (saveAs?: boolean) => {},
     onOpenProjectFromFile: () => {},
     onSaveAndShareProject: () => {},
+    onOpenRecentFile: (_id: string) => {},
     onExportImage: (_options: {
       area: "screen" | "content";
       background: "white" | "transparent" | "grid";
@@ -63,6 +65,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
   exportScale = state<1 | 2 | 4>(1);
   exportFormat = state<"png" | "webp" | "jpg">("png");
   menuDialog = state(false);
+  showRecentFilesDialog = state(false);
   layerSettingsDialog = state(false);
   zoomFactor = state(1);
   settings = inject(XDrawSettingsConfig);
@@ -168,6 +171,11 @@ export class CanvasDrawSidebar extends NeolitComponent {
   private openProjectFromFile(): void {
     this.properties.onOpenProjectFromFile();
     this.menuDialog.set(false);
+  }
+
+  private openRecentFilesDialog(): void {
+    this.menuDialog.set(false);
+    this.showRecentFilesDialog.set(true);
   }
 
   private runExtraMenuItem(onClick: () => void | Promise<void>): void {
@@ -559,6 +567,16 @@ export class CanvasDrawSidebar extends NeolitComponent {
               ></Button>
             )}
 
+            {this.appController.recentFiles && (
+              <Button
+                variant="ghost"
+                label={tr("xdraw.recent.title")}
+                padding={1}
+                icon={materialSymbolsOutlined("history")}
+                onClick={() => this.openRecentFilesDialog()}
+              ></Button>
+            )}
+
             {this.appController.extraMenuItems &&
               fromState(this.appController.extraMenuItems)
                 .keyFn((item) => item.label)
@@ -634,6 +652,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
           </sub>
           {/* <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo"></img> */}
         </WebDialog>
+        {this.appController.recentFiles && (
+          <RecentFilesDialog
+            show={this.showRecentFilesDialog}
+            provider={this.appController.recentFiles}
+            onOpenFile={(id: string) => this.properties.onOpenRecentFile(id)}
+          ></RecentFilesDialog>
+        )}
         <WebDialog
           show={this.showExportDialog}
           mode="modal"

@@ -385,7 +385,37 @@ export class CanvasDraw extends NeolitComponent {
       new Blob([serialized], { type: "application/json;charset=utf-8" }),
       "application/json",
       saveAs ? undefined : "xdraw_project.xdraw.json",
+      { thumbnailFactory: () => this.createThumbnail() },
     );
+  }
+
+  /** Gecmis listesi icin o anki ekran gorunumunden, uzun kenari THUMBNAIL_MAX_SIZE px olan kucuk bir onizleme uretir. */
+  private async createThumbnail(): Promise<Blob | null> {
+    const THUMBNAIL_MAX_SIZE = 320;
+    try {
+      this.flushPendingGestureHistory();
+      // Kullanicinin o an gordugu alan (ekran boyutu + aktif zoom) alinir;
+      // tum icerigi sigdirmak cizimi cok kucuk gosteriyordu.
+      const zoom = this.zoomFactor.get();
+      const screenWidth = this.canvasWidth.get();
+      const screenHeight = this.canvasHeight.get();
+      const bounds = {
+        x: this.worldX.get(),
+        y: this.worldY.get(),
+        width: screenWidth / zoom,
+        height: screenHeight / zoom,
+      };
+      const longestScreenSide = Math.max(screenWidth, screenHeight, 1);
+      return await this.svgHolder.exportImage({
+        bounds,
+        pixelsPerWorldUnit: zoom * Math.min(1, THUMBNAIL_MAX_SIZE / longestScreenSide),
+        background: "white",
+        format: "webp",
+      });
+    } catch (error) {
+      console.warn("Onizleme gorseli olusturulamadi:", error);
+      return null;
+    }
   }
 
   private exportImage(options: {
@@ -439,6 +469,7 @@ export class CanvasDraw extends NeolitComponent {
       blob,
       "application/json",
       "xdraw_project.xdraw.json",
+      { thumbnailFactory: () => this.createThumbnail() },
     );
     await this.appController.shareDataRequest?.(
       blob,
@@ -454,6 +485,13 @@ export class CanvasDraw extends NeolitComponent {
         await this.loadProjectFromFileConfirmed(file);
       }
     });
+  }
+
+  private openRecentFile(id: string): void {
+    const recentFiles = this.appController.recentFiles;
+    if (!recentFiles) return;
+    // Dosya acilinca icerik onExternalFileOpened callback'i uzerinden yuklenir.
+    this.confirmProjectReplacement(() => recentFiles.open(id));
   }
 
   private loadProjectFromFile(file: File): void {
@@ -1315,6 +1353,7 @@ export class CanvasDraw extends NeolitComponent {
               onDownloadProject={this.downloadProject.bind(this)}
               onOpenProjectFromFile={this.openProjectFromFile.bind(this)}
               onSaveAndShareProject={this.saveAndShareProject.bind(this)}
+              onOpenRecentFile={this.openRecentFile.bind(this)}
               onExportImage={this.exportImage.bind(this)}
               xdrawDataHolder={this.svgHolder}
               canRedo={this.canRedo}
