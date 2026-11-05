@@ -4,7 +4,6 @@ import {
   state,
   type NeolitNode,
 } from "@ubs-platform/neolit/core";
-import { UndoRedoHelper } from "@libs/utils/undo-redo-helper";
 import { CanvasDrawSidebar } from "../elements/canvas-sidebar";
 import { inject } from "@ubs-platform/neolit/injectables";
 import {
@@ -502,7 +501,8 @@ export class CanvasDraw extends NeolitComponent {
     this.svgHolder.setInteractionMode("idle");
   }
 
-  private async importProjectContent(content: string): Promise<void> {
+  private async importProjectContent(content: string, resetUndoRedoList = true): Promise<void> {
+    const closeLoadingDial = this.wdService.showLoading(tr("xdraw.importing-project"));
     const before = this.captureHistorySnapshot();
     const parsed = JSON.parse(content) as Partial<ProjectPayload>;
     if (!parsed.snapshot || !parsed.snapshot.data) {
@@ -517,6 +517,10 @@ export class CanvasDraw extends NeolitComponent {
     this.pushHistorySnapshotOperation(before, after);
     this.scheduleAutosave();
     await this.flushAutosave();
+    if (resetUndoRedoList) {
+      this.undoRedoHelper.reset();
+    }
+    closeLoadingDial();
   }
 
   private async restoreInitialContent(): Promise<void> {

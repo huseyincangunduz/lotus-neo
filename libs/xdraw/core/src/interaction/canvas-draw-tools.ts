@@ -266,6 +266,7 @@ export class CanvasDrawTools {
                         8 / (this.host.zoomFactor.get() || 1),
                     );
                     this.host.svgHolder.setSelectedElements(hit ? [hit.id] : []);
+                    // this.host.svgHolder.
                 }
             }
             this.host.svgHolder.setSelectionMarquee(undefined);
