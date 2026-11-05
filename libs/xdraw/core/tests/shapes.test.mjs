@@ -186,6 +186,7 @@ function toolHost(scale = 2) {
             setInteractionMode() {},
             setShapePreview(value) { preview = value; },
             insertShape(value) { elements.push(structuredClone(value)); },
+            findShapeHandleAtPoint() { return null; },
         },
         zoomFactor: setting(scale),
         clickedCameraX: { set() {} }, clickedCameraY: { set() {} },
@@ -442,4 +443,30 @@ test("content buffer and fill mask both paint shapes through the shared painter"
     const mask = new FillMaskRenderer(painter, () => canvas);
     mask.create(data.layers[0], { x: 0, y: 0, scale: 1 }, 200, 200);
     assert.equal(ctx.calls.filter(call => call[0] === "stroke").length, 2);
+});
+
+test("shape handle detection distinguishes move, edges and corners", () => {
+    const rect = { id: "r", type: "shape", shape: "rectangle", x: 0, y: 0, width: 100, height: 50, color: "#000", strokeWidth: 2 };
+    assert.equal(geometry.getShapeHandleAtPoint(rect, 50, 25, 4), "move");
+    assert.equal(geometry.getShapeHandleAtPoint(rect, 0, 25, 4), "w");
+    assert.equal(geometry.getShapeHandleAtPoint(rect, 102, 25, 4), "e");
+    assert.equal(geometry.getShapeHandleAtPoint(rect, 50, -3, 4), "n");
+    assert.equal(geometry.getShapeHandleAtPoint(rect, 99, 49, 4), "se");
+    assert.equal(geometry.getShapeHandleAtPoint(rect, 200, 25, 4), null);
+    const ellipse = { ...rect, id: "e", shape: "ellipse" };
+    assert.equal(geometry.getShapeHandleAtPoint(ellipse, 50, 0, 4), "n");
+    assert.equal(geometry.getShapeHandleAtPoint(ellipse, 5, 1, 4), "nw");
+    assert.equal(geometry.getShapeHandleAtPoint(ellipse, 10, 0, 4), null);
+    const data = { layers: [{ id: "l", type: "layer", elements: [rect, { ...rect, id: "top", x: 40 }] }] };
+    const hit = XdrawDataUtils.findShapeHandleAtPoint(data, 60, 25, 4);
+    assert.equal(hit.shape.id, "top");
+    assert.equal(hit.handle, "move");
+});
+
+test("resizeShapeBounds moves, resizes and normalizes flipped shapes", () => {
+    const bounds = { x: 10, y: 10, width: 100, height: 50 };
+    assert.deepEqual(geometry.resizeShapeBounds(bounds, "move", 5, -5), { x: 15, y: 5, width: 100, height: 50 });
+    assert.deepEqual(geometry.resizeShapeBounds(bounds, "se", 20, 10), { x: 10, y: 10, width: 120, height: 60 });
+    assert.deepEqual(geometry.resizeShapeBounds(bounds, "w", 30, 99), { x: 40, y: 10, width: 70, height: 50 });
+    assert.deepEqual(geometry.resizeShapeBounds(bounds, "e", -150, 0), { x: -40, y: 10, width: 50, height: 50 });
 });

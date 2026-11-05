@@ -1,4 +1,5 @@
 import type { XDrawPoint } from "../model/xdraw-data";
+import { shapeHandleCursor } from "../utils/xdraw-shape-utils";
 import type { CanvasDrawToolHost } from "./tools/canvas-tool-host";
 import { EraserTool } from "./tools/eraser-tool";
 import { ShapeTool } from "./tools/shape-tool";
@@ -137,6 +138,17 @@ export class CanvasDrawTools {
         }
 
         this.pen.move(event, offsetX, offsetY);
+    }
+
+    /**
+     * Shape aracında farenin altındaki şekle göre cursor değeri (move / *-resize).
+     * Şekle denk gelmiyorsa ya da araç shape değilse boş string döner; host kendi varsayılanını kullanır.
+     */
+    getShapeCursorAt(offsetX: number, offsetY: number, pointerType: string): string {
+        const editing = this.shape.editingHandle;
+        if (editing) return shapeHandleCursor(editing);
+        if (this.shape.isActive || !this.isShapePointer(pointerType)) return "";
+        return shapeHandleCursor(this.shape.getHandleAt(offsetX, offsetY));
     }
 
     cancelShapeInteraction(): void {

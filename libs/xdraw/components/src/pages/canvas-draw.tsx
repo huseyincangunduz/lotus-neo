@@ -872,11 +872,15 @@ export class CanvasDraw extends NeolitComponent {
   }
 
   onDoubleClick(event: MouseEvent): void {
-    if (this.settings.mode.get() !== "pointer") return;
+    const drawType = this.settings.drawType.get();
+    const isShapeTool = this.settings.mode.get() === "draw" && (drawType === "rectangle" || drawType === "ellipse");
+    if (this.settings.mode.get() !== "pointer" && !isShapeTool) return;
     this.svgHolder.finishPendingStroke();
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const point = this.getCanvasPointInViewBox(event.clientX - rect.left, event.clientY - rect.top);
-    const shape = this.svgHolder.findShapeAtPoint(point.x, point.y);
+    // Cursor ile aynı isabet testi: move/resize cursor'ı görünen her yerde çift tıklama da çalışır.
+    const tolerance = 8 / (this.zoomFactor.get() || 1);
+    const shape = this.svgHolder.findShapeHandleAtPoint(point.x, point.y, tolerance)?.shape;
     if (!shape) return;
     event.preventDefault();
     this.wdService.showTextPrompt(
@@ -914,7 +918,8 @@ export class CanvasDraw extends NeolitComponent {
     this.pointerBusy.set(true);
     this.selectionActionsDismissed.set(false);
     const pointer = this.getPointerOffsetFromEvent(event);
-    this.updateCursor(pointer.x, pointer.y);
+    const overShape = this.updateCanvasCursor(pointer.x, pointer.y, event.pointerType);
+    this.updateCursor(pointer.x, pointer.y, true, overShape);
 
     this.updatePointerPosition(event);
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -973,10 +978,12 @@ export class CanvasDraw extends NeolitComponent {
     ) >= 4) {
       this.cancelLongPress();
     }
+    const overShape = this.updateCanvasCursor(pointer.x, pointer.y, event.pointerType);
     this.updateCursor(
       pointer.x,
       pointer.y,
       this.settings.mode.get() !== "pointer",
+      overShape,
     );
 
     if (!this.activePointers.has(event.pointerId)) {
@@ -1023,10 +1030,27 @@ export class CanvasDraw extends NeolitComponent {
     }
   }
 
+  private canvasCursor = "crosshair";
+
+  /**
+   * Shape aracında farenin altındaki şekle göre (taşıma / kenar-köşe boyutlandırma) CSS cursor'ını ayarlar.
+   * Bir tutamaç üzerindeyse true döner.
+   */
+  private updateCanvasCursor(offsetX: number, offsetY: number, pointerType: string): boolean {
+    const shapeCursor = this.drawTools.getShapeCursorAt(offsetX, offsetY, pointerType);
+    const cursor = shapeCursor || "crosshair";
+    if (cursor !== this.canvasCursor) {
+      this.canvasCursor = cursor;
+      (this.canvas as HTMLCanvasElement).style.cursor = cursor;
+    }
+    return shapeCursor !== "";
+  }
+
   private updateCursor(
     offsetX: number,
     offsetY: number,
     renderCursor = true,
+    hideBrushPreview = false,
   ): void {
     // Boya kovasinda firca onizlemesi anlamsiz; imlec cizilmez.
     
@@ -1038,7 +1062,8 @@ export class CanvasDraw extends NeolitComponent {
       this.svgHolder.setCursorPosition(undefined);
       return;
     }
-    if (this.settings.mode.get() === "selection" || this.settings.mode.get() === "move") {
+    // Şekil tutamacı üzerindeyken fırça önizlemesi yerine move/resize cursor'ı görünsün.
+    if (hideBrushPreview || this.settings.mode.get() === "selection" || this.settings.mode.get() === "move") {
       this.svgHolder.setCursorPosition(undefined);
       return;
     }
@@ -1102,6 +1127,8 @@ export class CanvasDraw extends NeolitComponent {
 
     this.drawTools.finishInteraction(event.pointerType, wasActivePointer ? end : undefined, cancelled);
     this.pointerBusy.set(false);
+    // Sürükleme bitti; cursor'ı yeni konumdaki şekle göre tazele.
+    this.updateCanvasCursor(end.x, end.y, event.pointerType);
   }
 
   private cancelLongPress(): void {

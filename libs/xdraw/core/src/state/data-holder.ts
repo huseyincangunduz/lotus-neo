@@ -15,9 +15,9 @@ import type {
     XDrawShapeElement,
 } from "../model/xdraw-data";
 import { XDRAW_MAX_POINTS_PER_ELEMENT } from "../model/xdraw-data";
-import { XdrawDataUtils } from "../utils/xdraw-data-utils";
+import { XdrawDataUtils, type XDrawShapeHit } from "../utils/xdraw-data-utils";
 import { ColorUtils } from "../utils/color-utils";
-import { shapeContainsPoint } from "../utils/xdraw-shape-utils";
+import { shapeContainsPoint, type XDrawShapeBounds } from "../utils/xdraw-shape-utils";
 import {
     cloneXDrawElementsAtPoint,
     getXDrawElementBounds,
@@ -722,6 +722,25 @@ export class XDrawDataHolder {
             .map(getXDrawElementBounds)
             .filter((elementBounds): elementBounds is XDrawElementBounds => elementBounds !== null);
         this.rasterizer.setSelectionBounds(bounds);
+    }
+
+    findShapeHandleAtPoint(x: number, y: number, tolerance: number): XDrawShapeHit | null {
+        return XdrawDataUtils.findShapeHandleAtPoint(this.xdrawData, x, y, tolerance);
+    }
+
+    updateShapeBounds(id: string, bounds: XDrawShapeBounds): boolean {
+        for (const layer of this.xdrawData.layers) {
+            const shape = layer.elements.find(element => element.id === id && element.type === "shape") as XDrawShapeElement | undefined;
+            if (!shape) continue;
+            if (shape.x === bounds.x && shape.y === bounds.y && shape.width === bounds.width && shape.height === bounds.height) return false;
+            Object.assign(shape, bounds);
+            this.rasterizer.setProjectData(this.xdrawData, [{
+                operation: "upsert-element", layerId: layer.id, elementId: id, type: "shape", upsertData: shape,
+            }]);
+            this.refreshSelectionBounds();
+            return true;
+        }
+        return false;
     }
 
     updateShapeLabel(id: string, label: XDrawShapeElement["label"]): boolean {
