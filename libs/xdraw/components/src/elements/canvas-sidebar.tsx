@@ -25,6 +25,7 @@ import {
   type IAppNativeController,
 } from "../app-native-controller";
 import { asset } from "@libs/asset";
+import { RecentFilesDialog } from "./recent-files-dialog";
 
 // Bu componentte çoğu yerde state kullanılmayacak. Çünkü elementler rerender edilmeyecek. eğer rerender olursa hem performans sorunları yaşanır hem de canvas ve svg elementleri kaybolur. Bu yüzden state yerine class propertyleri kullanılacak.
 export class CanvasDrawSidebar extends NeolitComponent {
@@ -33,6 +34,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
     onDownloadProject: (saveAs?: boolean) => {},
     onOpenProjectFromFile: () => {},
     onSaveAndShareProject: () => {},
+    onOpenRecentFile: (_id: string) => {},
     onExportImage: (_options: {
       area: "screen" | "content";
       background: "white" | "transparent" | "grid";
@@ -63,6 +65,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
   exportScale = state<1 | 2 | 4>(1);
   exportFormat = state<"png" | "webp" | "jpg">("png");
   menuDialog = state(false);
+  showRecentFilesDialog = state(false);
   layerSettingsDialog = state(false);
   zoomFactor = state(1);
   settings = inject(XDrawSettingsConfig);
@@ -170,6 +173,11 @@ export class CanvasDrawSidebar extends NeolitComponent {
     this.menuDialog.set(false);
   }
 
+  private openRecentFilesDialog(): void {
+    this.menuDialog.set(false);
+    this.showRecentFilesDialog.set(true);
+  }
+
   private runExtraMenuItem(onClick: () => void | Promise<void>): void {
     this.menuDialog.set(false);
     void onClick();
@@ -264,15 +272,31 @@ export class CanvasDrawSidebar extends NeolitComponent {
 
   render(): NeolitNode {
     return (
-      <div className="flex flex-col gap-2 flex-wrap" id="toolbar">
+      <div className="contents">
+        <div
+          id="tools-toolbar"
+          className="fixed top-3 left-1/2 -translate-x-1/2 z-[1] flex flex-row gap-1 items-center p-1 rounded-xl border border-solid border-gray-500 bg-(--color-surface-2) overflow-x-auto max-w-[calc(100dvw-12rem)]"
+        >
         <Button
-          variant="ghost"
-          icon={materialSymbolsOutlined("menu")}
+          variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
+            mode === "selection" ? "filled-primary" : "ghost",
+          )}
+          label={tr("xdraw.select")}
           onClick={() => {
-            this.menuDialog.set(true);
+            this.settings.mode.set("selection");
           }}
+          icon={materialSymbolsOutlined("arrow_selector_tool")}
         ></Button>
-        <div className="border-t border-(--color-border)"></div>
+        <Button
+          variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
+            mode === "move" ? "filled-primary" : "ghost",
+          )}
+          label={tr("xdraw.move")}
+          onClick={() => {
+            this.settings.mode.set("move");
+          }}
+          icon={materialSymbolsOutlined("open_with")}
+        ></Button>
         <Button
           variant={computed<ButtonVariant>([this.settings.mode], ([mode]) =>
             mode === "pointer" ? "filled-primary" : "ghost",
@@ -284,7 +308,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             }
             this.settings.mode.set("pointer");
           }}
-          icon={materialSymbolsOutlined("arrow_selector_tool")}
+          icon={materialSymbolsOutlined("pan_tool")}
         ></Button>
         <Button
           variant={computed<ButtonVariant>(
@@ -375,6 +399,15 @@ export class CanvasDrawSidebar extends NeolitComponent {
           icon={materialSymbolsOutlined("format_color_fill")}
         ></Button>
         {/* )} */}
+        </div>
+      <div className="flex flex-col gap-2 flex-wrap" id="toolbar">
+        <Button
+          variant="ghost"
+          icon={materialSymbolsOutlined("menu")}
+          onClick={() => {
+            this.menuDialog.set(true);
+          }}
+        ></Button>
         <div className="border-t border-(--color-border)"></div>
 
         <Button
@@ -534,6 +567,16 @@ export class CanvasDrawSidebar extends NeolitComponent {
               ></Button>
             )}
 
+            {this.appController.recentFiles && (
+              <Button
+                variant="ghost"
+                label={tr("xdraw.recent.title")}
+                padding={1}
+                icon={materialSymbolsOutlined("history")}
+                onClick={() => this.openRecentFilesDialog()}
+              ></Button>
+            )}
+
             {this.appController.extraMenuItems &&
               fromState(this.appController.extraMenuItems)
                 .keyFn((item) => item.label)
@@ -609,6 +652,13 @@ export class CanvasDrawSidebar extends NeolitComponent {
           </sub>
           {/* <img src="tkneolitxdraw.png" alt="TKN Eolit XDraw Logo"></img> */}
         </WebDialog>
+        {this.appController.recentFiles && (
+          <RecentFilesDialog
+            show={this.showRecentFilesDialog}
+            provider={this.appController.recentFiles}
+            onOpenFile={(id: string) => this.properties.onOpenRecentFile(id)}
+          ></RecentFilesDialog>
+        )}
         <WebDialog
           show={this.showExportDialog}
           mode="modal"
@@ -709,8 +759,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
         <WebDialog
           show={this.showPencilSettingsDialog}
           mode="popover"
-          anchorSelector="#toolbar"
-          placement="right"
+          anchorSelector="#tools-toolbar"
+          placement="bottom"
           width="280px"
           displayHeader={false}
           displayCloseButton={false}
@@ -774,8 +824,8 @@ export class CanvasDrawSidebar extends NeolitComponent {
         <WebDialog
           show={this.showTextSettingsDialog}
           mode="popover"
-          anchorSelector="#toolbar"
-          placement="right"
+          anchorSelector="#tools-toolbar"
+          placement="bottom"
           width="280px"
           displayHeader={false}
           displayCloseButton={false}
@@ -1093,6 +1143,7 @@ export class CanvasDrawSidebar extends NeolitComponent {
             }}
           ></Trackbar>
         </WebDialog>
+      </div>
       </div>
     );
   }

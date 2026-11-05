@@ -5,6 +5,7 @@ export * from "./model/xdraw-data";
 export * from "./utils/color-utils";
 export * from "./utils/xdraw-fill-utils";
 export * from "./utils/xdraw-data-utils";
+export * from "./utils/xdraw-selection-utils";
 export * from "./utils/xdraw-binary-codec";
 export * from "./utils/clone-utils";
 export * from "./utils/data-delta-utils";

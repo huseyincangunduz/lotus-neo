@@ -1,5 +1,5 @@
 import type { ContentBufferDelta, XDrawCanvasCamera, XDrawData, XDrawDrawElement, XDrawElement, XDrawElementPosition, XDrawFillElement, XDrawFillMask, XDrawLayer, XDrawTextElement, XDrawShapeElement } from "../model/xdraw-data";
-import { shapeIntersectsRect, shapeTouchesCircle } from "./xdraw-shape-utils";
+import { getShapeHandleAtPoint, shapeIntersectsRect, shapeTouchesCircle, type XDrawShapeHandle } from "./xdraw-shape-utils";
 import { XdrawFillUtils } from "./xdraw-fill-utils";
 import { cloneObjectDeep } from "./clone-utils";
 import { DataDeltaUtils } from "./data-delta-utils";
@@ -16,6 +16,12 @@ export interface XDrawElementCropData {
     rings?: Array<Array<{ x: number; y: number }>>;
     color?: string;
     partial?: boolean;
+}
+
+export interface XDrawShapeHit {
+    layerId: string;
+    shape: XDrawShapeElement;
+    handle: XDrawShapeHandle;
 }
 
 export type OnFoundCallback = (cropData: XDrawElementCropData) => void;
@@ -369,6 +375,25 @@ export class XdrawDataUtils {
         return { minX, minY, maxX, maxY };
     }
 
+
+    /**
+     * Noktanın altındaki en üstteki shape'i ve farenin şeklin neresinde olduğunu (taşıma / kenar / köşe) bulur.
+     * Görünmez katmanlar atlanır. Hiçbir şekle denk gelmezse null döner.
+     */
+    public static findShapeHandleAtPoint(data: XDrawData, x: number, y: number, tolerance: number): XDrawShapeHit | null {
+        for (let layerIndex = data.layers.length - 1; layerIndex >= 0; layerIndex--) {
+            const layer = data.layers[layerIndex];
+            if (layer.visible === false || layer.opacity === 0) continue;
+            for (let index = layer.elements.length - 1; index >= 0; index--) {
+                const element = layer.elements[index];
+                if (element.type !== "shape") continue;
+                const shape = element as XDrawShapeElement;
+                const handle = getShapeHandleAtPoint(shape, x, y, tolerance);
+                if (handle) return { layerId: layer.id, shape, handle };
+            }
+        }
+        return null;
+    }
 
     static findNearestPointInElement(data: XDrawData, x: number, y: number, _scale: number, rotationDegrees: number): { x: number, y: number, element: XDrawElement, distance: number } | null {
         const radians = rotationDegrees * (Math.PI / 180);

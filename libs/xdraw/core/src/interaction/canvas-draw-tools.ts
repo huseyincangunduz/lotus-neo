@@ -1,34 +1,30 @@
-import type { XDrawDataHolder, XDrawHistorySnapshot } from "../state/data-holder";
-import type { XDrawSettingsConfig } from "../settings/xdraw-settings-config";
-import type { XDrawPoint, XDrawShapeElement } from "../model/xdraw-data";
-import { shapeBoundsFromPoints } from "../utils/xdraw-shape-utils";
-import { XdrawDataUtils } from "../utils/xdraw-data-utils";
-import { ColorUtils } from "../utils/color-utils";
+import type { XDrawPoint } from "../model/xdraw-data";
+import { shapeHandleCursor } from "../utils/xdraw-shape-utils";
+import type { CanvasDrawToolHost } from "./tools/canvas-tool-host";
+import { EraserTool } from "./tools/eraser-tool";
+import { ShapeTool } from "./tools/shape-tool";
+import { PenTool } from "./tools/pen-tool";
+import { FillTool } from "./tools/fill-tool";
+import { SelectionTool } from "./tools/selection-tool";
+import { MoveTool } from "./tools/move-tool";
 
-export interface CanvasDrawToolHost {
-    svgHolder: XDrawDataHolder;
-    zoomFactor: { get(): number };
-    settings: XDrawSettingsConfig;
-    clickedCameraX: { get(): number; set(value: number): void };
-    clickedCameraY: { get(): number; set(value: number): void };
-    smoothedPressure: number | null;
-    lastDrawPoint: { x: number; y: number } | null;
-    lastErasePoint: { x: number; y: number } | null;
-    getCanvasPointInViewBox(offsetX: number, offsetY: number): { x: number; y: number };
-    captureHistorySnapshot(): XDrawHistorySnapshot;
-    pushHistorySnapshotOperation(before: XDrawHistorySnapshot, after: XDrawHistorySnapshot): void;
-    beginGestureHistoryCapture(): void;
-    finishGestureHistoryCapture(): void;
-    // UI concern (dialog/prompt) belongs to the host, not to this generic tool.
-    promptForTextAt(offsetX: number, offsetY: number): void;
-}
+export type { CanvasDrawToolHost } from "./tools/canvas-tool-host";
 
 export class CanvasDrawTools {
-    private shapeStart: XDrawPoint | null = null;
-    private activeShape: XDrawShapeElement | null = null;
-    private shapeStartScreen: XDrawPoint | null = null;
-    private shapeEndScreen: XDrawPoint | null = null;
-    constructor(private host: CanvasDrawToolHost) { }
+    private readonly eraser: EraserTool;
+    private readonly shape: ShapeTool;
+    private readonly pen: PenTool;
+    private readonly fill: FillTool;
+    private readonly selection: SelectionTool;
+    private readonly move: MoveTool;
+    constructor(private host: CanvasDrawToolHost) {
+        this.eraser = new EraserTool(host);
+        this.shape = new ShapeTool(host);
+        this.pen = new PenTool(host);
+        this.fill = new FillTool(host);
+        this.selection = new SelectionTool(host);
+        this.move = new MoveTool(host);
+    }
 
     shouldPanWithPointer(pointerType: string): boolean {
         return this.host.settings.mode.get() === "pointer" ||
@@ -48,6 +44,14 @@ export class CanvasDrawTools {
 
     isTextPointer(): boolean {
         return this.host.settings.mode.get() === "text";
+    }
+
+    isSelectionPointer(): boolean {
+        return this.host.settings.mode.get() === "selection";
+    }
+
+    isMovePointer(): boolean {
+        return this.host.settings.mode.get() === "move";
     }
 
     isMarkingPointer(pointerType: string): boolean {
@@ -70,6 +74,14 @@ export class CanvasDrawTools {
         this.host.clickedCameraX.set(offsetX);
         this.host.clickedCameraY.set(offsetY);
         this.host.svgHolder.setInteractionMode("idle");
+        if (this.isSelectionPointer()) {
+            this.selection.start(offsetX, offsetY);
+            return;
+        }
+        if (this.isMovePointer()) {
+            this.move.start(offsetX, offsetY);
+            return;
+        }
         if (this.isTextPointer()) {
             this.host.promptForTextAt(offsetX, offsetY);
             return;
@@ -80,73 +92,36 @@ export class CanvasDrawTools {
         }
 
         if (this.isShapePointer(pointerType)) {
-            this.host.svgHolder.finishPendingStroke();
-            this.host.svgHolder.setInteractionMode("shape");
-            this.shapeStart = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.shapeStartScreen = { x: offsetX, y: offsetY };
-            this.shapeEndScreen = this.shapeStartScreen;
-            const scale = this.host.zoomFactor.get();
-            this.activeShape = {
-                id: XdrawDataUtils.generateUniqueId(),
-                type: "shape",
-                shape: this.host.settings.drawType.get() === "ellipse" ? "ellipse" : "rectangle",
-                ...shapeBoundsFromPoints(this.shapeStart, this.shapeStart),
-                color: ColorUtils.setColorWithAlpha(this.host.settings.strokeColor.get(), this.host.settings.strokeAlpha.get()),
-                strokeWidth: this.host.settings.baseStrokeWidth.get() / scale,
-            };
-            this.host.svgHolder.setShapePreview(this.activeShape);
+            this.shape.start(offsetX, offsetY);
             return;
         }
 
         if (this.isFillingPointer(pointerType)) {
-            this.host.svgHolder.setInteractionMode("fill");
-            const beforeSnapshot = this.host.captureHistorySnapshot();
-            void this.host.svgHolder
-                .fillAtCanvasPoint(offsetX, offsetY, this.host.settings.strokeColor.get())
-                .then((changed) => {
-                    if (!changed) {
-                        return;
-                    }
-                    const afterSnapshot = this.host.captureHistorySnapshot();
-                    this.host.pushHistorySnapshotOperation(beforeSnapshot, afterSnapshot);
-                })
-                .catch((error) => console.error("Boya kovasi uygulanamadi:", error));
+            this.fill.start(offsetX, offsetY);
             return;
         }
 
         if (this.isErasingPointer(pointerType)) {
-            this.host.svgHolder.setInteractionMode("erase");
-            this.host.beginGestureHistoryCapture();
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.host.svgHolder.erasePathSegmentsAtPoint(
-                point.x,
-                point.y,
-                this.eraseRadiusInWorld(),
-            );
-            this.host.lastErasePoint = point;
+            this.eraser.start(offsetX, offsetY);
             return;
         }
 
-
         if (this.isMarkingPointer(pointerType)) {
-            this.host.svgHolder.setInteractionMode("draw");
-            this.host.beginGestureHistoryCapture();
-            this.host.svgHolder.beginStroke(
-                strokeWidth,
-                this.host.settings.strokeColor.get(),
-                this.host.settings.strokeAlpha.get(),
-            );
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.host.svgHolder.insertPoint(point.x, point.y);
-            this.host.lastDrawPoint = point;
+            this.pen.start(offsetX, offsetY, strokeWidth);
         }
     }
 
     handleToolMove(event: PointerEvent, offsetX: number, offsetY: number): void {
-        if (this.activeShape && this.shapeStart) {
-            this.shapeEndScreen = { x: offsetX, y: offsetY };
-            Object.assign(this.activeShape, shapeBoundsFromPoints(this.shapeStart, this.host.getCanvasPointInViewBox(offsetX, offsetY)));
-            this.host.svgHolder.setShapePreview(this.activeShape);
+        if (this.selection.isActive) {
+            this.selection.move(offsetX, offsetY);
+            return;
+        }
+        if (this.move.isActive) {
+            this.move.move(offsetX, offsetY);
+            return;
+        }
+        if (this.shape.isActive) {
+            this.shape.move(offsetX, offsetY);
             return;
         }
         if (this.shouldPanWithPointer(event.pointerType)) {
@@ -154,9 +129,7 @@ export class CanvasDrawTools {
         }
 
         if (this.isErasingPointer(event.pointerType)) {
-            const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
-            this.eraseBetweenPoints(this.host.lastErasePoint || point, point);
-            this.host.lastErasePoint = point;
+            this.eraser.move(offsetX, offsetY);
             return;
         }
 
@@ -164,58 +137,48 @@ export class CanvasDrawTools {
             return;
         }
 
-        const strokeWidth = this.getStrokeWidthFromPressure(event);
-        const point = this.host.getCanvasPointInViewBox(offsetX, offsetY);
+        this.pen.move(event, offsetX, offsetY);
+    }
 
-        // Kalinlik nokta bazinda tasiniyor; rasterizer size degisiminde zaten yeni alt-path aciyor.
-        this.host.svgHolder.setActiveStrokeWidth(strokeWidth);
-
-        if (this.isBelowMinSegmentLength(point)) {
-            return;
-        }
-
-        this.host.svgHolder.insertPoint(point.x, point.y);
-        this.host.lastDrawPoint = point;
+    /**
+     * Shape aracında farenin altındaki şekle göre cursor değeri (move / *-resize).
+     * Şekle denk gelmiyorsa ya da araç shape değilse boş string döner; host kendi varsayılanını kullanır.
+     */
+    getShapeCursorAt(offsetX: number, offsetY: number, pointerType: string): string {
+        const editing = this.shape.editingHandle;
+        if (editing) return shapeHandleCursor(editing);
+        if (this.shape.isActive || !this.isShapePointer(pointerType)) return "";
+        return shapeHandleCursor(this.shape.getHandleAt(offsetX, offsetY));
     }
 
     cancelShapeInteraction(): void {
-        if (!this.activeShape && !this.shapeStart) return;
-        this.activeShape = null;
-        this.shapeStart = null;
-        this.shapeStartScreen = null;
-        this.shapeEndScreen = null;
-        this.host.svgHolder.setShapePreview(null);
-        this.host.svgHolder.setInteractionMode("idle");
+        this.shape.cancel();
     }
 
     finishInteraction(pointerType: string, end?: XDrawPoint, cancelled = false): void {
-        if (this.activeShape && this.shapeStart) {
-            if (end) {
-                this.shapeEndScreen = end;
-                Object.assign(this.activeShape, shapeBoundsFromPoints(this.shapeStart, this.host.getCanvasPointInViewBox(end.x, end.y)));
-            }
-            const screenBounds = this.shapeStartScreen && this.shapeEndScreen
-                ? shapeBoundsFromPoints(this.shapeStartScreen, this.shapeEndScreen)
-                : null;
-            if (!cancelled && screenBounds && screenBounds.width >= 3 && screenBounds.height >= 3) {
-                const before = this.host.captureHistorySnapshot();
-                this.host.svgHolder.insertShape(this.activeShape);
-                this.host.pushHistorySnapshotOperation(before, this.host.captureHistorySnapshot());
-            }
-            this.cancelShapeInteraction();
+        if (this.selection.isActive) {
+            this.selection.finish(end, cancelled);
+            return;
+        }
+        if (this.move.isActive) {
+            this.move.finish(end, cancelled);
+            return;
+        }
+        if (this.shape.isActive) {
+            this.shape.finish(end, cancelled);
         }
         const isErasing = this.isErasingPointer(pointerType);
         const isMarking = this.isMarkingPointer(pointerType);
 
         if (this.isMarkingPointer(pointerType)) {
-            this.host.svgHolder.stopStroke();
+            this.pen.finish();
         }
 
         if (isErasing || isMarking) {
             this.host.finishGestureHistoryCapture();
         }
         if (isErasing) {
-            this.host.svgHolder.addUndoRedoForEraseWithSnapshot(this.host.svgHolder.getActiveLayerId());
+            this.eraser.finish();
         }
         this.host.smoothedPressure = null;
         this.host.lastDrawPoint = null;
@@ -223,63 +186,17 @@ export class CanvasDrawTools {
         this.host.svgHolder.setInteractionMode("idle");
     }
 
+    clearSelection(): void {
+        this.cancelSelectionInteraction();
+        this.host.svgHolder.setSelectedElements([]);
+    }
+
+    cancelSelectionInteraction(): void {
+        if (this.selection.isActive) this.selection.finish(undefined, true);
+        else if (this.move.isActive) this.move.finish(undefined, true);
+    }
+
     getStrokeWidthFromPressure(event: PointerEvent): number {
-        const baseWidth = this.host.settings.baseStrokeWidth.get();
-
-        if (!this.host.settings.pressureWidthEnabled.get() || event.pointerType !== "pen") {
-            this.host.smoothedPressure = null;
-            return baseWidth;
-        }
-
-        const pressure = Math.max(0, Math.min(1, event.pressure || 0));
-        const smoothing = Math.max(0, Math.min(1, this.host.settings.pressureSmoothing.get()));
-
-        if (this.host.smoothedPressure === null) {
-            this.host.smoothedPressure = pressure;
-        } else {
-            this.host.smoothedPressure =
-                this.host.smoothedPressure * (1 - smoothing) + pressure * smoothing;
-        }
-
-        const minWidth = Math.max(1, baseWidth * 0.25);
-        const maxWidth = baseWidth * 2;
-        const width = minWidth + (maxWidth - minWidth) * this.host.smoothedPressure;
-        // Yarim piksele yuvarlanir: rasterizer her size degisiminde yeni alt-path actigi icin
-        // yuvarlanmamis degerler nokta basina bir Path2D segmenti uretirdi.
-        return Math.round(width * 2) / 2;
-    }
-
-    private eraseRadiusInWorld(): number {
-        const scale = this.host.zoomFactor.get() || 1;
-        return this.host.settings.eraserSize.get() / 2 / scale;
-    }
-
-    private eraseBetweenPoints(start: { x: number; y: number }, end: { x: number; y: number }): void {
-        const radius = this.eraseRadiusInWorld();
-        const distance = Math.hypot(end.x - start.x, end.y - start.y);
-        const stepCount = Math.max(1, Math.ceil(distance / Math.max(1, radius)));
-
-        for (let step = 1; step <= stepCount; step++) {
-            const ratio = step / stepCount;
-            this.host.svgHolder.erasePathSegmentsAtPoint(
-                start.x + (end.x - start.x) * ratio,
-                start.y + (end.y - start.y) * ratio,
-                radius,
-            );
-        }
-    }
-
-    // minSegmentLength ekran pikseli cinsindendir; karsilastirma dunya mesafesi degil ekran mesafesi uzerinden yapilir.
-    private isBelowMinSegmentLength(nextPoint: { x: number; y: number }): boolean {
-        const lastPoint = this.host.lastDrawPoint;
-        if (!lastPoint) {
-            return false;
-        }
-
-        const scale = this.host.zoomFactor.get() || 1;
-        const dx = (nextPoint.x - lastPoint.x) * scale;
-        const dy = (nextPoint.y - lastPoint.y) * scale;
-        const minStep = this.host.settings.minSegmentLength.get();
-        return dx * dx + dy * dy < minStep * minStep;
+        return this.pen.getStrokeWidthFromPressure(event);
     }
 }

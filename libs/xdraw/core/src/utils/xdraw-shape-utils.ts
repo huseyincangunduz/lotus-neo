@@ -59,3 +59,77 @@ export function shapeTouchesCircle(shape: XDrawShapeElement, x: number, y: numbe
     }
     return minimum <= tolerance ** 2;
 }
+
+/**
+ * Shape üzerinde farenin hangi bölgede olduğunu anlatır.
+ * - "move": şeklin içinde (kenarlara yakın değil) → taşıma
+ * - diğerleri: sınır kutusunun kenarı/köşesi → ilgili yönde yeniden boyutlandırma
+ */
+export type XDrawShapeHandle = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+export interface XDrawShapeBounds {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+/**
+ * Noktanın shape'in hangi tutamacına denk geldiğini bulur; denk gelmiyorsa null döner.
+ * Kenar/köşe tespiti sınır kutusuna göre yapılır (elips için de uç noktalar kutunun kenarlarıdır).
+ */
+export function getShapeHandleAtPoint(shape: XDrawShapeElement, x: number, y: number, tolerance: number): XDrawShapeHandle | null {
+    const edgeTolerance = tolerance + shape.strokeWidth / 2;
+    const left = shape.x;
+    const top = shape.y;
+    const right = shape.x + shape.width;
+    const bottom = shape.y + shape.height;
+    if (x < left - edgeTolerance || x > right + edgeTolerance || y < top - edgeTolerance || y > bottom + edgeTolerance) {
+        return null;
+    }
+    // Çok küçük şekillerde iki karşı kenar çakışmasın diye en yakın olanı seç.
+    const nearLeft = Math.abs(x - left) <= edgeTolerance;
+    const nearRight = Math.abs(x - right) <= edgeTolerance;
+    const nearTop = Math.abs(y - top) <= edgeTolerance;
+    const nearBottom = Math.abs(y - bottom) <= edgeTolerance;
+    const horizontal = nearLeft && nearRight
+        ? (Math.abs(x - left) <= Math.abs(x - right) ? "w" : "e")
+        : nearLeft ? "w" : nearRight ? "e" : "";
+    const vertical = nearTop && nearBottom
+        ? (Math.abs(y - top) <= Math.abs(y - bottom) ? "n" : "s")
+        : nearTop ? "n" : nearBottom ? "s" : "";
+    const handle = vertical + horizontal;
+    if (handle) {
+        // Elipste kutunun köşeleri şeklin dışında kalır; kenar ortaları ise şeklin uç noktalarıdır.
+        // Köşeler yine de çapraz boyutlandırma için kabul edilir, kenarlar ise sadece şekle yakınken.
+        if (shape.shape === "ellipse" && handle.length === 1 && !shapeTouchesCircle(shape, x, y, tolerance)) {
+            return shapeContainsPoint(shape, x, y) ? "move" : null;
+        }
+        return handle as XDrawShapeHandle;
+    }
+    return shapeContainsPoint(shape, x, y) ? "move" : null;
+}
+
+/** Tutamaç ve başlangıçtan itibaren toplam fare yer değiştirmesine göre yeni sınırları hesaplar. */
+export function resizeShapeBounds(original: XDrawShapeBounds, handle: XDrawShapeHandle, deltaX: number, deltaY: number): XDrawShapeBounds {
+    if (handle === "move") {
+        return { ...original, x: original.x + deltaX, y: original.y + deltaY };
+    }
+    let left = original.x;
+    let top = original.y;
+    let right = original.x + original.width;
+    let bottom = original.y + original.height;
+    if (handle.includes("w")) left += deltaX;
+    if (handle.includes("e")) right += deltaX;
+    if (handle.includes("n")) top += deltaY;
+    if (handle.includes("s")) bottom += deltaY;
+    // Kenar karşı tarafı geçerse şekil ters çevrilir, sınırlar normalize edilir.
+    return shapeBoundsFromPoints({ x: left, y: top }, { x: right, y: bottom });
+}
+
+/** Tutamaca uygun CSS cursor değeri. */
+export function shapeHandleCursor(handle: XDrawShapeHandle | null): string {
+    if (!handle) return "";
+    if (handle === "move") return "move";
+    return `${handle}-resize`;
+}

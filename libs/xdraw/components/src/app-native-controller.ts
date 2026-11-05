@@ -8,17 +8,44 @@ export interface IAppNativeMenuItem {
     onClick(): void | Promise<void>;
 }
 
+export interface IAppNativeSaveOptions {
+    /**
+     * Kayit basarili olursa cagrilir ve projenin kucuk bir onizleme gorselini uretir.
+     * Kayit iptal edilirse/basarisiz olursa hic cagrilmamalidir (bosuna render yapilmasin).
+     */
+    thumbnailFactory?: () => Promise<Blob | null>;
+}
+
+export interface IRecentFileEntry {
+    /** Platforma ozgu benzersiz anahtar (mobilde content:// URI). */
+    id: string;
+    fileName: string;
+    /** Son kaydedilme/acilma zamani (epoch ms). Eski kayitlarda olmayabilir. */
+    savedAt?: number;
+}
+
+export interface IRecentFilesProvider {
+    list: State<IRecentFileEntry[]>;
+    /** Dosyayi acar; acilan dosya onExternalFileOpened callback'leri uzerinden iletilir. */
+    open(id: string): Promise<void>;
+    remove(id: string): Promise<void>;
+    getThumbnail(id: string): Promise<Blob | undefined>;
+}
+
 export interface IAppNativeController {
     isMobileApp: boolean;
     isBrowserWebApp: boolean;
     isElectronApp: boolean;
     appName?: string;
     extraMenuItems?: State<IAppNativeMenuItem[]>;
+    /** Destekleyen platformlarda son dosyalar (gecmis) listesi. */
+    recentFiles?: IRecentFilesProvider;
 
     /**
      * 
      * @param data Verilen veriyi Blob olarak alır ve dosya olarak indirilmesini sağlar. Eğer fileNameOrPath parametresi verilmezse, tarayıcı varsayılan olarak "download" ismini kullanır.
      * @param fileNameOrPath Dosya pathi veya dosya ismi. Uygulama içinde verilmezse 'farklı kaydet' diyaloğu gösterilebilir. Tarayıcıda ise varsayılan olarak "download" ismi kullanılır.
+     * @param options Proje kayitlarinda onizleme gorseli gibi ek bilgiler.
      * @returns void
      * 
      * @example
@@ -30,7 +57,7 @@ export interface IAppNativeController {
      * appNativeController.downloadDataRequest(data);
      * // Tarayıcı varsayılan olarak "download" ismini kullanır.
      */
-    downloadDataRequest(data: Blob, saveMimetype: string, fileNameOrPath?: string): void | Promise<void>;
+    downloadDataRequest(data: Blob, saveMimetype: string, fileNameOrPath?: string, options?: IAppNativeSaveOptions): void | Promise<void>;
     openFileRequest(mimeType: string): File | Promise<File | null>;
 
     /**

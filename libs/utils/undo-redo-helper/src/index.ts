@@ -97,6 +97,8 @@ export class UndoRedoHelper {
   ): Promise<void> {
     if (runApply) {
       await operation.apply();
+      await operation.finally?.();
+
     }
 
     this.operationsHistory.push(operation);
